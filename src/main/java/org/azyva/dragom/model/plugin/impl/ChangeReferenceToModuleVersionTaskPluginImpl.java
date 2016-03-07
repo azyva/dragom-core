@@ -78,12 +78,6 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 	public static final String TRANSIENT_DATA_MAP_MODULE_VERSION_CHANGE = ChangeReferenceToModuleVersionTaskPluginImpl.class.getName() + ".MapModuleVersionChange";
 
 	/**
-	 * Tool property indicate if a confirmation should be aked to the user before any
-	 * change.
-	 */
-	private static final String TOOL_PROPERTY_IND_NO_CONFIRM = "IND_NO_CONFIRM";
-
-	/**
 	 * ID of the only task supported by this TaskPlugin.
 	 */
 	public static final String TASK_ID = "change-reference-to-module-version";

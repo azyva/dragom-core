@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015, 2016 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -19,8 +19,6 @@
 
 package org.azyva.dragom.util;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
@@ -29,28 +27,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.ExecContextFactory;
-import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
-import org.azyva.dragom.execcontext.WorkspaceExecContextFactory;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
-import org.azyva.dragom.execcontext.support.ExecContextFactoryHolder;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
-import org.azyva.dragom.job.RootManager;
-import org.azyva.dragom.model.Model;
-import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -59,10 +45,6 @@ import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.PluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.reference.ReferencePathMatcher;
-import org.azyva.dragom.reference.ReferencePathMatcherAnd;
-import org.azyva.dragom.reference.ReferencePathMatcherByElement;
-import org.azyva.dragom.reference.ReferencePathMatcherOr;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,102 +59,6 @@ import org.slf4j.LoggerFactory;
  */
 public final class Util {
 	private static Logger logger = LoggerFactory.getLogger(Util.class);
-
-	/**
-	 * Name of the ResourceBundle of the class.
-	 */
-	public static final String RESOURCE_BUNDLE = "org/azyva/util/UtilResourceBundle";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_ERROR_PARSING_COMMAND_LINE = "ERROR_PARSING_COMMAND_LINE";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_INVALID_ARGUMENT_COUNT = "INVALID_ARGUMENT_COUNT";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_INVALID_COMMAND = "INVALID_COMMAND";
-
-	/**
-	 * System property that specifies if a user properties file is supported.
-	 */
-	public static final String SYS_PROP_IND_USER_PROPERTIES = "org.azyva.dragom.IndUserProperties";
-
-	/**
-	 * System property that specifies the default user properties file.
-	 */
-	public static final String SYS_PROP_DEFAULT_USER_PROPERTIES_FILE = "org.azyva.dragom.DefaultUserProperties";
-
-	/**
-	 * System property that specifies the command line option used to specify the user
-	 * properties file.
-	 */
-	public static final String SYS_PROP_USER_PROPERTIES_FILE_COMMAND_LINE_OPTION = "org.azyva.dragom.UserPropertiesCommandLineOption";
-
-	/**
-	 * Default command line option for specifying the user properties file.
-	 */
-	public static final String DEFAULT_USER_PROPERTIES_COMMAND_LINE_OPTION = "user-properties";
-
-	/**
-	 * System property that specifies if a tool properties file is supported.
-	 */
-	public static final String SYS_PROP_IND_TOOL_PROPERTIES = "org.azyva.dragom.IndToolProperties";
-
-	/**
-	 * System property that specifies the tool_properties file.
-	 */
-	public static final String SYS_PROP_TOOL_PROPERTIES_FILE = "org.azyva.dragom.ToolProperties";
-
-	/**
-	 * System property that specifies the command line option used to specify the
-	 * workspace path.
-	 */
-	public static final String SYS_PROP_WORKSPACE_PATH_COMMAND_LINE_OPTION = "org.azyva.dragom.WorkspacePathCommandLineOption";
-
-	/**
-	 * Default command line option for specifying the workspace path.
-	 */
-	public static final String DEFAULT_WORKSPACE_PATH_COMMAND_LINE_OPTION = "workspace-path";
-
-	/**
-	 * System property that specifies the command line option used to specify the tool
-	 * properties file.
-	 */
-	public static final String SYS_PROP_TOOL_PROPERTIES_FILE_COMMAND_LINE_OPTION = "org.azyva.dragom.ToolPropertiesCommandLineOption";
-
-	/**
-	 * Default command line option for specifying the tool properties file.
-	 */
-	public static final String DEFAULT_TOOL_PROPERTIES_COMMAND_LINE_OPTION = "tool-properties";
-
-	/**
-	 * System property that specifies the command line option used to specify whether
-	 * confirmation is required for a particular context.
-	 */
-	public static final String SYS_PROP_NO_CONFIRM_COMMAND_LINE_OPTION = "org.azyva.dragom.NoConfirmCommandLineOption";
-
-	/**
-	 * Default command line option for specifying whether confirmation is required.
-	 */
-	public static final String DEFAULT_NO_CONFIRM_COMMAND_LINE_OPTION = "no-confirm";
-
-	/**
-	 * System property that specifies the command line option used to specify whether
-	 * confirmation is required.
-	 */
-	public static final String SYS_PROP_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION = "org.azyva.dragom.NoConfirmContextCommandLineOption";
-
-	/**
-	 * Default command line option for specifying whether confirmation is required
-	 * for a particular context.
-	 */
-	public static final String DEFAULT_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION = "no-confirm-context";
 
 	/**
 	 * Runtime property specifying whether confirmation is required.
@@ -222,9 +108,95 @@ public final class Util {
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING = "REFERENCE_CHANGE_AFTER_SWITCHING";
 
 	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
+	 * a workspace directory containing un synchronized changes.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES = "DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES";
+
+	/**
 	 * Path to the static Dragom properties resource within the classpath.
 	 */
 	private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
+
+	/**
+	 * Name of the ResourceBundle of the class.
+	 */
+	public static final String RESOURCE_BUNDLE = "org/azyva/util/UtilResourceBundle";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ALWAYS_RESPONSE = "ALWAYS_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEVER_RESPONSE = "NEVER_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ASK_RESPONSE = "ASK_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES = "YES_ALWAYS_NO_RESPONSE_CHOICES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_YES_RESPONSE = "YES_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE = "YES_ALWAYS_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_RESPONSE = "NO_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_YES_NO_RESPONSE_CHOICES = "YES_NO_RESPONSE_CHOICES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN = "INVALID_RESPONSE_TRY_AGAIN";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERSION_FORMAT_HELP = "VERSION_FORMAT_HELP";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERSION_FORMAT_HELP_VERSION_MUST_EXIST = "VERSION_FORMAT_HELP_VERSION_MUST_EXIST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INCORRECT_VERSION_TYPE = "INCORRECT_VERSION_TYPE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_TRY_AGAIN = "TRY_AGAIN";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -362,255 +334,6 @@ public final class Util {
 				throw new RuntimeException(ioe);
 			}
 		}
-
-	}
-
-	/**
-	 * Utility method to add Option's corresponding to the user-properties,
-	 * tool-properties and workspace options depending on whether user properties and
-	 * tool properties are supported.
-	 * <p>
-	 * Used by tools when initializing Options.
-	 *
-	 * @param options Options.
-	 */
-	public static void addStandardOptions(Options options) {
-		Option option;
-
-		Util.setDragomSystemProperties();
-
-		if (Util.isNotNullAndTrue(System.getProperty(Util.SYS_PROP_IND_USER_PROPERTIES))) {
-			option = new Option(null, null);
-			option.setLongOpt(System.getProperty(Util.SYS_PROP_USER_PROPERTIES_FILE_COMMAND_LINE_OPTION, Util.DEFAULT_USER_PROPERTIES_COMMAND_LINE_OPTION));
-			option.setArgs(1);
-			options.addOption(option);
-		}
-
-		if (Util.isNotNullAndTrue(System.getProperty(Util.SYS_PROP_IND_TOOL_PROPERTIES))) {
-			option = new Option(null, null);
-			option.setLongOpt(System.getProperty(Util.SYS_PROP_TOOL_PROPERTIES_FILE_COMMAND_LINE_OPTION, Util.DEFAULT_TOOL_PROPERTIES_COMMAND_LINE_OPTION));
-			option.setArgs(1);
-			options.addOption(option);
-		}
-
-		option = new Option(null, null);
-		option.setLongOpt(System.getProperty(Util.SYS_PROP_WORKSPACE_PATH_COMMAND_LINE_OPTION, Util.DEFAULT_WORKSPACE_PATH_COMMAND_LINE_OPTION));
-		option.setArgs(1);
-		options.addOption(option);
-
-		option = new Option(null, null);
-		option.setLongOpt(System.getProperty(Util.SYS_PROP_NO_CONFIRM_COMMAND_LINE_OPTION, Util.DEFAULT_NO_CONFIRM_COMMAND_LINE_OPTION));
-		options.addOption(option);
-
-		option = new Option(null, null);
-		option.setLongOpt(System.getProperty(Util.SYS_PROP_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION, Util.DEFAULT_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION));
-		option.setArgs(1);
-		options.addOption(option);
-	}
-
-	/**
-	 * Sets up an {@link ExecContext} assuming an {@link ExecContextFactory} that
-	 * supports the concept of workspace directory.
-	 * <p>
-	 * {@link ExecContextFactoryHolder} is used to get the ExecContextFactory so it
-	 * is not guaranteed that it will support the concept of workspace directory and
-	 * implement {@link WorkspaceExecContextFactory}. In such as case an exception is
-	 * raised.
-	 * <p>
-	 * The strategy for setting up the ExecContext supports a user service
-	 * implementation where a single JVM remains running in the background in the
-	 * context of a given user account (not system-wide) and can execute Dragom tools
-	 * for multiple different workspaces while avoiding tool startup overhead.
-	 * <a href="http://www.martiansoftware.com/nailgun/" target="_blank">Nailgun</a>
-	 * can be useful for that purpose.
-	 * <p>
-	 * A user service implementation is supported by differentiating between workspace
-	 * initialization Properties passed to {@link ExecContextFactory#getExecContext}
-	 * and tool initialization Properties passed to {@link
-	 * and {@link ToolLifeCycleExecContext#startTool}.
-	 * <p>
-	 * Workspace initialization Properties are constructed in the following way:
-	 * <p>
-	 * <li>Dragom properties are merged into System properties using
-	 *     {@link Util#setDragomSystemProperties}. System properties take precedence
-	 *     over Dragom properties;</li>
-	 * <li>Initialize an empty Properties with system Properties as defaults. This
-	 *     Properties when fully initialized will become the workspace initialization
-	 *     Properties;</li>
-	 * <li>If the org.azyva.IndUserProperties system property is defined, load the
-	 *     Properties defined in the properties file specified by the
-	 *     user-properties command line option. If not defined, use the properties
-	 *     file specified by the org.azyva.DefaultUserProperties system property. If
-	 *     not defined or if the properties file does not exist, do not load the
-	 *     Properties;</li>
-	 * <li>The workspace directory is added to the Properties created above.</li>
-	 * <p>
-	 * The name of the user-properties command line option can be overridden with the
-	 * org.azyva.dragom.UserPropertiesCommandLineOption system property.
-	 * <p>
-	 * Tool initialization Properties are constructed in the following way (if indSet):
-	 * <p>
-	 * <li>Initialize an empty Properties. This Properties when fully initialized will
-	 *     become the tool initialization Properties;</li>
-	 * <li>If the org.azyva.IndTaskProperties system property is defined, load the
-	 *     Properties defined in the Properties file specified by the
-	 *     tool-properties command line option. If not defined or if the properties
-	 *     file does not exist, do not load the Properties.</li>
-	 * <p>
-	 * The name of the tool-properties command line option can be overridden with the
-	 * org.azyva.dragom.ToolPropertiesCommandLineOption system property.
-	 * <p>
-	 * It is possible that ExecContextFactory.getExecContext uses a cached ExecContext
-	 * corresponding to a workspace that has already been initialized previously. In
-	 * that case workspace initialization Properties not be considered since
-	 * ExecContextFactory.getExecContext considers them only when a new ExecContext is
-	 * created. This is not expected to be a problem or source of confusion since this
-	 * can happen only if a user service implementation is actually used and in such a
-	 * case Dragom and system properties are expected to be considered only once when
-	 * initializing the user service and users are expected to understand that user
-	 * properties are considered only when initializing a new workspace.
-	 * <p>
-	 * If indSet, {@link ExecContextHolder#setAndStartTool} is called with the
-	 * ExecContext to make it easier for tools to prepare for execution. But it is
-	 * still the tool's responsibility to call
-	 * {@link ExecContextHolder#endToolAndUnset} before exiting. This is somewhat
-	 * asymmetric, but is sufficiently convenient to be warranted. The case where it
-	 * can be useful to set indSet to false is for subsequently calling
-	 * {@link ExecContextHolder#forceUnset}.
-	 * <p>
-	 * If indSet, the IND_NO_CONFIRM and {@code IND_NO_CONFIRM.<context>} runtime
-	 * properties are read from the CommandLine.
-	 *
-	 * @param commandLine CommandLine where to obtain the user and tool properties
-	 *   files as well as the workspace path.
-	 * @param indSet Indicates to set the ExecContext in ExecContextHolder.
-	 * @return ExecContext.
-	 */
-	public static ExecContext setupExecContext(CommandLine commandLine, boolean indSet) {
-		ExecContextFactory execContextFactory;
-		WorkspaceExecContextFactory workspaceExecContextFactory;
-		Properties propertiesSystem;
-		Properties propertiesWorkspace;
-		String workspaceDir;
-		String stringPropertiesFile;
-		ExecContext execContext;
-
-		execContextFactory = ExecContextFactoryHolder.getExecContextFactory();
-
-		if (!(execContextFactory instanceof WorkspaceExecContextFactory)) {
-			throw new RuntimeException("The ExecContextFactory does not support the workspace directory concept.");
-		}
-
-		workspaceExecContextFactory = (WorkspaceExecContextFactory)execContextFactory;
-
-		Util.setDragomSystemProperties();
-
-		propertiesSystem = System.getProperties();
-		propertiesWorkspace = propertiesSystem;
-
-		if (Util.isNotNullAndTrue(System.getProperty(Util.SYS_PROP_IND_USER_PROPERTIES))) {
-			stringPropertiesFile = commandLine.getOptionValue(System.getProperty(Util.SYS_PROP_USER_PROPERTIES_FILE_COMMAND_LINE_OPTION, Util.DEFAULT_USER_PROPERTIES_COMMAND_LINE_OPTION));
-
-			if (stringPropertiesFile == null) {
-				stringPropertiesFile = System.getProperty(Util.SYS_PROP_DEFAULT_USER_PROPERTIES_FILE);
-			}
-
-			if (stringPropertiesFile != null) {
-				propertiesWorkspace = Util.loadProperties(stringPropertiesFile, propertiesWorkspace);
-			}
-		}
-
-		// We do not want to add to the system properties.
-		if (propertiesWorkspace == propertiesSystem) {
-			propertiesWorkspace = new Properties(propertiesSystem);
-		}
-
-		workspaceDir = commandLine.getOptionValue(System.getProperty(Util.SYS_PROP_WORKSPACE_PATH_COMMAND_LINE_OPTION, Util.DEFAULT_WORKSPACE_PATH_COMMAND_LINE_OPTION));
-
-		if (workspaceDir != null) {
-			propertiesWorkspace.setProperty(workspaceExecContextFactory.getWorkspaceDirInitProp(), workspaceDir);
-		}
-
-		execContext = execContextFactory.getExecContext(propertiesWorkspace);
-
-		if (indSet) {
-			Properties propertiesTool;
-
-			propertiesTool = null;
-
-			if (Util.isNotNullAndTrue(System.getProperty(Util.SYS_PROP_IND_TOOL_PROPERTIES))) {
-				stringPropertiesFile = commandLine.getOptionValue(System.getProperty(Util.SYS_PROP_TOOL_PROPERTIES_FILE_COMMAND_LINE_OPTION, Util.DEFAULT_TOOL_PROPERTIES_COMMAND_LINE_OPTION));
-
-				if (stringPropertiesFile != null) {
-					propertiesTool = Util.loadProperties(stringPropertiesFile, null);
-				}
-			}
-
-			if (propertiesTool == null) {
-				propertiesTool = new Properties();
-			}
-
-
-			if (commandLine.hasOption(System.getProperty(Util.SYS_PROP_NO_CONFIRM_COMMAND_LINE_OPTION, Util.DEFAULT_NO_CONFIRM_COMMAND_LINE_OPTION))) {
-				propertiesTool.setProperty("runtime-property." + Util.RUNTIME_PROPERTY_IND_NO_CONFIRM, "true");
-			} else {
-				String[] tabNoConfirmContext;
-
-				tabNoConfirmContext = commandLine.getOptionValues(System.getProperty(Util.SYS_PROP_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION, Util.DEFAULT_NO_CONFIRM_CONTEXT_COMMAND_LINE_OPTION));
-
-				for (String context: tabNoConfirmContext) {
-					propertiesTool.setProperty("runtime-property."+ Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context, "true");
-				}
-			}
-
-			ExecContextHolder.setAndStartTool(execContext, propertiesTool);
-		}
-
-		return execContext;
-	}
-
-	/**
-	 * Helper method that factors the code for loading a Properties file.
-	 * <p>
-	 * All occurrences of "~" in the path to the Properties files are replaced with
-	 * the value of the user.home system property.
-	 * <p>
-	 * If the properties file is not found, propertiesDefault is returned (may be
-	 * null).
-	 * <p>
-	 * If propertiesDefault is null, a new Properties is created without default
-	 * Properties.
-	 * <p>
-	 * If propertiesDefault is not null, a new Properties is created with these
-	 * default Properties.
-	 *
-	 * @param stringPropertiesFile Path to the Properties file in String form.
-	 * @param propertiesDefault Default Properties.
-	 * @return Properties. May be null.
-	 */
-	private static Properties loadProperties(String stringPropertiesFile, Properties propertiesDefault) {
-		Properties properties;
-
-		properties = propertiesDefault;
-
-		Util.logger.debug("Loading properties from " + stringPropertiesFile);
-
-		stringPropertiesFile = stringPropertiesFile.replaceAll("~", System.getProperty("user.home"));
-
-		try (InputStream inputStreamProperties = new FileInputStream(stringPropertiesFile )) {
-			if (propertiesDefault == null) {
-				properties = new Properties();
-			} else {
-				properties = new Properties(propertiesDefault);
-			}
-			properties.load(inputStreamProperties);
-		} catch (FileNotFoundException fnfe) {
-			Util.logger.debug("Properties file " + stringPropertiesFile + " not found.");
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
-		}
-
-		return properties;
 	}
 
 	/**
@@ -692,9 +415,21 @@ public final class Util {
 	}
 
 	/**
+	 * @return The ResourceBundle of this class, which also contains global locale-
+	 *   specific resources that can be used by other classes.
+	 */
+	private static ResourceBundle getResourceBundle() {
+		if (Util.resourceBundle == null) {
+			Util.resourceBundle = ResourceBundle.getBundle(Util.RESOURCE_BUNDLE);
+		}
+
+		return Util.resourceBundle;
+	}
+
+	/**
 	 * Facilitates letting the user input a AlwaysNeverAskUserResponse.
 	 *
-	 * If idInfo ends with "*" it is replaced with
+	 * If info ends with "*" it is replaced with
 	 * " (Y(es always), N(ever), A(sk again)) [<default>]? " where <default> is
 	 * "Y", "N" or "A" depending on alwaysNeverAskUserResponseDefaultValue.
 	 *
@@ -705,41 +440,48 @@ public final class Util {
 	 * "NEVER" and "ASK").
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param idInfo See corresponding parameter in
+	 * @param info See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param alwaysNeverAskUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
-	 * @param arrayParam See corresponding parameter in
-	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return AlwaysNeverAskUserResponse.
 	 */
-	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String idInfo, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue, Object... arrayParam) {
+	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
+		String alwaysNeverAskResponseChoices;
+		String alwaysResponse;
+		String neverResponse;
+		String askResponse;
 		String userResponse;
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
-		if (idInfo.endsWith("*")) {
+		alwaysNeverAskResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES);
+		alwaysResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
+		neverResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
+		askResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ASK_RESPONSE);
+
+		if (info.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (alwaysNeverAskUserResponseDefaultValue) {
 			case ALWAYS:
-				defaultValue = "Y";
+				defaultValue = alwaysResponse;
 				break;
 
 			case NEVER:
-				defaultValue = "N";
+				defaultValue = neverResponse;
 				break;
 
 			case ASK:
-				defaultValue = "A";
+				defaultValue = askResponse;
 				break;
 			}
 
-			idInfo = idInfo.substring(0, idInfo.length() - 1) + " (Y(es always), N(ever), A(sk again)) [" + defaultValue + "]? ";
+			info = info.substring(0, info.length() - 1) + " (" + alwaysNeverAskResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(idInfo, alwaysNeverAskUserResponseDefaultValue.toString(), arrayParam);
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, alwaysNeverAskUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -748,17 +490,17 @@ public final class Util {
 			try {
 				alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOf(userResponse);
 			} catch (IllegalArgumentException iae) {
-				if (userResponse.equals("A")) {
-					alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.ASK;
-				} else if (userResponse.equals("N")) {
-						alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.NEVER;
-				} else if (userResponse.equals("Y")) {
+				if (userResponse.equals(alwaysResponse)) {
 					alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.ALWAYS;
+				} else if (userResponse.equals(neverResponse)) {
+						alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.NEVER;
+				} else if (userResponse.equals(askResponse)) {
+					alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.ASK;
 				}
 			}
 
 			if (alwaysNeverAskUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo("Invalid response. Please try again.");
+				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 		} while (false);
@@ -785,21 +527,18 @@ public final class Util {
 	 * @param runtimeProperty Runtime property.
 	 * @param userInteractionCallbackPlugin See corresponding parameter in
 	 *   getInfoAlwaysNeverAskUserResponse.
-	 * @param idInfo See corresponding parameter in
-	 *   getInfoAlwaysNeverAskUserResponse.
+	 * @param info See corresponding parameter in getInfoAlwaysNeverAskUserResponse.
 	 * @param alwaysNeverAskUserResponseDefaultValue See corresponding parameter in
-	 *   getInfoAlwaysNeverAskUserResponse.
-	 * @param arrayParam See corresponding parameter in
 	 *   getInfoAlwaysNeverAskUserResponse.
 	 * @return AlwaysNeverAskUserResponse.
 	 */
-	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String idInfo, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue, Object... arrayParam) {
+	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
 		alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(null, runtimeProperty));
 
 		if (alwaysNeverAskUserResponse.isAsk()) {
-			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, idInfo, alwaysNeverAskUserResponseDefaultValue, arrayParam);
+			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, info, alwaysNeverAskUserResponseDefaultValue);
 
 			if (!alwaysNeverAskUserResponse.isAsk()) {
 				runtimePropertiesPlugin.setProperty(null, runtimeProperty, alwaysNeverAskUserResponse.toString());
@@ -812,7 +551,7 @@ public final class Util {
 	/**
 	 * Facilitates letting the user input a YesAlwaysNoUserResponse.
 	 *
-	 * If idInfo ends with "*" it is replaced with
+	 * If info ends with "*" it is replaced with
 	 * " (Y(es), A(ways), N(o)) [<default>]? " where <default> is
 	 * "Y", "A" or "N" depending on yesAlwaysNoUserResponseDefaultValue.
 	 *
@@ -823,41 +562,48 @@ public final class Util {
 	 * "YES_ALWAYS" and "NO").
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param idInfo See corresponding parameter in
+	 * @param info See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param yesAlwaysNoUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
-	 * @param arrayParam See corresponding parameter in
-	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return YesAlwaysNoUserResponse.
 	 */
-	public static YesAlwaysNoUserResponse getInfoYesAlwaysNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String idInfo, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue, Object... arrayParam) {
+	public static YesAlwaysNoUserResponse getInfoYesAlwaysNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
+		String yesAlwaysNoResponseChoices;
+		String yesResponse;
+		String yesAlwaysResponse;
+		String noResponse;
 		String userResponse;
 		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 
-		if (idInfo.endsWith("*")) {
+		yesAlwaysNoResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES);
+		yesResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+		yesAlwaysResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
+		noResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
+
+		if (info.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (yesAlwaysNoUserResponseDefaultValue) {
 			case YES:
-				defaultValue = "Y";
+				defaultValue = yesResponse;
 				break;
 
 			case YES_ALWAYS:
-				defaultValue = "A";
+				defaultValue = yesAlwaysResponse;
 				break;
 
 			case NO:
-				defaultValue = "N";
+				defaultValue = noResponse;
 				break;
 			}
 
-			idInfo = idInfo.substring(0, idInfo.length() - 1) + " (Y(es), A(lways), N(o)) [" + defaultValue + "]? ";
+			info = info.substring(0, info.length() - 1) + " (" + yesAlwaysNoResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(idInfo, yesAlwaysNoUserResponseDefaultValue.toString(), arrayParam);
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, yesAlwaysNoUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -866,17 +612,17 @@ public final class Util {
 			try {
 				yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.valueOf(userResponse);
 			} catch (IllegalArgumentException iae) {
-				if (userResponse.equals("Y") || userResponse.equals("1")) {
+				if (userResponse.equals(yesResponse) || userResponse.equals("1")) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES;
-				} else if (userResponse.equals("A")) {
+				} else if (userResponse.equals(yesAlwaysResponse)) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES_ALWAYS;
-				} else if (userResponse.equals("N") || userResponse.equals("0")) {
+				} else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
 				}
 			}
 
 			if (yesAlwaysNoUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo("Invalid response. Please try again.");
+				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 
@@ -893,40 +639,45 @@ public final class Util {
 	 * returned.
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param idInfo See corresponding parameter in
+	 * @param info See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param yesAlwaysNoUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
-	 * @param arrayParam See corresponding parameter in
-	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return YesAlwaysNoUserResponse.
 	 */
-	public static YesAlwaysNoUserResponse getInfoYesNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String idInfo, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue, Object... arrayParam) {
+	public static YesAlwaysNoUserResponse getInfoYesNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
+		String yesNoResponseChoices;
+		String yesResponse;
+		String noResponse;
 		String userResponse;
 		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 
-		if (idInfo.endsWith("*")) {
+		yesNoResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_NO_RESPONSE_CHOICES);
+		yesResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+		noResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
+
+		if (info.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (yesAlwaysNoUserResponseDefaultValue) {
 			case YES:
-				defaultValue = "Y";
+				defaultValue = yesResponse;
 				break;
 
 			case YES_ALWAYS:
 				throw new RuntimeException("YES_ALWAYS is not supported by this method.");
 
 			case NO:
-				defaultValue = "N";
+				defaultValue = noResponse;
 				break;
 			}
 
-			idInfo = idInfo.substring(0, idInfo.length() - 1) + " (Y(es), N(o)) [" + defaultValue + "]? ";
+			info = info.substring(0, info.length() - 1) + " (" + yesNoResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(idInfo, yesAlwaysNoUserResponseDefaultValue.toString(), arrayParam);
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, yesAlwaysNoUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -939,15 +690,15 @@ public final class Util {
 					yesAlwaysNoUserResponse = null;
 				}
 			} catch (IllegalArgumentException iae) {
-				if (userResponse.equals("Y") || userResponse.equals("1")) {
+				if (userResponse.equals(yesResponse) || userResponse.equals("1")) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES;
-				} else if (userResponse.equals("N") || userResponse.equals("0")) {
+				} else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
 				}
 			}
 
 			if (yesAlwaysNoUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo("Invalid response. Please try again.");
+				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 
@@ -960,8 +711,8 @@ public final class Util {
 	/**
 	 * Facilitates letting the user input a Version.
 	 *
-	 * If idInfo ends with "*" it is replaced with text that gides the user in
-	 * inputting the Version.
+	 * If info ends with "*" it is replaced with text that gides the user in inputting
+	 * the Version.
 	 *
 	 * If scmPlugin is not null that text is
 	 * " (use the format <format>/<version>; version must exist) [<default>]? "
@@ -981,21 +732,25 @@ public final class Util {
 	 * @param versionType
 	 * @param scmPlugin
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param idInfo See corresponding parameter in
+	 * @param info See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param versionDefaultValue Default user response. It is translated to the
 	 *   defaultValue parameter in UserInteractionCallbackPlugin.getInfo.
-	 * @param arrayParam See corresponding parameter in
-	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return Version.
 	 */
-	public static Version getInfoVersion(VersionType versionType, ScmPlugin scmPlugin, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String idInfo, Version versionDefaultValue, Object... arrayParam) {
+	public static Version getInfoVersion(VersionType versionType, ScmPlugin scmPlugin, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, Version versionDefaultValue) {
+		String msgPatternVersionFormatHelp;
 		String userResponse;
 		Version version = null;
 
-		if (idInfo.endsWith("*")) {
+		if (scmPlugin != null) {
+			msgPatternVersionFormatHelp = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP_VERSION_MUST_EXIST);
+		} else {
+			msgPatternVersionFormatHelp = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP);
+		}
+
+		if (info.endsWith("*")) {
 			String stringVersionType;
-			String versionMayOrMayNotExist;
 			String defaultValue;
 
 			if (versionType == null) {
@@ -1008,46 +763,41 @@ public final class Util {
 				throw new RuntimeException("Should never get here.");
 			}
 
-			if (scmPlugin != null) {
-				versionMayOrMayNotExist = "; version must exist";
-			} else {
-				versionMayOrMayNotExist = "";
-			}
-
 			if (versionDefaultValue != null) {
 				defaultValue = " [" + versionDefaultValue.toString() + "]";
 			} else {
 				defaultValue = "";
 			}
 
-			idInfo = idInfo.substring(0, idInfo.length() - 1) + " (use the format " + stringVersionType + "/<version>" + versionMayOrMayNotExist + ")" + defaultValue + "? ";
+			info = info.substring(0, info.length() - 1) + " (" + MessageFormat.format(msgPatternVersionFormatHelp, stringVersionType) + ")" + defaultValue + "? ";
+
 		}
 
 		do {
 			if (versionDefaultValue != null) {
-				userResponse = userInteractionCallbackPlugin.getInfoWithDefault(idInfo, versionDefaultValue.toString(), arrayParam);
+				userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, versionDefaultValue.toString());
 			} else {
-				userResponse = userInteractionCallbackPlugin.getInfo(idInfo, arrayParam);
+				userResponse = userInteractionCallbackPlugin.getInfo(info);
 			}
 
 			try {
 				version = Version.parse(userResponse);
-			} catch (Exception e) {
-				userInteractionCallbackPlugin.provideInfo(e.getMessage());
-				userInteractionCallbackPlugin.provideInfo("Please try again.");
+			} catch (ParseException pe) {
+				userInteractionCallbackPlugin.provideInfo(pe.getMessage());
+				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 				continue;
 			}
 
 			if ((versionType != null) && (version.getVersionType() != versionType)) {
-				userInteractionCallbackPlugin.provideInfo("The version is " + version.getVersionType() + " which is not the expected type " + versionType + '.');
-				userInteractionCallbackPlugin.provideInfo("Please try again.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INCORRECT_VERSION_TYPE), version, versionType));
+				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 				continue;
 			}
 
 			if (scmPlugin != null) {
 				if (!scmPlugin.isVersionExists(version)) {
-					userInteractionCallbackPlugin.provideInfo("The version " + version + " does not exist.");
-					userInteractionCallbackPlugin.provideInfo("Please try again.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), version));
+					userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 					continue;
 				}
 			}
@@ -1056,87 +806,6 @@ public final class Util {
 		} while (true);
 
 		return version;
-	}
-
-	/**
-	 * Helper method to return the List of root ModuleVersion's used by many tools.
-	 *
-	 * If the command line specifies the --root-module-version option, no root
-	 * ModuleVersions's must be specified by RootManager, and the List of root
-	 * ModuleVerion's contains the single ModuleVersion specified by this option.
-	 *
-	 * Otherwise, RootManager must specify at least one root ModuleVersion and this
-	 * List of root ModuleVersion's specified by RootManager is returned.
-	 *
-	 * @param commandLine CommandLine.
-	 * @return List of root ModuleVersion's.
-	 */
-	public static List<ModuleVersion> getListModuleVersionRoot(CommandLine commandLine) {
-		List<ModuleVersion> listModuleVersionRoot;
-
-		if (commandLine.hasOption("root-module-version")) {
-			if (!RootManager.getListModuleVersion().isEmpty()) {
-				throw new RuntimeExceptionUserError("No root module version can be specified on the command line with the --root-module-version option when one is specified in the workspace. Use the --help option to display help information.");
-			}
-
-			 listModuleVersionRoot = new ArrayList<ModuleVersion>();
-
-			 try {
-				 listModuleVersionRoot.add(ModuleVersion.parse(commandLine.getOptionValue("root-module-version")));
-			 } catch (ParseException pe) {
-				 throw new RuntimeExceptionUserError(pe.getMessage());
-			 }
-		} else {
-			if (RootManager.getListModuleVersion().isEmpty()) {
-				throw new RuntimeExceptionUserError("A root module version must be specified on the command line with the --root-module-version option when none is specified in the workspace. Use the --help option to display help information.");
-			}
-
-			listModuleVersionRoot = RootManager.getListModuleVersion();
-		}
-
-		return listModuleVersionRoot;
-
-	}
-
-	/**
-	 * Helper method to return a ReferencePathMatcherAnd that is built from the
-	 * ReferencePathMatcherOr specified by RootManager and a ReferencePathMatcherOr
-	 * built from the command line options --reference-path-matcher that specify
-	 * ReferencePathMatcherByElement literals.
-	 *
-	 * @param commandLine CommandLine.
-	 * @return ReferencePathMatcher.
-	 */
-	public static ReferencePathMatcher getReferencePathMatcher(CommandLine commandLine) {
-		Model model;
-		String[] arrayStringReferencePathMatcher;
-		ReferencePathMatcherOr referencePathMatcherOrCommandLine;
-		ReferencePathMatcherAnd referencePathMatcherAnd;
-
-		model = ExecContextHolder.get().getModel();
-
-		arrayStringReferencePathMatcher = commandLine.getOptionValues("reference-path-matcher");
-
-		if (arrayStringReferencePathMatcher == null) {
-			throw new RuntimeExceptionUserError("At least one --reference-path-matcher option must be specified on the command line. Use the --help option to display help information.");
-		}
-
-		referencePathMatcherOrCommandLine = new ReferencePathMatcherOr();
-
-		for (int i = 0; i < arrayStringReferencePathMatcher.length; i++) {
-			try {
-				referencePathMatcherOrCommandLine.addReferencePathMatcher(ReferencePathMatcherByElement.parse(arrayStringReferencePathMatcher[i], model));
-			} catch (ParseException pe) {
-				throw new RuntimeExceptionUserError(pe.getMessage());
-			}
-		}
-
-		referencePathMatcherAnd = new ReferencePathMatcherAnd();
-
-		referencePathMatcherAnd.addReferencePathMatcher(RootManager.getReferencePathMatcherOr());
-		referencePathMatcherAnd.addReferencePathMatcher(referencePathMatcherOrCommandLine);
-
-		return referencePathMatcherAnd;
 	}
 
 	/**
@@ -1368,31 +1037,5 @@ public final class Util {
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
 		runtimePropertiesPlugin.setProperty(null, Util.RUNTIME_PROPERTY_IND_ABORT, "true");
-	}
-
-	/**
-	 * @return The ResourceBundle of this class, which also contains global locale-
-	 *   specific resources that can be used by other classes.
-	 */
-	public static ResourceBundle getResourceBundle() {
-		if (Util.resourceBundle == null) {
-			Util.resourceBundle = ResourceBundle.getBundle(Util.RESOURCE_BUNDLE);
-		}
-
-		return Util.resourceBundle;
-	}
-
-	/**
-	 * Factors in all the code required to localize messages in a simple manner. It
-	 * uses a ResourceBundle to get a pattern corresponding to a key and uses
-	 * MessageFormat to format the message using this pattern and arguments.
-	 *
-	 * @param resourceBundle ResourceBundle containing the MessageFormat pattern used
-	 *   to format the message.
-	 * @param patternKey Key of the MessageFormat pattern in the ResourceBundle.
-	 * @param arrayArgument Array of arguments passed to MessageFormat.
-	 */
-	public static String formatMessage(ResourceBundle resourceBundle, String patternKey, Object... arrayArgument) {
-		return MessageFormat.format(resourceBundle.getString(patternKey), arrayArgument);
 	}
 }

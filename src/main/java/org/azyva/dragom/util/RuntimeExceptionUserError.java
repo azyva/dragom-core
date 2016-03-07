@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015, 2016 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -19,7 +19,6 @@
 
 package org.azyva.dragom.util;
 
-import java.util.ResourceBundle;
 
 /**
  * RuntimeException used to report some error condition to the user.
@@ -43,27 +42,10 @@ public class RuntimeExceptionUserError extends RuntimeException {
 
 	/**
 	 * Constructor.
-	 * <p>
-	 * The message passed to the constructor is used as is. The caller has to take
-	 * care of localization, if required.
 	 *
-	 * @param message Message.
+	 * @param message Message. The caller has to take care of localization, if required.
 	 */
 	public RuntimeExceptionUserError(String message) {
 		super(message);
-	}
-
-	/**
-	 * Constructor.
-	 * <p>
-	 * This constructor uses {@link Util.formatMessage} to format the message.
-	 *
-	 * @param resourceBundle ResourceBundle containing the MessageFormat pattern used
-	 *   to format the message.
-	 * @param patternKey Key of the MessageFormat pattern in the ResourceBundle.
-	 * @param arrayArgument Array of arguments passed to MessageFormat.
-	 */
-	public RuntimeExceptionUserError(ResourceBundle resourceBundle, String patternKey, Object... arrayArgument) {
-		super(Util.formatMessage(resourceBundle, patternKey, arrayArgument));
 	}
 }

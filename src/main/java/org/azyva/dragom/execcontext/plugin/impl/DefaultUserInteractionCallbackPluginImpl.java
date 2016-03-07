@@ -29,9 +29,9 @@ import java.util.Arrays;
 import java.util.Stack;
 
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -197,51 +197,51 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	}
 
 	@Override
-	public BracketHandle startBracket(String idInfo, Object... arrayParam) {
+	public BracketHandle startBracket(String info) {
 		BracketHandle bracketHandle;
 
 		bracketHandle = new BracketHandleImpl();
 
 		this.stackBracketHandle.push(bracketHandle);
 
-		this.provideInfo(idInfo, arrayParam);
+		this.provideInfo(info);
 
 		return bracketHandle;
 	}
 
 	@Override
-	public void provideInfo(String idInfo, Object... arrayParam) {
+	public void provideInfo(String info) {
 		if (this.writerInfoActive != null) {
 			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
 		}
 
 		System.out.println();
-		this.printWithIndent(idInfo);
-		DefaultUserInteractionCallbackPluginImpl.logger.info("Information provided to user: " + idInfo);
+		this.printWithIndent(info);
+		DefaultUserInteractionCallbackPluginImpl.logger.info("Information provided to user: " + info);
 	}
 
 	@Override
-	public Writer provideInfoWithWriter(String idInfo, Object... arrayParam) {
-		this.provideInfo(idInfo, arrayParam);
+	public Writer provideInfoWithWriter(String info) {
+		this.provideInfo(info);
 
 		return new WriterInfo(new OutputStreamWriter(System.out));
 	}
 
 	@Override
-	public String getInfo(String idInfo, Object... arrayParam) {
+	public String getInfo(String prompt) {
 		String info;
 
 		if (this.writerInfoActive != null) {
 			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
 		}
 
-		this.validateBatchMode(idInfo);
+		this.validateBatchMode(prompt);
 
 		System.out.println();
 		System.out.println();
 		this.printWithIndent("##### Information request #####");
-		this.printWithIndent(idInfo);
-		DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + idInfo);
+		this.printWithIndent(prompt);
+		DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + prompt);
 
 		try {
 			info = this.bufferedReaderStdin.readLine();
@@ -257,20 +257,20 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	}
 
 	@Override
-	public String getInfoWithDefault(String idInfo, String defaultValue, Object... arrayParam) {
+	public String getInfoWithDefault(String prompt, String defaultValue) {
 		String info;
 
 		if (this.writerInfoActive != null) {
 			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
 		}
 
-		this.validateBatchMode(idInfo);
+		this.validateBatchMode(prompt);
 
 		System.out.println();
 		System.out.println();
 		this.printWithIndent("##### Information request #####");
-		this.printWithIndent(idInfo);
-		DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + idInfo);
+		this.printWithIndent(prompt);
+		DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + prompt);
 
 
 		try {
@@ -301,6 +301,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 			System.out.print(this.tabCharBracketIndent);
 		}
 
+		// TODO: May want to wrap using commons lang WordUtils.wrap.
 		System.out.println(string);
 	}
 }
