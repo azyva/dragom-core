@@ -108,10 +108,22 @@ public final class Util {
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING = "REFERENCE_CHANGE_AFTER_SWITCHING";
 
 	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents committing local
+	 * unsynchronized changes.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT = "COMMIT";
+
+	/**
 	 * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
 	 * a workspace directory containing un synchronized changes.
 	 */
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES = "DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES";
+
+	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
+	 * a workspace directory (not containing any unsynchronized local changes).
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY = "DELETE_WORKSPACE_DIRECTORY";
 
 	/**
 	 * Path to the static Dragom properties resource within the classpath.
