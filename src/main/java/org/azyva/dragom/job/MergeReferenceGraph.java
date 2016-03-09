@@ -215,9 +215,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	}
 
 	/**
-	 * Indicates to continue to the next matching destination module version when
-	 * merge conflicts are encountered (if indContinueOnMergeConflicts is true) or
-	 * abort the whole process (if indContinueOnMergeConflicts is false).
+	 * Indicates to continue to the next matching destination {@link ModuleVersion}
+	 * when merge conflicts are encountered (if indContinueOnMergeConflicts is true)
+	 * or abort the whole process (if indContinueOnMergeConflicts is false).
 	 * <p>
 	 * If this method is not called, the default is to ask the user.
 	 *
@@ -285,7 +285,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			// ModuleVersion to merge into.
 			//********************************************************************************
 
-			// We always start with the root ModuleVersion of the reference path and this is
+			// We always start with the root ModuleVersion of the ReferencePath and this is
 			// the ModuleVersion for which we require the user to provide a source Version,
 			// even if the first merge operation will not be performed on that ModuleVersion,
 			// but rather on a child reference because of the ReferencePathMatcher.
@@ -342,7 +342,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			// in the source, constructing along the way the source  ReferencePath.
 			//********************************************************************************
 
-			userInteractionCallbackPlugin.provideInfo("Locating source module version within reference graph rooted at module version " + moduleVersionSrc + " corresponding to destination reference path " + this.referencePath + '.');
+			userInteractionCallbackPlugin.provideInfo("Locating source ModuleVersion within reference graph rooted at ModuleVersion " + moduleVersionSrc + " corresponding to destination ReferencePath " + this.referencePath + '.');
 
 			referencePathSrc = new ReferencePath();
 			referencePathSrc.add(new Reference(moduleVersionSrc));
@@ -382,7 +382,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (referenceChildSrc == null) {
-					userInteractionCallbackPlugin.provideInfo("A source module version corresponding to destination reference " + referenceDest + " could not be found within source reference path " + referencePathSrc + '.');
+					userInteractionCallbackPlugin.provideInfo("A source ModuleVersion corresponding to destination reference " + referenceDest + " could not be found within source ReferencePath " + referencePathSrc + '.');
 					return false;
 				}
 
@@ -462,7 +462,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			module = model.getModule(moduleVersionDest.getNodePath());
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			userInteractionCallbackPlugin.provideInfo("Merging leaf module version of source reference path " + referencePathSrc + " into " + this.referencePath + '.');
+			userInteractionCallbackPlugin.provideInfo("Merging leaf ModuleVersion of source ReferencePath " + referencePathSrc + " into " + this.referencePath + '.');
 
 			//********************************************************************************
 			// Ensure destination ModuleVersion is in a user workspace directory.
@@ -478,7 +478,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				try {
-					userInteractionCallbackPlugin.provideInfo("Checking out module version " + moduleVersionDest + " into " + pathModuleWorkspace + '.');
+					userInteractionCallbackPlugin.provideInfo("Checking out ModuleVersion " + moduleVersionDest + " into " + pathModuleWorkspace + '.');
 
 					scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
 				} catch (RuntimeException re) {
@@ -498,7 +498,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			// Shallow-merge source ModuleVersion into destination.
 			//********************************************************************************
 
-			MergeReferenceGraph.logger.info("Building list of version-changing commits to exclude before merging source module version " + moduleVersionSrc + " into destination module version " + moduleVersionDest + '.');
+			MergeReferenceGraph.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
 
 			listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR));
 			iterCommit = listCommit.iterator();
@@ -514,9 +514,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			}
 
 			if (listCommit.isEmpty()) {
-				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source module version " + moduleVersionSrc + " into destination module version " + moduleVersionDest + '.');
+				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
 			} else {
-				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source module version " + moduleVersionSrc + " into destination module version " + moduleVersionDest + " excluding version-changing commits " + listCommit + '.');
+				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + " excluding version-changing commits " + listCommit + '.');
 			}
 
 			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
@@ -525,17 +525,17 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 			// ScmPlugin.merge ensures that the working directory is synchronized.
 			if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
-				userInteractionCallbackPlugin.provideInfo("WARNING: Merge conflicts occurred in " + pathModuleWorkspace + " while merging source module version " + moduleVersionSrc + " into destination module version " + moduleVersionDest + ". Merge process for current matched destination module version aborted.");
+				userInteractionCallbackPlugin.provideInfo("WARNING: Merge conflicts occurred in " + pathModuleWorkspace + " while merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + ". Merge process for current matched destination ModuleVersion aborted.");
 
 				switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 				case ALWAYS:
-					userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination module version, if any.");
+					userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
 					break;
 				case NEVER:
 					Util.setAbort();
 					break;
 				case ASK:
-					this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination module version, if any*", AlwaysNeverAskUserResponse.ASK);
+					this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
 
 					if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 						Util.setAbort();
@@ -566,7 +566,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 					ByReference<Boolean> byReferenceBooleanDestDiverges;
 
 					if (referenceChildDest.getModuleVersion() == null) {
-						MergeReferenceGraph.logger.info("Reference " + referenceChildDest + " within reference path " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+						MergeReferenceGraph.logger.info("Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
 						continue;
 					}
 
@@ -578,14 +578,14 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 					}
 
 					if (referenceChildSrc == null) {
-						MergeReferenceGraph.logger.info("A reference in the source module version " + moduleVersionSrc + " in " + pathModuleWorkspaceSrc + " corresponding to reference " + referenceChildDest + " in the destination module version " + moduleVersionDest + " in " + pathModuleWorkspace + " could not be found. Destination reference skipped.");
+						MergeReferenceGraph.logger.info("A reference in the source ModuleVersion " + moduleVersionSrc + " in " + pathModuleWorkspaceSrc + " corresponding to reference " + referenceChildDest + " in the destination ModuleVersion " + moduleVersionDest + " in " + pathModuleWorkspace + " could not be found. Destination reference skipped.");
 						continue;
 					}
 
 					// We take care of the source and destination Version's being the same outside of
 					// the various cases below.
 					if (referenceChildSrc.getModuleVersion().getVersion().equals(referenceChildDest.getModuleVersion().getVersion())) {
-						MergeReferenceGraph.logger.info("The reference source module version " + referenceChildSrc.getModuleVersion() + " is the same as that in the destination. Not recursing.");
+						MergeReferenceGraph.logger.info("The reference source ModuleVersion " + referenceChildSrc.getModuleVersion() + " is the same as that in the destination. Not recursing.");
 						continue;
 					}
 
@@ -603,17 +603,17 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 						if (byReferenceBooleanSrcDiverges.object.booleanValue()) {
 							if (byReferenceBooleanDestDiverges.object.booleanValue()) {
-								userInteractionCallbackPlugin.provideInfo("WARNING: Both the reference static source module version " + referenceChildSrc.getModuleVersion() + " from reference path " + referencePathSrc + " and destination static module version " + referenceChildDest.getModuleVersion() + " from reference path " + this.referencePath + " diverge. This is a conflict at the reference graph level. Merge process for current matched destination module version aborted.");
+								userInteractionCallbackPlugin.provideInfo("WARNING: Both the reference static source ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " and destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " diverge. This is a conflict at the reference graph level. Merge process for current matched destination ModuleVersion aborted.");
 
 								switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 								case ALWAYS:
-									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination module version, if any.");
+									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
 									break;
 								case NEVER:
 									Util.setAbort();
 									break;
 								case ASK:
-									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination module version, if any*", AlwaysNeverAskUserResponse.ASK);
+									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
 
 									if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 										Util.setAbort();
@@ -625,7 +625,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								String message;
 								Map<String, String> mapCommitAttr;
 
-								userInteractionCallbackPlugin.provideInfo("Reference source static module version " + referenceChildSrc.getModuleVersion() + " from reference path " + referencePathSrc + " diverges compared to destination static module version " + referenceChildDest.getModuleVersion() + " from reference path " + this.referencePath + ". Destination version will be updated to source version.");
+								userInteractionCallbackPlugin.provideInfo("Reference source static ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " diverges compared to destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + ". Destination version will be updated to source version.");
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 									return true;
@@ -633,7 +633,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 								referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion());
 
-								message = "Reference " + referenceChildDest + " within reference path " + this.referencePath + " was changed to version " + referenceChildSrc.getModuleVersion().getVersion() + '.';
+								message = "Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " was changed to version " + referenceChildSrc.getModuleVersion().getVersion() + '.';
 								mapCommitAttr = new HashMap<String, String>();
 								mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 								scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -664,7 +664,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							Version versionDynamicNew;
 							ByReference<Boolean> byReferenceBooleanOldDestDiverges;
 
-							userInteractionCallbackPlugin.provideInfo("Reference source dynamic module version " + referenceChildSrc.getModuleVersion() + " from reference path " + referencePathSrc + " diverge compared to destination static module version " + referenceChildDest.getModuleVersion() + " from reference path " + this.referencePath + ". Destination will be switched to a dynamic version so that changes from the source can be merged.");
+							userInteractionCallbackPlugin.provideInfo("Reference source dynamic ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " diverge compared to destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + ". Destination will be switched to a dynamic version so that changes from the source can be merged.");
 
 							if (byReferenceBooleanDestDiverges.object.booleanValue()) {
 								userInteractionCallbackPlugin.provideInfo("WARNING: Destination static version also diverges compared to source. Selected dynamic version to switch to should include these changes.");
@@ -675,17 +675,17 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							switchToDynamicVersion = new SwitchToDynamicVersion(listModuleVersion);
 
 							if (!switchToDynamicVersion.performTask()) {
-								userInteractionCallbackPlugin.provideInfo("Destination static version " + referenceChildDest.getModuleVersion() + " within reference path " + this.referencePath + " was not switched. Merge process for current matched destination module version aborted.");
+								userInteractionCallbackPlugin.provideInfo("Destination static version " + referenceChildDest.getModuleVersion() + " within ReferencePath " + this.referencePath + " was not switched. Merge process for current matched destination ModuleVersion aborted.");
 
 								switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 								case ALWAYS:
-									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination module version, if any.");
+									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
 									break;
 								case NEVER:
 									Util.setAbort();
 									break;
 								case ASK:
-									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination module version, if any*", AlwaysNeverAskUserResponse.ASK);
+									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
 
 									if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 										Util.setAbort();
@@ -701,10 +701,10 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							this.verifyDivergences(referenceChildDest.getModuleVersion().getNodePath(), referenceChildDest.getModuleVersion().getVersion(), versionDynamicNew, byReferenceBooleanOldDestDiverges, null);
 
 							if (byReferenceBooleanOldDestDiverges.object.booleanValue()) {
-								userInteractionCallbackPlugin.provideInfo("WARNING: Destination static module version " + referenceChildDest.getModuleVersion()+ " was diverging compared to source. New selected dynamic version " + versionDynamicNew + " does not include these changes which may be lost.");
+								userInteractionCallbackPlugin.provideInfo("WARNING: Destination static ModuleVersion " + referenceChildDest.getModuleVersion()+ " was diverging compared to source. New selected dynamic version " + versionDynamicNew + " does not include these changes which may be lost.");
 							}
 
-							userInteractionCallbackPlugin.provideInfo("Reference destination static module version " + referenceChildDest.getModuleVersion() + " from reference path " + this.referencePath + " was switched to version " + versionDynamicNew + " and will be updated.");
+							userInteractionCallbackPlugin.provideInfo("Reference destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " was switched to version " + versionDynamicNew + " and will be updated.");
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 								return true;
@@ -712,7 +712,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 							referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, versionDynamicNew);
 
-							message = "Reference " + referenceChildDest + " within reference path " + this.referencePath + " was changed to version " + versionDynamicNew + '.';
+							message = "Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " was changed to version " + versionDynamicNew + '.';
 							mapCommitAttr = new HashMap<String, String>();
 							mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 							scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -735,7 +735,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 						referencePathSrc.add(referenceChildSrc);
 
-						userInteractionCallbackPlugin.provideInfo("Reference destination module version " + referenceChildDest.getModuleVersion() + " from reference path " + this.referencePath + " is dynamic. Recursively merging source module version " + referenceChildSrc.getModuleVersion() + " from reference path " + referencePathSrc + '.');
+						userInteractionCallbackPlugin.provideInfo("Reference destination ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " is dynamic. Recursively merging source ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + '.');
 
 						try {
 							if (this.mergeModuleVersion(referencePathSrc, referenceChildDest)) {
@@ -806,7 +806,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 			if (byReferenceBooleanSrcDiverges != null) {
-				userInteractionCallbackPlugin.provideInfo("Verifying divergences of source module version " + moduleVersionSrc + " compared to destination module version " + moduleVersionDest + '.');
+				userInteractionCallbackPlugin.provideInfo("Verifying divergences of source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
 
 				listCommit = scmPlugin.getListCommitDiverge(versionSrc, versionDest, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
@@ -822,16 +822,16 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (listCommit.isEmpty()) {
-					userInteractionCallbackPlugin.provideInfo("No divergence found in source module version " + moduleVersionSrc + " compared to destination module version " + moduleVersionDest + '.');
+					userInteractionCallbackPlugin.provideInfo("No divergence found in source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Divergences found in source module version " + moduleVersionSrc + " compared to destination module version " + moduleVersionDest + '.');
+					userInteractionCallbackPlugin.provideInfo("Divergences found in source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
 				}
 
 				byReferenceBooleanSrcDiverges.object = Boolean.valueOf(!listCommit.isEmpty());
 			}
 
 			if (byReferenceBooleanDestDiverges != null) {
-				userInteractionCallbackPlugin.provideInfo("Verifying divergences of destination module version " + moduleVersionDest + " compared to source module version " + moduleVersionSrc + '.');
+				userInteractionCallbackPlugin.provideInfo("Verifying divergences of destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
 
 				listCommit = scmPlugin.getListCommitDiverge(versionDest, versionSrc, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
@@ -847,9 +847,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (listCommit.isEmpty()) {
-					userInteractionCallbackPlugin.provideInfo("No divergence found in destination module version " + moduleVersionDest + " compared to source module version " + moduleVersionSrc + '.');
+					userInteractionCallbackPlugin.provideInfo("No divergence found in destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Divergences found in destination module version " + moduleVersionDest + " compared to source module version " + moduleVersionSrc + '.');
+					userInteractionCallbackPlugin.provideInfo("Divergences found in destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
 				}
 
 				byReferenceBooleanDestDiverges.object = Boolean.valueOf(!listCommit.isEmpty());
@@ -890,12 +890,12 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 						}
 
 						if (referenceChildSrc == null) {
-							MergeReferenceGraph.logger.info("A reference in the source module version " + moduleVersionSrc + " in " + pathModuleWorkspaceSrc + " corresponding to reference " + referenceChildDest + " in the destination module version " + moduleVersionDest + " in " + pathModuleWorkspaceDest + " could not be found. Destination reference skipped.");
+							MergeReferenceGraph.logger.info("A reference in the source ModuleVersion " + moduleVersionSrc + " in " + pathModuleWorkspaceSrc + " corresponding to reference " + referenceChildDest + " in the destination ModuleVersion " + moduleVersionDest + " in " + pathModuleWorkspaceDest + " could not be found. Destination reference skipped.");
 							continue;
 						}
 
 						if (referenceChildSrc.getModuleVersion().getVersion().equals(referenceChildDest.getModuleVersion().getVersion())) {
-							MergeReferenceGraph.logger.info("The reference source module version " + referenceChildSrc.getModuleVersion() + " is the same as that in the destination. Not recursing.");
+							MergeReferenceGraph.logger.info("The reference source ModuleVersion " + referenceChildSrc.getModuleVersion() + " is the same as that in the destination. Not recursing.");
 							continue;
 						}
 

@@ -188,7 +188,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 				switch (buildScope) {
 				case ONLY_USER:
-					userInteractionCallbackPlugin.provideInfo("Module version " + moduleVersion + " is not checked out in a user workspace directory and needs to be built. Aborting the build..");
+					userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is not checked out in a user workspace directory and needs to be built. Aborting the build..");
 					return taskEffects.abort();
 
 				case ONLY_USER_NO_ABORT_IF_SYSTEM:
@@ -200,7 +200,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 				case ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT:
 					if (!module.isNodePluginExists(ArtifactInfoPlugin.class, null)) {
-						userInteractionCallbackPlugin.provideInfo("Module version " + moduleVersion + " is not checked out in a user workspace directory, does not produce artifacts and and needs to be built. Aborting the build..");
+						userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is not checked out in a user workspace directory, does not produce artifacts and and needs to be built. Aborting the build..");
 						return taskEffects.abort();
 					}
 
@@ -213,7 +213,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 			if (taskId.equals(BuildTaskPluginImpl.TASK_ID_BUILD)) {
 				if (builderPlugin.isSomethingToBuild(pathModuleWorkspace)) {
-					try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter("Initiating the build process for module version " + moduleVersion + " in workspace directory " + pathModuleWorkspace + '.')) {
+					try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter("Initiating the build process for ModuleVersion " + moduleVersion + " in workspace directory " + pathModuleWorkspace + '.')) {
 						if (!builderPlugin.build(pathModuleWorkspace, buildContext, writerLog)) {
 							taskEffects.abort();
 						}

@@ -83,8 +83,8 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 		Pattern patternSrcVersion;
 
 		/**
-		 * Destination version in literal form. Can contain references to captured
-		 * subsequences within the matching source version. See Matcher.replaceAll.
+		 * Destination Version literal. Can contain references to captured subsequences
+		 * within the matching source version. See Matcher.replaceAll.
 		 */
 		String destinationVersion;
 

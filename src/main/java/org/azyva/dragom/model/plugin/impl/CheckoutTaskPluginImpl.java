@@ -21,12 +21,12 @@ package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirModeEnum;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
@@ -103,7 +103,7 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 			// directory. But we do not need to reserve it.
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 
-			userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " already exists. It is assumed to already contain the checked out sources for module version " + moduleVersion + ". No action taken.");
+			userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " already exists. It is assumed to already contain the checked out sources for ModuleVersion " + moduleVersion + ". No action taken.");
 		} else {
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
@@ -112,7 +112,7 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 			}
 
 			try {
-				userInteractionCallbackPlugin.provideInfo("Checking out module version " + moduleVersion + " into " + pathModuleWorkspace + '.');
+				userInteractionCallbackPlugin.provideInfo("Checking out ModuleVersion " + moduleVersion + " into " + pathModuleWorkspace + '.');
 
 				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);

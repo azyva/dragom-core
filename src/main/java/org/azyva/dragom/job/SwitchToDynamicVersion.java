@@ -213,7 +213,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 		// We use a try-finally construct to ensure that the current ModuleVersion
 		// always gets removed for the ReferencePath.
 		try {
-			SwitchToDynamicVersion.logger.info("Visiting leaf module version of reference path " + this.referencePath + '.');
+			SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			mapReferenceVisitModuleActionPerformed = new HashMap<Reference, VisitModuleActionPerformed>();
 
@@ -277,11 +277,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					VisitModuleActionPerformed visitModuleActionPerformedReference;
 
 					if (referenceChild.getModuleVersion() == null) {
-						SwitchToDynamicVersion.logger.info("Reference " + referenceChild + " within reference path " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+						SwitchToDynamicVersion.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
 						continue;
 					}
 
-					SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+					SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 					visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
 
@@ -315,7 +315,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				 * processed.
 				 * *******************************************************************************/
 
-				userInteractionCallbackPlugin.provideInfo("At least one reference within reference path " + this.referencePath + " was processed (and maybe switched). We must process the parent, potentially switching its version to a new dynamic version.");
+				userInteractionCallbackPlugin.provideInfo("At least one reference within ReferencePath " + this.referencePath + " was processed (and maybe switched). We must process the parent, potentially switching its version to a new dynamic version.");
 
 				indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 
@@ -331,7 +331,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 					visitModuleActionPerformed = VisitModuleActionPerformed.SWITCH;
 
-					userInteractionCallbackPlugin.provideInfo("The current module version " + referenceParent.getModuleVersion() + " was switched to version " + byReferenceVersionParent.object + ". The new version may have different references compared to the original one. Here is a summary of the version differences and actions that will be automatically reapplied to the new versions based on what was already processed:");
+					userInteractionCallbackPlugin.provideInfo("The current ModuleVersion " + referenceParent.getModuleVersion() + " was switched to version " + byReferenceVersionParent.object + ". The new version may have different references compared to the original one. Here is a summary of the version differences and actions that will be automatically reapplied to the new versions based on what was already processed:");
 
 					pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
 					listReferenceNew = referenceManagerPlugin.getListReference(pathModuleWorkspace);
@@ -449,8 +449,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					// listReference which must be set to the new reference List.
 					listReference = listReferenceNew;
 
-					// The parent module version was changed so we must recreate it (it is immutable)
-					// and we must update the ReferencePath that includes the module version as its
+					// The parent ModuleVersion was changed so we must recreate it (it is immutable)
+					// and we must update the ReferencePath that includes the ModuleVersion as its
 					// last element.
 					//TODO: This recreates a simple reference with less information. Don't know if OK.
 					referenceParent = new Reference(new ModuleVersion(referenceParent.getModuleVersion().getNodePath(), byReferenceVersionParent.object));
@@ -470,7 +470,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					// The current ReferencePath is matched by the ReferencePathMatcherAnd. The
 					// current ModuleVersion must be processed.
 
-					userInteractionCallbackPlugin.provideInfo("The reference path " + this.referencePath + " of the current module version is matched by the reference path matcher.");
+					userInteractionCallbackPlugin.provideInfo("The ReferencePathpath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePath matcher.");
 
 					indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 
@@ -483,8 +483,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					if (indParentSwitched) {
 						visitModuleActionPerformed = VisitModuleActionPerformed.SWITCH;
 
-						// The parent module version was changed so we must recreate it (it is immutable)
-						// and we must update the ReferencePath that includes the module version as its
+						// The parent ModuleVersion was changed so we must recreate it (it is immutable)
+						// and we must update the ReferencePath that includes the ModuleVersion as its
 						// last element.
 						//TODO: This recreates a simple reference with less information. Don't know if OK.
 						referenceParent = new Reference(new ModuleVersion(referenceParent.getModuleVersion().getNodePath(), byReferenceVersionParent.object));
@@ -549,7 +549,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
 				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo("This module version is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
+					userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
 				}
 
 				// We want to perform a single commit for all reference updates, but only if at
@@ -572,7 +572,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 							versionNewDynamic = this.mapNodePathVersionDynamic.get(referenceChild.getModuleVersion().getNodePath());
 
 							if (!versionNewDynamic.equals(referenceChild.getModuleVersion().getVersion())) {
-								userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within reference path " + this.referencePath + " was established at " + versionNewDynamic + " during its visit. We must update the parent.");
+								userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within ReferencePath " + this.referencePath + " was established at " + versionNewDynamic + " during its visit. We must update the parent.");
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 									return visitModuleActionPerformed;
@@ -580,19 +580,19 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic)) {
 									indReferenceUpdated = true;
-									message = "Reference " + referenceChild + " within reference path " + this.referencePath + " was changed to " + versionNewDynamic + '.';
+									message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to " + versionNewDynamic + '.';
 									userInteractionCallbackPlugin.provideInfo(message);
 									this.listActionsPerformed.add(message);
 								} else {
-									userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + this.referencePath + " needed to be changed to version " + versionNewDynamic + ", but this did not result in a real change in the reference. No change was performed.");
+									userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + versionNewDynamic + ", but this did not result in a real change in the reference. No change was performed.");
 								}
 							}
 						}
 					} else if (indCanMatchChildren) {
-						SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+						SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 						if (this.visitModuleForSwitchToDynamicVersion(referenceChild, byReferenceVersionChild) == VisitModuleActionPerformed.SWITCH) {
-							userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within reference path " + this.referencePath + " was switched to " + byReferenceVersionChild.object + " during its visit. We must update the parent.");
+							userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within ReferencePath " + this.referencePath + " was switched to " + byReferenceVersionChild.object + " during its visit. We must update the parent.");
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 								return visitModuleActionPerformed;
@@ -600,11 +600,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object)) {
 								indReferenceUpdated = true;
-								message = "Reference " + referenceChild + " within reference path " + this.referencePath + " was changed to " + byReferenceVersionChild.object + '.';
+								message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to " + byReferenceVersionChild.object + '.';
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
 							} else {
-								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
+								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
 							}
 						}
 
@@ -619,7 +619,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-					scmPlugin.commit(pathModuleWorkspace, "One or more references within reference path " + this.referencePath + " were updated following their switch to a dynamic version.", mapCommitAttr);
+					scmPlugin.commit(pathModuleWorkspace, "One or more references within ReferencePath " + this.referencePath + " were updated following their switch to a dynamic version.", mapCommitAttr);
 
 					if (indUserWorkspaceDir) {
 						message = "The previous changes were performed in " + pathModuleWorkspace + " which belongs to the user (you) and were committed to the SCM.";
@@ -676,7 +676,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		SwitchToDynamicVersion.logger.info("Processing request to switch module version " + moduleVersion + " to a dynamic version.");
+		SwitchToDynamicVersion.logger.info("Processing request to switch ModuleVersion " + moduleVersion + " to a dynamic version.");
 
 		module = ExecContextHolder.get().getModel().getModule(moduleVersion.getNodePath());
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -692,7 +692,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				// If the version of the module is the same as the new version stored in
 				// mapNodePathVersionDynamic, simply keep it. No switch needs to
 				// be performed.
-				SwitchToDynamicVersion.logger.info("Module version " + moduleVersion + " is currently a dynamic version that was already switched to or previously kept by the user. We simply keep it.");
+				SwitchToDynamicVersion.logger.info("ModuleVersion " + moduleVersion + " is currently a dynamic version that was already switched to or previously kept by the user. We simply keep it.");
 				return false;
 			} else {
 				// we rightfully assume the new version exists since it was inserted in
@@ -700,7 +700,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				// check it out in some workspace directory. It probably already is, but even if
 				// not, if the caller needs the sources, it is responsible for checking it out
 				// itself.
-				SwitchToDynamicVersion.logger.info("Another version " + versionNewDynamic + " of module version " + moduleVersion + " was already switched to or previously kept by the user. We assume we want to switch that module version to that same version.");
+				SwitchToDynamicVersion.logger.info("Another version " + versionNewDynamic + " of ModuleVersion " + moduleVersion + " was already switched to or previously kept by the user. We assume we want to switch that ModuleVersion to that same version.");
 
 				if (byReferenceVersion != null) {
 					byReferenceVersion.object = versionNewDynamic;
@@ -725,16 +725,16 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 		indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
 
 		if (indSameVersion) {
-			userInteractionCallbackPlugin.provideInfo("Module version " + moduleVersion + " is to be kept. The artifact version will simply be adjusted if required.");
+			userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is to be kept. The artifact version will simply be adjusted if required.");
 		} else {
-			userInteractionCallbackPlugin.provideInfo("Module version " + moduleVersion + " will be switched to version " + versionNewDynamic + '.');
+			userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " will be switched to version " + versionNewDynamic + '.');
 		}
 
 		try {
 			if (indUserWorkspaceDir) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-				userInteractionCallbackPlugin.provideInfo("Original module version " + moduleVersion + " is already checked out in " + pathModuleWorkspace + ". The version in this directory will be switched to the new version " + versionNewDynamic + '.');
+				userInteractionCallbackPlugin.provideInfo("Original ModuleVersion " + moduleVersion + " is already checked out in " + pathModuleWorkspace + ". The version in this directory will be switched to the new version " + versionNewDynamic + '.');
 
 				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
 					throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this job.");

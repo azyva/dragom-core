@@ -745,7 +745,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 		moduleClassificationPath = this.getModule().getNodePath();
 
-		// We first check if a user workspace directory exists for the module version.
+		// We first check if a user workspace directory exists for the ModuleVersion.
 
 		workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(moduleClassificationPath, version));
 

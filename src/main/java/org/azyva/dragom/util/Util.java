@@ -131,11 +131,6 @@ public final class Util {
 	private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
 
 	/**
-	 * Name of the ResourceBundle of the class.
-	 */
-	public static final String RESOURCE_BUNDLE = "org/azyva/util/UtilResourceBundle";
-
-	/**
 	 * See description in ResourceBundle.
 	 */
 	public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
@@ -216,7 +211,7 @@ public final class Util {
 	 * Being a utility class, this ResourceBundle also contains global locale-specific
 	 * resources which can be used by other classes.
 	 */
-	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.RESOURCE_BUNDLE);
+	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.class.getName());
 
 	/**
 	 * Indicates that the Dragom properties have been loaded.

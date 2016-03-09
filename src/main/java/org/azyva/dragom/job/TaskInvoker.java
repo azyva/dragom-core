@@ -89,11 +89,6 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	private static final Logger logger = LoggerFactory.getLogger(TaskInvoker.class);
 
 	/**
-	 * Name of the ResourceBundle of the class.
-	 */
-	public static final String RESOURCE_BUNDLE = "org/azyva/job/TaskInvokerToolResourceBundle";
-
-	/**
 	 * See description in ResourceBundle.
 	 */
 	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
@@ -111,8 +106,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(TaskInvoker.RESOURCE_BUNDLE);
-
+	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(TaskInvoker.class.getName());
 
 	/**
 	 * ID of the TaskPlugin to invoke.
@@ -173,7 +167,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-		// We use a try-finally construct to ensure that the current module version
+		// We use a try-finally construct to ensure that the current ModuleVersion
 		// always gets removed for the current ReferencePath.
 		try {
 			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
@@ -228,11 +222,11 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 					}
 
 					if (referenceChild.getModuleVersion() == null) {
-						TaskInvoker.logger.info("Reference " + referenceChild + " within reference path " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+						TaskInvoker.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
 						continue;
 					}
 
-					TaskInvoker.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+					TaskInvoker.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 					this.visitModuleVersion(referenceChild, null);
 

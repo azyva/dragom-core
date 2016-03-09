@@ -163,10 +163,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-		// We use a try-finally construct to ensure that the current module version
+		// We use a try-finally construct to ensure that the current ModuleVersion
 		// always gets removed for the current ReferencePath.
 		try {
-			CreateStaticVersion.logger.info("Visiting leaf module version of reference path " + this.referencePath + '.');
+			CreateStaticVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
 
@@ -184,11 +184,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					// would be naturally performed later in processCreateStaticVersion. But it avoid
 					// useless processing and more importantly it is less confusing for the user.
 					if (this.handleAlreadyCreatedStaticVersion(referenceParent.getModuleVersion(), byReferenceVersion)) {
-						userInteractionCallbackPlugin.provideInfo("The reference path " + this.referencePath + " of the current module version is matched by the reference path matcher. But a static version " + byReferenceVersion.object + " was already established for the leaf module version. We simply reuse that version.");
+						userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. But a static version " + byReferenceVersion.object + " was already established for the leaf ModuleVersion. We simply reuse that version.");
 						return true;
 					}
 
-					userInteractionCallbackPlugin.provideInfo("The reference path " + this.referencePath + " of the current module version is matched by the reference path matcher. Initiating the process for creating a static version for module version " + referenceParent.getModuleVersion() + '.');
+					userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. Initiating the process for creating a static version for ModuleVersion " + referenceParent.getModuleVersion() + '.');
 
 					// We are about to delegate to visitModuleForCreateStaticVersion for the rest of
 					// the processing. This method starts working on the same current module and also
@@ -243,11 +243,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						boolean indVersionChanged;
 
 						if (referenceChild.getModuleVersion() == null) {
-							CreateStaticVersion.logger.info("Reference " + referenceChild + " within reference path " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+							CreateStaticVersion.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
 							continue;
 						}
 
-						CreateStaticVersion.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+						CreateStaticVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 						byReferenceVersionChild = new ByReference<Version>();
 
@@ -263,16 +263,16 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						if (indVersionChanged) {
 							String message;
 
-							userInteractionCallbackPlugin.provideInfo("The version of reference " + referenceChild + " within reference path " + this.referencePath + " has been changed to " + byReferenceVersionChild.object + ". We must update the parent.");
+							userInteractionCallbackPlugin.provideInfo("The version of reference " + referenceChild + " within ReferencePath " + this.referencePath + " has been changed to " + byReferenceVersionChild.object + ". We must update the parent.");
 
 							if (indUserWorkspaceDir) {
-								userInteractionCallbackPlugin.provideInfo("This module version is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
+								userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
 							}
 
 							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object)) {
 								Map<String, String> mapCommitAttr;
 
-								message = "Reference " + referenceChild + " within reference path " + this.referencePath + " was changed to version " + byReferenceVersionChild.object + '.';
+								message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to version " + byReferenceVersionChild.object + '.';
 								mapCommitAttr = new HashMap<String, String>();
 								mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 								scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -287,7 +287,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 									CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " which belongs to the system and was committed to the SCM.");
 								}
 							} else {
-								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
+								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
 							}
 						}
 					}
@@ -335,16 +335,16 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		pathModuleWorkspace = null;
 		this.referencePath.add(referenceParent);
 
-		// We use a try - finally construct to ensure that the current module version
+		// We use a try - finally construct to ensure that the current ModuleVersion
 		// always gets removed for the current ReferencePath.
 		try {
 			if (referenceParent.getModuleVersion().getVersion().getVersionType() != VersionType.DYNAMIC) {
 				// This should not happen since this method is not supposed to be called on static
 				// version.
-				throw new RuntimeException("Module version " + referenceParent.getModuleVersion() + " within reference path " + this.referencePath + " is not dynamic.");
+				throw new RuntimeException("ModuleVersion " + referenceParent.getModuleVersion() + " within ReferencePath " + this.referencePath + " is not dynamic.");
 			}
 
-			CreateStaticVersion.logger.info("Visiting leaf module version of reference path " + this.referencePath + '.');
+			CreateStaticVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
@@ -354,7 +354,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			// would be naturally performed later in processCreateStaticVersion. But it avoid
 			// useless processing and more importantly it is less confusing for the user.
 			if (this.handleAlreadyCreatedStaticVersion(referenceParent.getModuleVersion(), byReferenceVersion)) {
-				userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersion.object + " was already created for module version " + referenceParent.getModuleVersion() + ". We automatically reuse that same version.");
+				userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersion.object + " was already created for ModuleVersion " + referenceParent.getModuleVersion() + ". We automatically reuse that same version.");
 				return true;
 			}
 
@@ -396,7 +396,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				if (referenceChild.getModuleVersion() == null) {
 					if (referenceChild.getArtifactVersion().getVersionType() == VersionType.DYNAMIC) {
 						//TODO: Maybe handle that (simply ask the user for new static version to use).
-						throw new RuntimeExceptionUserError("Reference " + referenceChild + " within reference path " + this.referencePath + " is refers to a dynamic version of an external module.");
+						throw new RuntimeExceptionUserError("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " refers to a dynamic version of an external module.");
 					}
 
 					continue;
@@ -406,7 +406,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					continue;
 				}
 
-				CreateStaticVersion.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+				CreateStaticVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 				byReferenceVersionReference = new ByReference<Version>();
 
@@ -414,7 +414,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					return false;
 				}
 
-				userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersionReference.object + " for reference " + referenceChild + " within reference path " + this.referencePath + " was created during its visit. We must update the parent.");
+				userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersionReference.object + " for reference " + referenceChild + " within ReferencePath " + this.referencePath + " was created during its visit. We must update the parent.");
 
 				// Since we will be updating the module, we must interact with the user about the
 				// workspace directory in which the module is checked out.
@@ -424,7 +424,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " will be updated in order to change the version to " + byReferenceVersionReference.object + '.');
 
 				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo("This module version is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
+					userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
 				}
 
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
@@ -434,7 +434,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionReference.object)) {
 					Map<String, String> mapCommitAttr;
 
-					message = "Reference " + referenceChild + " within reference path " + this.referencePath + " was changed to version " + byReferenceVersionReference.object + '.';
+					message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to version " + byReferenceVersionReference.object + '.';
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -449,7 +449,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " which belongs to the system and was committed to the SCM.");
 					}
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + this.referencePath + " needed to be changed to version " + byReferenceVersionReference.object + ", but this did not result in a real change in the reference. No change was performed.");
+					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionReference.object + ", but this did not result in a real change in the reference. No change was performed.");
 				}
 
 			}
@@ -464,7 +464,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			return this.processCreateStaticVersion(referenceParent.getModuleVersion(), byReferenceVersion);
 
 			// The version of the module was changed but we do not need to update the
-			// reference path since we are anyway exiting from this module and removing it
+			// ReferencePath since we are anyway exiting from this module and removing it
 			// from the ReferencePath.
 		} finally {
 			if (pathModuleWorkspace != null) {
@@ -512,13 +512,13 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-		CreateStaticVersion.logger.info("Processing request to create a static version for module version " + moduleVersion + '.');
+		CreateStaticVersion.logger.info("Processing request to create a static version for ModuleVersion " + moduleVersion + '.');
 
 		// New versions stored in mapModuleVersionStatic take precedence. If a mew version
 		// is found in this Map we are sure it has been created for the module and we can
 		// simply return it.
 		if (this.handleAlreadyCreatedStaticVersion(moduleVersion, byReferenceVersion)) {
-			userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersion.object + " was already created for module version " + moduleVersion + ". We automatically reuse that same version.");
+			userInteractionCallbackPlugin.provideInfo("A static version " + byReferenceVersion.object + " was already created for ModuleVersion " + moduleVersion + ". We automatically reuse that same version.");
 			return true;
 		}
 
@@ -529,7 +529,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		versionStaticNew = newStaticVersionPlugin.getVersionNewStatic(moduleVersion.getVersion());
 
 		if (scmPlugin.isVersionExists(versionStaticNew)) {
-			userInteractionCallbackPlugin.provideInfo("An existing static version " + versionStaticNew + " for module version " + moduleVersion + " was selected. The process will continue as if that version had just been created. It probably was in a previous iteration of this same process.");
+			userInteractionCallbackPlugin.provideInfo("An existing static version " + versionStaticNew + " for ModuleVersion " + moduleVersion + " was selected. The process will continue as if that version had just been created. It probably was in a previous iteration of this same process.");
 			this.mapModuleVersionStatic.put(moduleVersion, versionStaticNew);
 			byReferenceVersion.object = versionStaticNew;
 			return true;
@@ -540,13 +540,13 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
 		workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);
 		indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
-		userInteractionCallbackPlugin.provideInfo("The new static version " + versionStaticNew + " will be created for module version " + moduleVersion + '.');
+		userInteractionCallbackPlugin.provideInfo("The new static version " + versionStaticNew + " will be created for ModuleVersion " + moduleVersion + '.');
 
 		try {
 			if (indUserWorkspaceDir) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-				userInteractionCallbackPlugin.provideInfo("Original module version " + moduleVersion + " is already checked out in " + pathModuleWorkspace + ". The actions for creating the new static version " + versionStaticNew + " will be performed in this directory .");
+				userInteractionCallbackPlugin.provideInfo("Original ModuleVersion " + moduleVersion + " is already checked out in " + pathModuleWorkspace + ". The actions for creating the new static version " + versionStaticNew + " will be performed in this directory .");
 
 				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
 					throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this job.");
@@ -599,14 +599,14 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				builderPlugin = module.getNodePlugin(BuilderPlugin.class,  null);
 				buildContext = runtimePropertiesPlugin.getProperty(module, CreateStaticVersion.RUNTIME_PROPERTY_CREATE_STATIC_VERSION_BUILD_CONTEXT);
 
-				try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter("Initiating the build process for module version " + moduleVersion + " with new artifact version " + artifactVersion + " in workspace directory " + pathModuleWorkspace + " to ensure the building the module is successful before creating the new static version " + versionStaticNew + '.')) {
+				try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter("Initiating the build process for ModuleVersion " + moduleVersion + " with new artifact version " + artifactVersion + " in workspace directory " + pathModuleWorkspace + " to ensure the building the module is successful before creating the new static version " + versionStaticNew + '.')) {
 					indBuildSuccessful = builderPlugin.build(pathModuleWorkspace, buildContext, writerLog);
 				} catch (IOException ioe) {
 					throw new RuntimeException(ioe);
 				}
 
 				if (!indBuildSuccessful) {
-					userInteractionCallbackPlugin.provideInfo("The build for module version " + moduleVersion + " with new artifact version " + artifactVersion + " in workspace directory " + pathModuleWorkspace + " failed. Aborting the process for creating new static version " + versionStaticNew + '.');
+					userInteractionCallbackPlugin.provideInfo("The build for ModuleVersion " + moduleVersion + " with new artifact version " + artifactVersion + " in workspace directory " + pathModuleWorkspace + " failed. Aborting the process for creating new static version " + versionStaticNew + '.');
 				}
 			}
 

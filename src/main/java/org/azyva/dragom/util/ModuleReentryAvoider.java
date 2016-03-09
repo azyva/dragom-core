@@ -40,7 +40,7 @@ public class ModuleReentryAvoider {
 	/**
 	 * Indicates the intent of processing a module.
 	 *
-	 * @param moduleVersion Module and its version.
+	 * @param moduleVersion ModuleVersion.
 	 * @return Indicates if the module can be processed, meaning that it has not
 	 * already been processed.
 	 */

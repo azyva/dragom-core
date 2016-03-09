@@ -19,8 +19,10 @@
 
 package org.azyva.dragom.job;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
@@ -75,6 +77,26 @@ public class RootManager {
 	 * The ReferencePathMatcherByElement's are represented with their literal form.
 	 */
 	public static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_NOT_EXIST = "MODULE_NOT_EXIST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERSION_NOT_EXIST = "VERSION_NOT_EXIST";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(RootManager.class.getName());
 
 	/**
 	 * @return List of root {@link ModuleVersion}'s.
@@ -290,7 +312,7 @@ public class RootManager {
 		module = model.getModule(moduleVersion.getNodePath());
 
 		if (module == null) {
-			throw new RuntimeExceptionUserError("Module version " + moduleVersion + " refers to a non existing module.");
+			throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_MODULE_NOT_EXIST), moduleVersion));
 		}
 
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -298,7 +320,7 @@ public class RootManager {
 		// We assume the default version, when getVersion returns null, always exists.
 		if (moduleVersion.getVersion() != null) {
 			if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-				throw new RuntimeExceptionUserError("Module version " + moduleVersion + " refers to a non existing version of the module.");
+				throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_VERSION_NOT_EXIST), moduleVersion));
 			}
 		}
 	}

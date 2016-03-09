@@ -324,7 +324,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 		SimpleClassificationNode simpleClassificationNodeCurrent;
 
 		if (!nodePath.isPartial()) {
-			throw new RuntimeException("Cannot get a classification node given a complete non-partial node path " + nodePath + '.');
+			throw new RuntimeException("Cannot get a classification node given a complete non-partial NodsePath " + nodePath + '.');
 		}
 
 		simpleClassificationNodeCurrent = this.simpleClassificationNodeRoot;
@@ -355,7 +355,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 		SimpleClassificationNode classificationNode;
 
 		if (nodePath.isPartial()) {
-			throw new RuntimeException("Cannot get a module given a partial node path " + nodePath + '.');
+			throw new RuntimeException("Cannot get a module given a partial NodsePath " + nodePath + '.');
 		}
 
 		classificationNode = (SimpleClassificationNode)this.getClassificationNode(nodePath.getNodePathParent());

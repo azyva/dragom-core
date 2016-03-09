@@ -23,9 +23,9 @@ import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.EventPlugin;
 import org.azyva.dragom.execcontext.plugin.ToolLifeCycleExecContextPlugin;
 import org.azyva.dragom.model.Node;
-import org.azyva.dragom.model.event.EventManager;
 import org.azyva.dragom.model.event.NodeEvent;
 import org.azyva.dragom.model.event.NodeEventListener;
+import org.azyva.dragom.model.event.support.EventManager;
 
 /**
  * Default {@link EventPlugin} implementation.

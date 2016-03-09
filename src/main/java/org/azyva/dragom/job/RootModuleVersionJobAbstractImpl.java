@@ -214,7 +214,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		Module module;
 		ScmPlugin scmPlugin;
 
-		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root module versions " + this.listModuleVersionRoot + " to validate them.");
+		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + " to validate them.");
 
 		indListRootModuleVersionChanged = false;
 
@@ -241,15 +241,15 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(moduleVersion));
 
 				if (setWorkspaceDir.size() > 1) {
-					throw new RuntimeExceptionUserError("The root module version " + moduleVersion + " does not specify a version and multiple workspace directories contain versions of this module.");
+					throw new RuntimeExceptionUserError("The root ModuleVersion " + moduleVersion + " does not specify a version and multiple workspace directories contain versions of this module.");
 				}
 
 				if (setWorkspaceDir.size() == 1) {
 					version = ((WorkspaceDirUserModuleVersion)setWorkspaceDir.iterator().next()).getModuleVersion().getVersion();
-					RootModuleVersionJobAbstractImpl.logger.info("Root module version " + moduleVersion + " does not specify a version. We update it to the version " + version + " of the module within the workspace.");
+					RootModuleVersionJobAbstractImpl.logger.info("Root ModuleVersion " + moduleVersion + " does not specify a version. We update it to the version " + version + " of the module within the workspace.");
 				} else {
 					version = scmPlugin.getDefaultVersion();
-					RootModuleVersionJobAbstractImpl.logger.info("Root module version " + moduleVersion + " does not specify a version. We update it to the default version " + version + '.');
+					RootModuleVersionJobAbstractImpl.logger.info("Root ModuleVersion " + moduleVersion + " does not specify a version. We update it to the default version " + version + '.');
 				}
 
 				// ModuleVersion is immutable. We need to create a new one.
@@ -262,7 +262,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			}
 		}
 
-		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root module versions " + this.listModuleVersionRoot + " completed for validation.");
+		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root ModuleVersion's " + this.listModuleVersionRoot + " completed for validation.");
 
 		return indListRootModuleVersionChanged;
 	}
@@ -287,21 +287,21 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		indListRootModuleVersionChanged = false;
 		byReferenceVersion = new ByReference<Version>();
 
-		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root module versions " + this.listModuleVersionRoot + '.');
+		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + '.');
 
 		for (indexModuleVersionRoot = 0; indexModuleVersionRoot < this.listModuleVersionRoot.size(); indexModuleVersionRoot++) {
 			boolean indVersionChanged;
 
 			moduleVersion = this.listModuleVersionRoot.get(indexModuleVersionRoot);
 
-			RootModuleVersionJobAbstractImpl.logger.info("Initiating a traversal of the reference graph rooted at module version " + moduleVersion + '.');
+			RootModuleVersionJobAbstractImpl.logger.info("Initiating a traversal of the reference graph rooted at ModuleVersion " + moduleVersion + '.');
 
 			indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
 
-			RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at module version " + moduleVersion + " is completed.");
+			RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at ModuleVersion " + moduleVersion + " is completed.");
 
 			if (indVersionChanged) {
-				RootModuleVersionJobAbstractImpl.logger.info("During this traversal the version of the root module version " + moduleVersion + " was changed to " + byReferenceVersion.object + ". We update the root module version.");
+				RootModuleVersionJobAbstractImpl.logger.info("During this traversal the version of the root ModuleVersion " + moduleVersion + " was changed to " + byReferenceVersion.object + ". We update the root ModuleVersion.");
 
 				// We must create a new ModuleVersion as it is immutable.
 				this.listModuleVersionRoot.set(indexModuleVersionRoot, moduleVersion = new ModuleVersion(moduleVersion.getNodePath(), byReferenceVersion.object));
@@ -314,7 +314,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			}
 		}
 
-		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root module versions " + this.listModuleVersionRoot + " completed.");
+		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root ModuleVersions " + this.listModuleVersionRoot + " completed.");
 
 		if (this.listActionsPerformed.size() != 0) {
 			userInteractionCallbackPlugin.provideInfo("The following significant actions were performed:\n" + StringUtils.join(this.listActionsPerformed, '\n'));
@@ -365,19 +365,19 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		// We use a try-finally construct to ensure that the current ModuleVersion always
 		// gets removed for the current ReferencePath.
 		try {
-			RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf module version of reference path " + this.referencePath + '.');
+			RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
-				userInteractionCallbackPlugin.provideInfo("Module version " + referenceParent.getModuleVersion() + " is dynamic and is not to be handled.");
+				userInteractionCallbackPlugin.provideInfo("ModuleVersion " + referenceParent.getModuleVersion() + " is dynamic and is not to be handled.");
 				return false;
 			}
 
 			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
-				userInteractionCallbackPlugin.provideInfo("Module version " + referenceParent.getModuleVersion() + " is static and is not to be handled.");
+				userInteractionCallbackPlugin.provideInfo("ModuleVersion " + referenceParent.getModuleVersion() + " is static and is not to be handled.");
 				return false;
 			}
 
@@ -385,10 +385,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			if (this.referencePathMatcher.matches(this.referencePath)) {
 				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
-					userInteractionCallbackPlugin.provideInfo("The reference path " + this.referencePath + " of the current module version is matched by the reference path matcher. But that module version was already processed and is skipped.");
+					userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. But that ModuleVersion was already processed and is skipped.");
 					return false;
 				} else {
-					userInteractionCallbackPlugin.provideInfo("The reference path " + this.referencePath + " of the current module version is matched by the reference path matcher. Initiating the process for module version " + referenceParent.getModuleVersion() + '.');
+					userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. Initiating the process for ModuleVersion " + referenceParent.getModuleVersion() + '.');
 				}
 
 				// We are about to delegate to visitMatchedModuleVersion for the rest of the
@@ -438,11 +438,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 				for (Reference referenceChild: listReference) {
 					if (referenceChild.getModuleVersion() == null) {
-						RootModuleVersionJobAbstractImpl.logger.info("Reference " + referenceChild + " within reference path " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+						RootModuleVersionJobAbstractImpl.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
 						continue;
 					}
 
-					RootModuleVersionJobAbstractImpl.logger.info("Processing reference " + referenceChild + " within reference path " + this.referencePath + '.');
+					RootModuleVersionJobAbstractImpl.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 					// Generally the byReferenceVersion parameter must not be null. But here we are
 					// recursively invoking the same non-overridden method and we know this parameter

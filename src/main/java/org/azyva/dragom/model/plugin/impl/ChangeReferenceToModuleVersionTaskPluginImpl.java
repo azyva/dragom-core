@@ -181,7 +181,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 			Version versionNew;
 
 			if (referenceChild.getModuleVersion() == null) {
-				ChangeReferenceToModuleVersionTaskPluginImpl.logger.info("Reference " + referenceChild + " within reference path " + referencePath + " does not include a source reference known to Dragom. It cannot be processed.");
+				ChangeReferenceToModuleVersionTaskPluginImpl.logger.info("Reference " + referenceChild + " within ReferencePath " + referencePath + " does not include a source reference known to Dragom. It cannot be processed.");
 				continue;
 			}
 
@@ -190,14 +190,14 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 			if (versionNew != null) {
 				String message;
 
-				userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + referencePath + " will be changed to version " + versionNew + '.');
+				userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + referencePath + " will be changed to version " + versionNew + '.');
 
 				workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
 
 				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo("This module version is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
+					userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
 				}
 
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
@@ -208,7 +208,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 					Map<String, String> mapCommitAttr;
 					taskEffects.referenceChanged();
 
-					message = "Reference " + referenceChild + " within reference path " + referencePath + " was changed to version " + versionNew + '.';
+					message = "Reference " + referenceChild + " within ReferencePath " + referencePath + " was changed to version " + versionNew + '.';
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -225,7 +225,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 
 					taskEffects.actionPerformed(message);
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within reference path " + referencePath + " needed to be changed to version " + versionNew + ", but this did not result in a real change in the reference. No change was performed.");
+					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + referencePath + " needed to be changed to version " + versionNew + ", but this did not result in a real change in the reference. No change was performed.");
 				}
 			}
 		}
