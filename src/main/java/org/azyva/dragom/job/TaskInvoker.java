@@ -20,8 +20,10 @@
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
@@ -87,6 +89,32 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	private static final Logger logger = LoggerFactory.getLogger(TaskInvoker.class);
 
 	/**
+	 * Name of the ResourceBundle of the class.
+	 */
+	public static final String RESOURCE_BUNDLE = "org/azyva/job/TaskInvokerToolResourceBundle";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_LEAF_REFERENCE_MATCHED = "LEAF_REFERENCE_MATCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED = "MODULE_VERSION_ALREADY_PROCESSED";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(TaskInvoker.RESOURCE_BUNDLE);
+
+
+	/**
 	 * ID of the TaskPlugin to invoke.
 	 */
 	private String taskPluginId;
@@ -148,7 +176,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 		// We use a try-finally construct to ensure that the current module version
 		// always gets removed for the current ReferencePath.
 		try {
-			userInteractionCallbackPlugin.provideInfo("Visiting leaf module version of reference path " + this.referencePath + '.');
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
 
@@ -160,13 +188,15 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 			if (!taskPlugin.isDepthFirst()) {
 				if (this.referencePathMatcher.matches(this.referencePath)) {
 					if (this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_LEAF_REFERENCE_MATCHED), this.referencePath, this.taskPluginId, this.taskId));
+
 						taskEffects = taskPlugin.performTask(this.taskId, referenceParent.getModuleVersion().getVersion(), this.referencePath);
 
 						if (this.handleTaskEffects(taskEffects)) {
 							return false;
 						}
 					} else {
-						userInteractionCallbackPlugin.provideInfo("Module version " + referenceParent.getModuleVersion() + " has already been processed. Processing aborted and reentry avoided.");
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
 						return false;
 					}
 				}
@@ -219,12 +249,12 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 
 						this.handleTaskEffects(taskEffects); // No need to test return value since we are done anyways.
 					} else {
-						userInteractionCallbackPlugin.provideInfo("Module version " + referenceParent.getModuleVersion() + " has already been processed. Processing aborted and reentry avoided.");
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
 					}
 				}
 			}
 		} finally {
-			this.referencePath.remove(this.referencePath.size() - 1);
+			this.referencePath.removeLeafReference();
 		}
 
 		return false;

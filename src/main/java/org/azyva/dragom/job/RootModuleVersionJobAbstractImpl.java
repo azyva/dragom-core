@@ -395,7 +395,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				// processing. This method starts working on the same current module and also
 				// manages the graph path. We must therefore reset it now so that it can re-add
 				// the current reference. And we must prevent the finally block to reset it.
-				this.referencePath.remove(this.referencePath.size() - 1);
+				this.referencePath.removeLeafReference();;
 				indReferencePathAlreadyReverted = true;
 
 				// Util.isAbort() may be set, but it is not necessary to handle it since we are
@@ -456,7 +456,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			}
 		} finally {
 			if (!indReferencePathAlreadyReverted) {
-				this.referencePath.remove(this.referencePath.size() - 1);
+				this.referencePath.removeLeafReference();
 			}
 		}
 

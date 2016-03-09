@@ -92,7 +92,7 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 
 		taskEffects = new TaskPlugin.TaskEffects();
 
-		moduleVersion = referencePath.get(referencePath.size() - 1).getModuleVersion();
+		moduleVersion = referencePath.getLeafModuleVersion();
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 

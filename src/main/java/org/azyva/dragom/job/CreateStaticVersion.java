@@ -194,7 +194,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					// the processing. This method starts working on the same current module and also
 					// manages the graph path. We must therefore reset it now so that it can re-add
 					// the current reference. And we must prevent the finally block to reset it.
-					this.referencePath.remove(this.referencePath.size() - 1);
+					this.referencePath.removeLeafReference();
 					indReferencePathAlreadyReverted = true;
 
 					// When the Version of the ModuleVersion is dynamic and the ReferencePath is
@@ -299,7 +299,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			}
 
 			if (!indReferencePathAlreadyReverted) {
-				this.referencePath.remove(this.referencePath.size() - 1);
+				this.referencePath.removeLeafReference();
 			}
 		}
 
@@ -471,7 +471,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 			}
 
-			this.referencePath.remove(this.referencePath.size() - 1);
+			this.referencePath.removeLeafReference();
 		}
 	}
 

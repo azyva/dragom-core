@@ -633,7 +633,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 			return visitModuleActionPerformed;
 		} finally {
-			this.referencePath.remove(this.referencePath.size() - 1);
+			this.referencePath.removeLeafReference();
 
 			if (pathModuleWorkspace != null) {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);

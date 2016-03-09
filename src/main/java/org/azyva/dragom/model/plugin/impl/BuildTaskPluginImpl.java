@@ -24,7 +24,6 @@ import java.io.Writer;
 import java.nio.file.Path;
 
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
@@ -32,6 +31,7 @@ import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirModeEnum;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
@@ -171,7 +171,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 		taskEffects = new TaskPlugin.TaskEffects();
 
-		moduleVersion = referencePath.get(referencePath.size() - 1).getModuleVersion();
+		moduleVersion = referencePath.getLeafModuleVersion();
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 

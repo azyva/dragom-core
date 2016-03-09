@@ -399,13 +399,13 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			// This method starts working on the same current module and also manages the
 			// graph path. We must therefore reset it now so that it can re-add
 			// the current reference. And we must prevent the finally block to reset it.
-			this.referencePath.remove(this.referencePath.size() - 1);
+			this.referencePath.removeLeafReference();
 			indReferencePathAlreadyReverted = true;
 
 			this.mergeModuleVersion(referencePathSrc, referenceParent);
 		} finally {
 			if (!indReferencePathAlreadyReverted) {
-				this.referencePath.remove(this.referencePath.size() - 1);
+				this.referencePath.removeLeafReference();
 			}
 		}
 
@@ -457,7 +457,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 		try {
 			moduleVersionDest = referenceDest.getModuleVersion();
-			moduleVersionSrc = referencePathSrc.get(referencePathSrc.size() - 1).getModuleVersion();
+			moduleVersionSrc = referencePathSrc.getLeafModuleVersion();
 
 			module = model.getModule(moduleVersionDest.getNodePath());
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -742,7 +742,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								return true;
 							}
 						} finally {
-							referencePathSrc.remove(referencePathSrc.size() - 1);
+							referencePathSrc.removeLeafReference();
 						}
 					}
 				}
@@ -756,7 +756,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspaceSrc);
 			}
 
-			this.referencePath.remove(this.referencePath.size() - 1);
+			this.referencePath.removeLeafReference();
 		}
 
 		return false;

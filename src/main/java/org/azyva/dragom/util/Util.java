@@ -216,7 +216,7 @@ public final class Util {
 	 * Being a utility class, this ResourceBundle also contains global locale-specific
 	 * resources which can be used by other classes.
 	 */
-	private static ResourceBundle resourceBundle;
+	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.RESOURCE_BUNDLE);
 
 	/**
 	 * Indicates that the Dragom properties have been loaded.
@@ -431,10 +431,6 @@ public final class Util {
 	 *   specific resources that can be used by other classes.
 	 */
 	private static ResourceBundle getResourceBundle() {
-		if (Util.resourceBundle == null) {
-			Util.resourceBundle = ResourceBundle.getBundle(Util.RESOURCE_BUNDLE);
-		}
-
 		return Util.resourceBundle;
 	}
 
