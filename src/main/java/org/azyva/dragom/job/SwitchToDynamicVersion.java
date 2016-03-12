@@ -17,6 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+bracket
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
@@ -190,6 +191,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 */
 	private VisitModuleActionPerformed visitModuleForSwitchToDynamicVersion(Reference referenceParent, ByReference<Version> byReferenceVersionParent) {
 		Map<Reference, VisitModuleActionPerformed> mapReferenceVisitModuleActionPerformed;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		Module module;
 		ScmPlugin scmPlugin;
 		WorkspacePlugin workspacePlugin = null;
@@ -210,10 +212,13 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			byReferenceVersionParent = new ByReference<Version>();
 		}
 
-		// We use a try-finally construct to ensure that the current ModuleVersion
-		// always gets removed for the ReferencePath.
+		bracketHandle = null;
+
+		// We use a try-finally construct to ensure that the current ModuleVersion always
+		// gets removed for the current ReferencePath, and that the
+		// UserInteractionCallback BracketHandle gets closed.
 		try {
-			SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
+			bracketHandle = userInteractionCallbackPlugin.startBracket("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			mapReferenceVisitModuleActionPerformed = new HashMap<Reference, VisitModuleActionPerformed>();
 
@@ -638,6 +643,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			if (pathModuleWorkspace != null) {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 			}
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
+			}
 		}
 	}
 
@@ -661,6 +670,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 */
 	private boolean processSwitchToDynamicVersion(ModuleVersion moduleVersion, ByReference<Version> byReferenceVersion) {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		Module module;
 		ScmPlugin scmPlugin;
 		NewDynamicVersionPlugin newDynamicVersionPlugin;
@@ -730,7 +740,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " will be switched to version " + versionNewDynamic + '.');
 		}
 
+		bracketHandle = null;
+
 		try {
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
+
 			if (indUserWorkspaceDir) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
@@ -888,6 +902,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 		} finally {
 			if (pathModuleWorkspace != null) {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+			}
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
 			}
 		}
 

@@ -20,9 +20,11 @@
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
@@ -38,6 +40,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
@@ -49,7 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for implementing tasks based on root {@link ModuleVersions}'s.
+ * Base class for implementing jobs based on root {@link ModuleVersions}'s.
  * <p>
  * It factors out code that is often encountered in these types of tasks.
  * <p>
@@ -59,6 +62,12 @@ import org.slf4j.LoggerFactory;
  * This class does not attempt to completely encapsulate its implementation. It
  * has protected instance variables available to subclasses to simplify
  * implementation.
+ * <p>
+ * This class has similarities with {@link TaskInvoker}, but should not be
+ * confused. This ia a base class for implementing jobs that are to be applied to
+ * to ModuleVersion's matched by {@link ReferencePathMatcher} while traversing
+ * reference graphs rooted at root ModuleVersion's. TaskInvoker is such a job which
+ * invokes a {@link TaskPlugin} for each matched ModuleVersion and its children.
  *
  * @author David Raymond
  */
@@ -67,6 +76,75 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * Logger for the class.
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(RootModuleVersionJobAbstractImpl.class);
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ROOT_MODULE_VERSION_NOT_KNOWN = "ROOT_MODULE_VERSION_NOT_KNOWN";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE = "MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION = "UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT = "UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERSION_NOT_EXIST = "VERSION_NOT_EXIST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION = "INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED = "TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_UPDATE_CHANGED_ROOT_MODULE_VERSION = "UPDATE_CHANGED_ROOT_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED = "VISITING_LEAF_REFERENCE_MATCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED = "MODULE_VERSION_ALREADY_PROCESSED";
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ACTIONS_PERFORMED = "ACTIONS_PERFORMED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobAbstractImpl.class.getName() + "ResourceBundle");
 
 	/**
 	 * List root ModuleVersion's on which to initiate the traversal of the reference
@@ -100,6 +178,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 	/*
 	 * {@link ModuleReentryAvoider}.
+	 * <p>
+	 * Used by this class when matching {@link ReferenceGraphPath} if
+	 * indAvoidReentry. Available to subclasses as well independently of
+	 * indAvoidReentry.
 	 */
 	protected ModuleReentryAvoider moduleReentryAvoider;
 
@@ -121,6 +203,12 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * Used to accumulate a description for the actions performed.
 	 */
 	protected List<String> listActionsPerformed;
+
+	/**
+	 * Indicates that the List of root {@link ModuleVersion} passed to the constructor
+	 * was changed and should be saved by the caller if persisted.
+	 */
+	protected boolean indListModuleVersionRootChanged;
 
 	/**
 	 * Constructor.
@@ -167,56 +255,77 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	}
 
 	/**
-	 * @param indHandleStaticVersion Specifies to handle or not static
-	 *   {@link Version}'s. The default is to handle static {@link Version}.
+	 * @param indAvoidReentry Specifies to avoid reentry by using
+	 *   {@link ModuleReentryAvoider}. The default is to avoid reentry.
 	 */
 	protected void setIndAvoidReentry(boolean indAvoidReentry) {
 		this.indAvoidReentry = indAvoidReentry;
 	}
 
 	/**
-	 * Main method for performing the job. It is expected that caller invoke this
-	 * method to perform the job.
-	 *
-	 * This class provides a default implementation which calls
-	 * validateListModuleVersionRoot and then iterateListThroughModuleVersionRoot.
-	 * If this behavior is not appropriate for the job, subclasses can simply
-	 * override the method. Alternatively, the methods mentioned above can be
-	 * overridden individually.
-	 *
-	 * @return Indicates if the List of root ModuleVersion's passed to the constructor
-	 *   of the class was modified and should be saved by the caller if it is
-	 *   persisted.
+	 * Called by methods of this class or subclasses to indicate that the List of root
+	 * {@link ModuleVersion} passed to the constructor was changed and should be
+	 * saved by the caller if persisted.
 	 */
-	public boolean performTask() {
-		// A regular | operator is used to force both methods to be called. The ||
-		// operator would avoid calling the second method if the first one returns
-		// true.
-		return this.validateListModuleVersionRoot() | this.iterateThroughListModuleVersionRoot();
+	protected void setIndListModuleVersionRootChanged() {
+		this.indListModuleVersionRootChanged = true;
 	}
 
 	/**
-	 * Validates the root ModuleVersion's.
-	 *
+	 * @return Indicate that the List of root {@link ModuleVersion} passed to the
+	 * constructor was changed and should be saved by the caller if persisted.
+	 */
+	public boolean isListModuleVersionRootChanged() {
+		return this.indListModuleVersionRootChanged;
+	}
+
+	/**
+	 * Main method for performing the job. It is expected that caller invoke this
+	 * method to perform the job.
+	 * <p>
+	 * This class provides a default implementation which calls
+	 * {@link #beforeValidateListModuleVersionRoot},
+	 * {@link #validateListModuleVersionRoot},
+	 * {@link #beforeIterateListModuleVersionRoot},
+	 * {@link #afterIterateListModuleVersionRoot}. If ever this behavior is not
+	 * appropriate for the job, subclasses can simply override the method.
+	 * Alternatively, the methods mentioned above can be overridden individually.
+	 */
+	public void performTask() {
+		this.beforeValidateListModuleVersionRoot();
+		this.validateListModuleVersionRoot();
+		this.beforeIterateListModuleVersionRoot();
+		this.iterateListModuleVersionRoot();
+		this.afterIterateListModuleVersionRoot();
+	}
+
+	/**
+	 * Called by {@link #performTask}. Subclasses can override to introduce
+	 * job-specific behavior.
+	 * <p>
+	 * This implementation does nothing.
+	 */
+	protected void beforeValidateListModuleVersionRoot() {
+	}
+
+	/**
+	 * Called by {@link #performTask} to validate the root ModuleVersion's.
+	 * <p>
 	 * This performs a first pass to validate the root ModuleVersion's. The reason
 	 * is that if one ModuleVersion is invalid (module not known to the model or
 	 * Version does not exist), many actions may have already been performed and
 	 * it is better for the user to detect the error before doing anything.
-	 *
-	 * @return Indicates if the List of root ModuleVersion's passed to the constructor
-	 *   of the class was modified and should be saved by the caller if it is
-	 *   persisted.
 	 */
-	protected boolean validateListModuleVersionRoot() {
-		boolean indListRootModuleVersionChanged;
+	protected void validateListModuleVersionRoot() {
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		int indexModuleVersionRoot;
 		ModuleVersion moduleVersion;
 		Module module;
 		ScmPlugin scmPlugin;
 
-		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + " to validate them.");
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		indListRootModuleVersionChanged = false;
+		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + " to validate them.");
 
 		for (indexModuleVersionRoot = 0; indexModuleVersionRoot < this.listModuleVersionRoot.size(); indexModuleVersionRoot++) {
 			moduleVersion = this.listModuleVersionRoot.get(indexModuleVersionRoot);
@@ -226,7 +335,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			module = ExecContextHolder.get().getModel().getModule(moduleVersion.getNodePath());
 
 			if (module == null) {
-				throw new RuntimeExceptionUserError("Root module " + moduleVersion.getNodePath() + " is not known to the model.");
+				throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_ROOT_MODULE_VERSION_NOT_KNOWN), moduleVersion));
 			}
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -241,42 +350,44 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(moduleVersion));
 
 				if (setWorkspaceDir.size() > 1) {
-					throw new RuntimeExceptionUserError("The root ModuleVersion " + moduleVersion + " does not specify a version and multiple workspace directories contain versions of this module.");
+					throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE), moduleVersion));
 				}
 
 				if (setWorkspaceDir.size() == 1) {
 					version = ((WorkspaceDirUserModuleVersion)setWorkspaceDir.iterator().next()).getModuleVersion().getVersion();
-					RootModuleVersionJobAbstractImpl.logger.info("Root ModuleVersion " + moduleVersion + " does not specify a version. We update it to the version " + version + " of the module within the workspace.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION), moduleVersion, version));
 				} else {
 					version = scmPlugin.getDefaultVersion();
-					RootModuleVersionJobAbstractImpl.logger.info("Root ModuleVersion " + moduleVersion + " does not specify a version. We update it to the default version " + version + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT), moduleVersion, version));
 				}
 
 				// ModuleVersion is immutable. We need to create a new one.
 				this.listModuleVersionRoot.set(indexModuleVersionRoot,  moduleVersion = new ModuleVersion(moduleVersion.getNodePath(), version));
-				indListRootModuleVersionChanged = true;
+				this.setIndListModuleVersionRootChanged();
 			}
 
 			if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-				throw new RuntimeExceptionUserError("Version " + moduleVersion.getVersion() + " of root module " + moduleVersion.getNodePath() + " does not exist.");
+				throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VERSION_NOT_EXIST), moduleVersion));
 			}
 		}
 
 		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root ModuleVersion's " + this.listModuleVersionRoot + " completed for validation.");
-
-		return indListRootModuleVersionChanged;
 	}
 
 	/**
-	 * Iterates through the List of root ModuleVersion's calling
-	 * visitModuleVersion for each root ModuleVersion.
-	 *
-	 * @return Indicates if the List of root ModuleVersion's passed to the constructor
-	 *   of the class was modified and should be saved by the caller if it is
-	 *   persisted.
+	 * Called by {@link #performTask}. Subclasses can override to introduce
+	 * job-specific behavior.
+	 * <p>
+	 * This implementation does nothing.
 	 */
-	protected boolean iterateThroughListModuleVersionRoot() {
-		boolean indListRootModuleVersionChanged;
+	protected void beforeIterateListModuleVersionRoot() {
+	}
+
+	/**
+	 * Called by {@link #performTask} to iterate through the List of root
+	 * ModuleVersion's calling visitModuleVersion for each root ModuleVersion.
+	 */
+	protected void iterateListModuleVersionRoot() {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		ByReference<Version> byReferenceVersion;
 		int indexModuleVersionRoot;
@@ -284,7 +395,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		indListRootModuleVersionChanged = false;
 		byReferenceVersion = new ByReference<Version>();
 
 		RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + '.');
@@ -294,22 +404,23 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			moduleVersion = this.listModuleVersionRoot.get(indexModuleVersionRoot);
 
-			RootModuleVersionJobAbstractImpl.logger.info("Initiating a traversal of the reference graph rooted at ModuleVersion " + moduleVersion + '.');
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION), moduleVersion));
 
 			indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
 
 			RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at ModuleVersion " + moduleVersion + " is completed.");
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED), moduleVersion));
 
 			if (indVersionChanged) {
-				RootModuleVersionJobAbstractImpl.logger.info("During this traversal the version of the root ModuleVersion " + moduleVersion + " was changed to " + byReferenceVersion.object + ". We update the root ModuleVersion.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATE_CHANGED_ROOT_MODULE_VERSION), moduleVersion, byReferenceVersion.object));
 
 				// We must create a new ModuleVersion as it is immutable.
 				this.listModuleVersionRoot.set(indexModuleVersionRoot, moduleVersion = new ModuleVersion(moduleVersion.getNodePath(), byReferenceVersion.object));
-				indListRootModuleVersionChanged = true;
+				this.setIndListModuleVersionRootChanged();
 			}
 
 			if (Util.isAbort()) {
-				RootModuleVersionJobAbstractImpl.logger.info("During this traversal the user has indicated to abort the whole process.");
+				userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_ABORTED_BY_USER));
 				break;
 			}
 		}
@@ -317,14 +428,12 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root ModuleVersions " + this.listModuleVersionRoot + " completed.");
 
 		if (this.listActionsPerformed.size() != 0) {
-			userInteractionCallbackPlugin.provideInfo("The following significant actions were performed:\n" + StringUtils.join(this.listActionsPerformed, '\n'));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_ACTIONS_PERFORMED), StringUtils.join(this.listActionsPerformed, '\n')));
 		} else {
-			userInteractionCallbackPlugin.provideInfo("No significant action was performed.");
+			userInteractionCallbackPlugin.provideInfo(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED));
 		}
 
-		userInteractionCallbackPlugin.provideInfo("Job execution completed.");
-
-		return indListRootModuleVersionChanged;
+		userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_COMPLETED));
 	}
 
 	/**
@@ -352,6 +461,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		Module module;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		WorkspacePlugin workspacePlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		ScmPlugin scmPlugin;
 		boolean indReferencePathAlreadyReverted;
 		boolean indVisitChildren;
@@ -362,22 +472,27 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
+		bracketHandle = null;
+
 		// We use a try-finally construct to ensure that the current ModuleVersion always
-		// gets removed for the current ReferencePath.
+		// gets removed for the current ReferencePath, and that the
+		// UserInteractionCallback BracketHandle gets closed.
 		try {
-			RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
+			// We bracket even if the ReferencePath will not be matched in order to better
+			// show the traversal.
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
-				userInteractionCallbackPlugin.provideInfo("ModuleVersion " + referenceParent.getModuleVersion() + " is dynamic and is not to be handled.");
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + referenceParent.getModuleVersion() + " is dynamic and is not to be handled.");
 				return false;
 			}
 
 			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
-				userInteractionCallbackPlugin.provideInfo("ModuleVersion " + referenceParent.getModuleVersion() + " is static and is not to be handled.");
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + referenceParent.getModuleVersion() + " is static and is not to be handled.");
 				return false;
 			}
 
@@ -385,18 +500,20 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			if (this.referencePathMatcher.matches(this.referencePath)) {
 				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
-					userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. But that ModuleVersion was already processed and is skipped.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath.getLeafModuleVersion()));
 					return false;
 				} else {
-					userInteractionCallbackPlugin.provideInfo("The ReferencePath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePathMatcher. Initiating the process for ModuleVersion " + referenceParent.getModuleVersion() + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath.getLeafModuleVersion()));
 				}
 
 				// We are about to delegate to visitMatchedModuleVersion for the rest of the
 				// processing. This method starts working on the same current module and also
-				// manages the graph path. We must therefore reset it now so that it can re-add
-				// the current reference. And we must prevent the finally block to reset it.
+				// manages the ReferencePath and UserInteractionCallback BracketHandle. We must
+				// therefore reset them now. And we must prevent the finally block to reset them.
 				this.referencePath.removeLeafReference();;
 				indReferencePathAlreadyReverted = true;
+				bracketHandle.close();
+				bracketHandle = null;
 
 				// Util.isAbort() may be set, but it is not necessary to handle it since we are
 				// done after this call.
@@ -405,6 +522,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				if (Util.isAbort()) {
 					return false;
 				}
+
+				// We redo the things that were undone before calling visitMatchedModuleVersion.
+				this.referencePath.add(referenceParent);
+				indReferencePathAlreadyReverted = false;
+				bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 			}
 
 			if (indVisitChildren && this.referencePathMatcher.canMatchChildren(this.referencePath)) {
@@ -423,7 +545,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 				try {
 					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
-						throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this job.");
+						throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
 					}
 
 					if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -458,6 +580,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			if (!indReferencePathAlreadyReverted) {
 				this.referencePath.removeLeafReference();
 			}
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
+			}
 		}
 
 		return false;
@@ -475,7 +601,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
  	 * will be applied to children as well.
  	 * <p>
  	 * This implementation raises an exception. This method is not abstract since if
- 	 * the subclass overrides visitModuleVersion, it may not be called or need to be overridden at all.
+ 	 * the subclass overrides visitModuleVersion, it may not be called or need to be
+ 	 * overridden at all.
  	 *
 	 * @param referenceParent Reference referring to the matched ModuleVersion.
 	 * @return Indicates if children must be visited.
@@ -483,4 +610,14 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	protected boolean visitMatchedModuleVersion(Reference referenceParent) {
 		throw new RuntimeException("Must not get here.");
 	}
+
+	/**
+	 * Called by {@link #performTask}. Subclasses can override to introduce
+	 * job-specific behavior.
+	 * <p>
+	 * This implementation does nothing.
+	 */
+	protected void afterIterateListModuleVersionRoot() {
+	}
+
 }

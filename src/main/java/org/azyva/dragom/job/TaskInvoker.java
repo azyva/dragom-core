@@ -36,12 +36,12 @@ import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.Reference;
-import org.azyva.dragom.util.ModuleReentryAvoider;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * TODO: To review completely. THis was written prior to subclassing from RootModuleVersionJobAbstractImpl.
  * Iterates through modules in reference graphs, invoking an arbitrary TaskPlugin
  * for each of them.
  *
@@ -80,6 +80,10 @@ import org.slf4j.LoggerFactory;
  * This class implements a simple subclassing mechanism to facilitate the
  * development of other classes making use of TaskPlugin.
  *
+ * This class has similarities with {@link RootModuleVersionJobAbstractImpl} from
+ * which it derives, but should not be confused. See
+ * RootModuleVersionJobAbstractImpl for more information.
+ *
  * @author David Raymond
  */
 public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
@@ -89,24 +93,9 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	private static final Logger logger = LoggerFactory.getLogger(TaskInvoker.class);
 
 	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_LEAF_REFERENCE_MATCHED = "LEAF_REFERENCE_MATCHED";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	public static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED = "MODULE_VERSION_ALREADY_PROCESSED";
-
-	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(TaskInvoker.class.getName());
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(TaskInvoker.class.getName() + "ResourceBundle");
 
 	/**
 	 * ID of the TaskPlugin to invoke.
@@ -117,11 +106,6 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	 * ID of the task to invoke within the TaskPlugin.
 	 */
 	private String taskId;
-
-	/*
-	 * {@link ModuleReentryAvoider}.
-	 */
-	private ModuleReentryAvoider moduleReentryAvoider;
 
 	/**
 	 * Constructor.
@@ -136,13 +120,13 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 
 		this.taskPluginId = taskPluginId;
 		this.taskId = taskId;
-		this.moduleReentryAvoider = new ModuleReentryAvoider();
 	}
 
 	/**
 	 * Visits a ModuleVersion in the context of traversing the reference graph for
 	 * invoking the TaskPlugin. This method is called by the base class as well as
 	 * recursively by this class.
+	 * TODO: Explain why the main loop could not be done within base class.
 	 *
 	 * @param referenceParent Root ModuleVersion passed as a Reference so that the
 	 *   initial parent element of the ReferencePath can be created.
@@ -153,6 +137,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	@Override
 	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		WorkspacePlugin workspacePlugin;
 		Module module;
 		ScmPlugin scmPlugin;
@@ -167,10 +152,13 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-		// We use a try-finally construct to ensure that the current ModuleVersion
-		// always gets removed for the current ReferencePath.
+		bracketHandle = null;
+
+		// We use a try-finally construct to ensure that the current ModuleVersion always
+		// gets removed for the current ReferencePath, and that the
+		// UserInteractionCallback BracketHandle gets closed.
 		try {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
 
@@ -182,7 +170,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 			if (!taskPlugin.isDepthFirst()) {
 				if (this.referencePathMatcher.matches(this.referencePath)) {
 					if (this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_LEAF_REFERENCE_MATCHED), this.referencePath, this.taskPluginId, this.taskId));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.taskPluginId, this.taskId));
 
 						taskEffects = taskPlugin.performTask(this.taskId, referenceParent.getModuleVersion().getVersion(), this.referencePath);
 
@@ -190,7 +178,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 							return false;
 						}
 					} else {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
 						return false;
 					}
 				}
@@ -243,12 +231,16 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 
 						this.handleTaskEffects(taskEffects); // No need to test return value since we are done anyways.
 					} else {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(TaskInvoker.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
 					}
 				}
 			}
 		} finally {
 			this.referencePath.removeLeafReference();
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
+			}
 		}
 
 		return false;

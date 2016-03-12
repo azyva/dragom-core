@@ -17,6 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//TODO: ??? record important actions.
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
@@ -257,6 +258,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		ExecContext execContext;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		WorkspacePlugin workspacePlugin;
 		Model model;
 		Module module;
@@ -279,7 +281,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
 		model = execContext.getModel();
 
+		bracketHandle = null;
+
 		try {
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
+
 			//********************************************************************************
 			// Determine the source Version corresponding to the root destination
 			// ModuleVersion to merge into.
@@ -396,16 +402,22 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			//********************************************************************************
 
 			// We are about to delegate to mergeModuleVersion for the rest of the processing.
-			// This method starts working on the same current module and also manages the
-			// graph path. We must therefore reset it now so that it can re-add
-			// the current reference. And we must prevent the finally block to reset it.
+			// This method starts working on the same current module and also
+			// manages the ReferencePath and UserInteractionCallback BracketHandle. We must
+			// therefore reset them now. And we must prevent the finally block to reset them.
 			this.referencePath.removeLeafReference();
 			indReferencePathAlreadyReverted = true;
+			bracketHandle.close();
+			bracketHandle = null;
 
 			this.mergeModuleVersion(referencePathSrc, referenceParent);
 		} finally {
 			if (!indReferencePathAlreadyReverted) {
 				this.referencePath.removeLeafReference();
+			}
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
 			}
 		}
 
@@ -433,6 +445,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	private boolean mergeModuleVersion(ReferencePath referencePathSrc, Reference referenceDest) {
 		ExecContext execContext;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		WorkspacePlugin workspacePlugin;
 		Model model;
 		ModuleVersion moduleVersionDest;
@@ -455,6 +468,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		pathModuleWorkspace = null;
 		pathModuleWorkspaceSrc = null;
 
+		bracketHandle = null;
+
 		try {
 			moduleVersionDest = referenceDest.getModuleVersion();
 			moduleVersionSrc = referencePathSrc.getLeafModuleVersion();
@@ -462,6 +477,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			module = model.getModule(moduleVersionDest.getNodePath());
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
 			userInteractionCallbackPlugin.provideInfo("Merging leaf ModuleVersion of source ReferencePath " + referencePathSrc + " into " + this.referencePath + '.');
 
 			//********************************************************************************
@@ -674,7 +690,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							listModuleVersion.add(referenceChildDest.getModuleVersion());
 							switchToDynamicVersion = new SwitchToDynamicVersion(listModuleVersion);
 
-							if (!switchToDynamicVersion.performTask()) {
+							switchToDynamicVersion.performTask();
+
+							if (!switchToDynamicVersion.isListModuleVersionRootChanged()) {
 								userInteractionCallbackPlugin.provideInfo("Destination static version " + referenceChildDest.getModuleVersion() + " within ReferencePath " + this.referencePath + " was not switched. Merge process for current matched destination ModuleVersion aborted.");
 
 								switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
@@ -757,6 +775,10 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			}
 
 			this.referencePath.removeLeafReference();
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
+			}
 		}
 
 		return false;
@@ -926,4 +948,3 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		}
 	}
 }
-//TODO: ??? record important actions.

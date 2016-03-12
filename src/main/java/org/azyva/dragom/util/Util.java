@@ -206,12 +206,27 @@ public final class Util {
 	public static final String MSG_PATTERN_KEY_TRY_AGAIN = "TRY_AGAIN";
 
 	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_JOB_COMPLETED = "JOB_COMPLETED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_JOB_ABORTED_BY_USER = "JOB_ABORTED_BY_USER";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC = "WORKSPACE_DIRECTORY_NOT_SYNC";
+
+	/**
 	 * ResourceBundle specific to this class.
 	 * <p>
 	 * Being a utility class, this ResourceBundle also contains global locale-specific
 	 * resources which can be used by other classes.
 	 */
-	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.class.getName());
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.class.getName() + "ResourceBundle");
 
 	/**
 	 * Indicates that the Dragom properties have been loaded.
@@ -422,11 +437,11 @@ public final class Util {
 	}
 
 	/**
-	 * @return The ResourceBundle of this class, which also contains global locale-
-	 *   specific resources that can be used by other classes.
+	 * @param msgPatternKey Message pattern key within the ResourceBundle.
+	 * @return Message pattern associated with the key.
 	 */
-	private static ResourceBundle getResourceBundle() {
-		return Util.resourceBundle;
+	public static String getLocalizedMsgPattern(String msgPatternKey) {
+		return Util.resourceBundle.getString(msgPatternKey);
 	}
 
 	/**
@@ -458,10 +473,10 @@ public final class Util {
 		String userResponse;
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
-		alwaysNeverAskResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES);
-		alwaysResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
-		neverResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
-		askResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_ASK_RESPONSE);
+		alwaysNeverAskResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES);
+		alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
+		neverResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
+		askResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ASK_RESPONSE);
 
 		if (info.endsWith("*")) {
 			String defaultValue = null;
@@ -503,7 +518,7 @@ public final class Util {
 			}
 
 			if (alwaysNeverAskUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 		} while (false);
@@ -580,10 +595,10 @@ public final class Util {
 		String userResponse;
 		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 
-		yesAlwaysNoResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES);
-		yesResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
-		yesAlwaysResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
-		noResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
+		yesAlwaysNoResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES);
+		yesResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+		yesAlwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
+		noResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
 
 		if (info.endsWith("*")) {
 			String defaultValue = null;
@@ -625,7 +640,7 @@ public final class Util {
 			}
 
 			if (yesAlwaysNoUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 
@@ -656,9 +671,9 @@ public final class Util {
 		String userResponse;
 		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 
-		yesNoResponseChoices = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_NO_RESPONSE_CHOICES);
-		yesResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
-		noResponse = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
+		yesNoResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_NO_RESPONSE_CHOICES);
+		yesResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+		noResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
 
 		if (info.endsWith("*")) {
 			String defaultValue = null;
@@ -701,7 +716,7 @@ public final class Util {
 			}
 
 			if (yesAlwaysNoUserResponse == null) {
-				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
 
@@ -747,9 +762,9 @@ public final class Util {
 		Version version = null;
 
 		if (scmPlugin != null) {
-			msgPatternVersionFormatHelp = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP_VERSION_MUST_EXIST);
+			msgPatternVersionFormatHelp = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP_VERSION_MUST_EXIST);
 		} else {
-			msgPatternVersionFormatHelp = Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP);
+			msgPatternVersionFormatHelp = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP);
 		}
 
 		if (info.endsWith("*")) {
@@ -787,20 +802,20 @@ public final class Util {
 				version = Version.parse(userResponse);
 			} catch (ParseException pe) {
 				userInteractionCallbackPlugin.provideInfo(pe.getMessage());
-				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 				continue;
 			}
 
 			if ((versionType != null) && (version.getVersionType() != versionType)) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_INCORRECT_VERSION_TYPE), version, versionType));
-				userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INCORRECT_VERSION_TYPE), version, versionType));
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 				continue;
 			}
 
 			if (scmPlugin != null) {
 				if (!scmPlugin.isVersionExists(version)) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), version));
-					userInteractionCallbackPlugin.provideInfo(Util.getResourceBundle().getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), version));
+					userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_TRY_AGAIN));
 					continue;
 				}
 			}

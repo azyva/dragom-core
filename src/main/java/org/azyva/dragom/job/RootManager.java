@@ -96,7 +96,7 @@ public class RootManager {
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static ResourceBundle resourceBundle = ResourceBundle.getBundle(RootManager.class.getName());
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootManager.class.getName() + "ResourceBundle");
 
 	/**
 	 * @return List of root {@link ModuleVersion}'s.

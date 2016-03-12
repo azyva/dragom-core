@@ -154,3 +154,4 @@ public class MergeBase {
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(MergeBase.class);
 }
+bracket

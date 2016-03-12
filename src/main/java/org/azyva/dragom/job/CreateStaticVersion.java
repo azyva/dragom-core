@@ -17,6 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+bracket
 package org.azyva.dragom.job;
 
 import java.io.IOException;
@@ -152,6 +153,8 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 */
 	@Override
 	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		Module module;
 		WorkspacePlugin workspacePlugin;
 		Path pathModuleWorkspace = null;
@@ -161,11 +164,17 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		this.referencePath.add(referenceParent);
 		indReferencePathAlreadyReverted = false;
 
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-		// We use a try-finally construct to ensure that the current ModuleVersion
-		// always gets removed for the current ReferencePath.
+		bracketHandle = null;
+
+		// We use a try-finally construct to ensure that the current ModuleVersion always
+		// gets removed for the current ReferencePath, and that the
+		// UserInteractionCallback BracketHandle gets closed.
 		try {
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
 			CreateStaticVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
@@ -173,10 +182,6 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 			if (referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) {
-				UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-
-				userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
 				if (this.referencePathMatcher.matches(this.referencePath)) {
 					// As an optimization we first verify if a new Version was already created or
 					// established for the ModuleVersion during the execution of the job. If so, we
@@ -192,10 +197,12 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 
 					// We are about to delegate to visitModuleForCreateStaticVersion for the rest of
 					// the processing. This method starts working on the same current module and also
-					// manages the graph path. We must therefore reset it now so that it can re-add
-					// the current reference. And we must prevent the finally block to reset it.
+					// manages the ReferencePath and UserInteractionCallback BracketHandle. We must
+					// therefore reset them now. And we must prevent the finally block to reset them.
 					this.referencePath.removeLeafReference();
 					indReferencePathAlreadyReverted = true;
+					bracketHandle.close();
+					bracketHandle = null;
 
 					// When the Version of the ModuleVersion is dynamic and the ReferencePath is
 					// matched by the ReferencePathMatcher, we delegate the processing to the
@@ -326,6 +333,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	private boolean visitModuleForCreateStaticVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
 		Path pathModuleWorkspace;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		Module module;
 		ScmPlugin scmPlugin;
 		WorkspacePlugin workspacePlugin = null;
@@ -335,8 +343,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		pathModuleWorkspace = null;
 		this.referencePath.add(referenceParent);
 
-		// We use a try - finally construct to ensure that the current ModuleVersion
-		// always gets removed for the current ReferencePath.
+		bracketHandle = null;
+
+		// We use a try-finally construct to ensure that the current ModuleVersion always
+		// gets removed for the current ReferencePath, and that the
+		// UserInteractionCallback BracketHandle gets closed.
 		try {
 			if (referenceParent.getModuleVersion().getVersion().getVersionType() != VersionType.DYNAMIC) {
 				// This should not happen since this method is not supposed to be called on static
@@ -344,6 +355,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				throw new RuntimeException("ModuleVersion " + referenceParent.getModuleVersion() + " within ReferencePath " + this.referencePath + " is not dynamic.");
 			}
 
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
 			CreateStaticVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
 
 			userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -472,6 +484,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			}
 
 			this.referencePath.removeLeafReference();
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
+			}
 		}
 	}
 
@@ -492,6 +508,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	private boolean processCreateStaticVersion(ModuleVersion moduleVersion, ByReference<Version> byReferenceVersion) {
 		ExecContext execContext;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		Version versionStaticNew;
 		Module module;
@@ -542,7 +559,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
 		userInteractionCallbackPlugin.provideInfo("The new static version " + versionStaticNew + " will be created for ModuleVersion " + moduleVersion + '.');
 
+		bracketHandle = null;
+
 		try {
+			bracketHandle = userInteractionCallbackPlugin.startBracket();
+
 			if (indUserWorkspaceDir) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
@@ -730,6 +751,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		} finally {
 			if (pathModuleWorkspace != null) {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+			}
+
+			if (bracketHandle != null) {
+				bracketHandle.close();
 			}
 		}
 

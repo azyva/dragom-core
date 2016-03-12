@@ -28,6 +28,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.Stack;
 
+import org.apache.commons.lang.WordUtils;
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
@@ -51,10 +52,25 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	private static final String RUNTIME_PROPERTY_BRACKET_INDENT = "BRACKET_INDENT";
 
 	/**
-	 * Default indentation for each bracket level when the runtime property BRACKET
-	 * INDENT is not defined.
+	 * Default indentation for each bracket level when the runtime property
+	 * BRACKET_INDENT is not defined.
 	 */
 	private static final int DEFAULT_BRACKET_INDENT = 4;
+
+	/**
+	 * Runtime property specifying the WrapMode.
+	 */
+	private static final String RUNTIME_PROPERTY_WRAP_MODE = "WRAP_MODE";
+
+	/**
+	 * Runtime property specifying the Wrap width.
+	 */
+	private static final String RUNTIME_PROPERTY_WRAP_WIDTH = "WRAP_WIDTH";
+
+	/**
+	 * Default wrap width when the runtime property WRAP_WIDTH is not defined.
+	 */
+	private static final int DEFAULT_WRAP_WIDTH = 132;
 
 	/**
 	 * Indicates that no information must be obtained from the user.
@@ -70,6 +86,45 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	 * String of this.bracketIndent spaces.
 	 */
 	char tabCharBracketIndent[];
+
+	/**
+	 * Defines the wrap modes.
+	 * <p>
+	 * Whatever the wrap mode, wrapping may also be performed by console which would
+	 * render class controlled wrapping less useful.
+	 */
+	private enum WrapMode {
+		/**
+		 * No wrap.
+		 * <p>
+		 * Wrapping will be performed by console.
+		 */
+		NO_WRAP,
+
+		/**
+		 * Wrap to the specified width including the indent. Indented sections will have
+		 * less available width for the actual text, but the whole output will be indented
+		 * uniformly.
+		 */
+		WRAP_WITH_INDENT,
+
+		/**
+		 * Wrap to the specified width not including the indent. All sections regardless
+		 * of indent will have the same available with for the actual text and global
+		 * width of the whole output will increase with the indent.
+		 */
+		WRAP_WITHOUT_INDENT
+	}
+
+	/**
+	 * WrapMode.
+	 */
+	private WrapMode wrapMode;
+
+	/**
+	 * Wrap width.
+	 */
+	private int wrapWidth;
 
 	/**
 	 * Opaque handle to a bracket.
@@ -103,6 +158,9 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	 */
 	WriterInfo writerInfoActive;
 
+	/**
+	 * Used to read information from stdin.
+	 */
 	BufferedReader bufferedReaderStdin;
 
 	private class WriterInfo extends BufferedWriter {
@@ -175,25 +233,41 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	 */
 	public DefaultUserInteractionCallbackPluginImpl(ExecContext execContext) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		String stringBracketIndent;
+		String runtimeProperty;
 
 		this.bufferedReaderStdin = new BufferedReader(new InputStreamReader(System.in));
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		this.indBatchMode = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BATCH_MODE));
 
-		stringBracketIndent = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BRACKET_INDENT);
+		runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BRACKET_INDENT);
 
-		if (stringBracketIndent == null) {
+		if (runtimeProperty == null) {
 			this.bracketIndent = DefaultUserInteractionCallbackPluginImpl.DEFAULT_BRACKET_INDENT;
 		} else {
-			this.bracketIndent = Integer.parseInt(stringBracketIndent);
+			this.bracketIndent = Integer.parseInt(runtimeProperty);
 		}
 
 		this.tabCharBracketIndent = new char[this.bracketIndent];
 		Arrays.fill(this.tabCharBracketIndent, ' ');
 
 		this.stackBracketHandle = new Stack<BracketHandle>();
+
+		runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_WRAP_MODE);
+
+		if (runtimeProperty != null) {
+			this.wrapMode = WrapMode.valueOf(runtimeProperty);
+
+			runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_WRAP_WIDTH);
+
+			if (runtimeProperty == null) {
+				this.wrapWidth = DefaultUserInteractionCallbackPluginImpl.DEFAULT_WRAP_WIDTH;
+			} else {
+				this.wrapWidth = Integer.parseInt(runtimeProperty);
+			}
+		} else {
+			this.wrapMode = WrapMode.NO_WRAP;
+		}
 	}
 
 	@Override
@@ -297,11 +371,29 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	}
 
 	private void printWithIndent(String string) {
-		for (int i = 0 ; i < this.stackBracketHandle.size(); i++) {
-			System.out.print(this.tabCharBracketIndent);
+		String[] arrayLine = null;
+
+		switch (this.wrapMode) {
+		case NO_WRAP:
+			break;
+
+		case WRAP_WITH_INDENT:
+			string = WordUtils.wrap(string, this.wrapWidth - (this.stackBracketHandle.size() * this.bracketIndent));
+			break;
+
+		case WRAP_WITHOUT_INDENT:
+			string = WordUtils.wrap(string, this.wrapWidth);
+			break;
 		}
 
-		// TODO: May want to wrap using commons lang WordUtils.wrap.
-		System.out.println(string);
+		arrayLine = string.split("\n");
+
+		for (int i = 0; i < arrayLine.length; i++) {
+			for (int j = 0 ; j < this.stackBracketHandle.size(); j++) {
+				System.out.print(this.tabCharBracketIndent);
+			}
+
+			System.out.println(arrayLine[i]);
+		}
 	}
 }
