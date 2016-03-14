@@ -21,9 +21,9 @@ package org.azyva.dragom.model.plugin.impl;
 
 import java.util.List;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -316,7 +316,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 					return new Version(VersionType.STATIC, semanticVersionPrefixNotNull + String.valueOf(arraySemanticVersionComponentMax[0]) + '.' + String.valueOf(arraySemanticVersionComponentMax[1] + 1));
 
 				default:
-					throw new RuntimeException("Should never get here.");
+					throw new RuntimeException("Must not get here.");
 				}
 			}
 		}

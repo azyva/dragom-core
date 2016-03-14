@@ -17,15 +17,16 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-bracket
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
@@ -61,6 +62,71 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 * Logger for the class.
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(SwitchToDynamicVersion.class);
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_PROCESS_PARENT_BECAUSE_REFERENCE_PROCESSED = "PROCESS_PARENT_BECAUSE_REFERENCE_PROCESSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED = "UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION = "REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REFERENCE_IN_NEW_VERSION_NOT_FOUND = "REFERENCE_IN_NEW_VERSION_NOT_FOUND";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_NOT_PROCESSED = "NEW_REFERENCE_VERSION_ORG_NOT_PROCESSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED_NEW_SAME_AS_ESTABLISHED = "NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED_NEW_SAME_AS_ESTABLISHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED = "NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_SWITCHED_NEW_SAME_AS_ESTABLISHED = "NEW_REFERENCE_VERSION_ORG_SWITCHED_NEW_SAME_AS_ESTABLISHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_SWITCHED = "NEW_REFERENCE_VERSION_ORG_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REFERENCE_IN_ORG_VERSION_NOT_FOUND = "REFERENCE_IN_ORG_VERSION_NOT_FOUND";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_REFERENCE_DIFFERENCES = "NO_REFERENCE_DIFFERENCES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SwitchToDynamicVersion.class.getName() + "ResourceBundle");
 
 	/**
 	 * Map of all modules which were switched during the processing, or that
@@ -212,13 +278,15 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			byReferenceVersionParent = new ByReference<Version>();
 		}
 
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
 		bracketHandle = null;
 
 		// We use a try-finally construct to ensure that the current ModuleVersion always
 		// gets removed for the current ReferencePath, and that the
 		// UserInteractionCallback BracketHandle gets closed.
 		try {
-			bracketHandle = userInteractionCallbackPlugin.startBracket("Visiting leaf ModuleVersion of ReferencePath " + this.referencePath + '.');
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath));
 
 			mapReferenceVisitModuleActionPerformed = new HashMap<Reference, VisitModuleActionPerformed>();
 
@@ -271,8 +339,6 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 			pathModuleWorkspace = null;
 
-			userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
 			// There is no need to visit the references if the ReferencePathMatcherAnd is such
 			// that it cannot match any children of the current ReferencePath. In such a case
 			// it is logically not required to retrieve the List of references above, but this
@@ -320,7 +386,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				 * processed.
 				 * *******************************************************************************/
 
-				userInteractionCallbackPlugin.provideInfo("At least one reference within ReferencePath " + this.referencePath + " was processed (and maybe switched). We must process the parent, potentially switching its version to a new dynamic version.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PROCESS_PARENT_BECAUSE_REFERENCE_PROCESSED), this.referencePath));
 
 				indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 
@@ -333,118 +399,119 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				if (indParentSwitched) {
 					List<Reference> listReferenceNew;
 					boolean indDifferencesInReferences;
+					UserInteractionCallbackPlugin.BracketHandle bracketHandleReferenceDifferences;
 
 					visitModuleActionPerformed = VisitModuleActionPerformed.SWITCH;
 
-					userInteractionCallbackPlugin.provideInfo("The current ModuleVersion " + referenceParent.getModuleVersion() + " was switched to version " + byReferenceVersionParent.object + ". The new version may have different references compared to the original one. Here is a summary of the version differences and actions that will be automatically reapplied to the new versions based on what was already processed:");
+					bracketHandleReferenceDifferences = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION), referenceParent.getModuleVersion(), byReferenceVersionParent.object));
 
-					pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
-					listReferenceNew = referenceManagerPlugin.getListReference(pathModuleWorkspace);
-					indDifferencesInReferences = false;
-
-					for(Reference referenceChildOrg: listReference) {
-						Reference referenceChildNewFound;
-
-						if (referenceChildOrg.getModuleVersion() == null) {
-							continue;
-						}
-
-						referenceChildNewFound = null;
-
-						for(Reference referenceChildNew: listReferenceNew) {
-							if (referenceChildNew.getModuleVersion() == null) {
-								continue;
-							}
-
-							if (referenceChildNew.equalsNoVersion(referenceChildOrg)) {
-								referenceChildNewFound = referenceChildNew;
-							}
-						}
-
-						if (referenceChildNewFound == null) {
-							userInteractionCallbackPlugin.provideInfo(  "Original reference: " + referenceChildOrg + ".\n"
-							                                          + "  No new reference is found that corresponds to this original reference so that even though the original reference was visited the processing that may have been performed on it will not be reapplied in the context of the new version of the current module, at least not in the context of this reference.");
-							indDifferencesInReferences = true;
-						} else {
-							if (!referenceChildOrg.getModuleVersion().getVersion().equals(referenceChildNewFound.getModuleVersion().getVersion())) {
-								Version versionEstablishedOrg;
-								String difference;
-
-								// The established version may be null (if the original reference was not
-								// processed).
-								versionEstablishedOrg = this.mapNodePathVersionDynamic.get(referenceChildOrg.getModuleVersion().getNodePath());
-
-								difference = "Original reference: " + referenceChildOrg + ".\n";
-
-								// Since we are iterating through the original references, we expect to find an
-								// entry in this Map for all of them.
-								switch (mapReferenceVisitModuleActionPerformed.get(referenceChildOrg)) {
-								case NONE:
-									difference += "  New reference " + referenceChildNewFound + " corresponds to this original reference, but with a different version " + referenceChildNewFound.getModuleVersion().getVersion() + ".\n";
-									difference += "  The original reference was not processed during its visit. But with the new different version it may be. It will therefore be visited again.";
-									break;
-
-								case PROCESSED_NO_SWITCH:
-									if (referenceChildNewFound.getModuleVersion().getVersion().equals(versionEstablishedOrg)) {
-										difference += "  New reference " + referenceChildNewFound + " corresponds to this original reference, but with a different version " + versionEstablishedOrg + " that happens to have been previously established as the new version for this module.\n";
-										difference += "  The new established version will be kept for this reference. Note that the original reference was processed but its version was not switched during its visit.";
-									} else {
-										difference += "  New reference " + referenceChildNewFound + " corresponds to this original reference, but with a different version " + referenceChildNewFound.getModuleVersion().getVersion() + ".\n";
-										difference += "  The original reference was processed but its version was not switched during its visit. Nevertheless the version will be changed to the established version " + versionEstablishedOrg + " for the module.";
-									}
-
-									mapReferenceVisitModuleActionPerformed.put(referenceChildNewFound, VisitModuleActionPerformed.PROCESSED_NO_SWITCH);
-									break;
-
-								case SWITCH:
-									if (referenceChildNewFound.getModuleVersion().getVersion().equals(versionEstablishedOrg)) {
-										difference += "  New reference " + referenceChildNewFound + " corresponds to this original reference, but with a different version " + versionEstablishedOrg + " that happens to have been previously established as the new version for this module.\n";
-										difference += "  The new established version will be kept for this reference. Note that the original reference was processed and switched during its visit.";
-									} else {
-										difference += "  New reference " + referenceChildNewFound + " corresponds to this original reference, but with a different version " + referenceChildNewFound.getModuleVersion().getVersion() + ".\n";
-										difference += "  The original reference was processed and switched during its visit. Therefore the version will be changed to the established version " + versionEstablishedOrg + " for the module.";
-									}
-
-									mapReferenceVisitModuleActionPerformed.put(referenceChildNewFound, VisitModuleActionPerformed.SWITCH);
-									break;
-								}
-
-								userInteractionCallbackPlugin.provideInfo(difference);
-								indDifferencesInReferences = true;
-							}
-						}
-					}
-
-					for(Reference referenceChildNew: listReferenceNew) {
-						Reference referenceChildOrgFound;
-
-						if (referenceChildNew.getModuleVersion() == null) {
-							continue;
-						}
-
-						referenceChildOrgFound = null;
+					try {
+						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
+						listReferenceNew = referenceManagerPlugin.getListReference(pathModuleWorkspace);
+						indDifferencesInReferences = false;
 
 						for(Reference referenceChildOrg: listReference) {
+							Reference referenceChildNewFound;
+
 							if (referenceChildOrg.getModuleVersion() == null) {
 								continue;
 							}
 
-							if (referenceChildOrg.equalsNoVersion(referenceChildNew)) {
-								referenceChildOrgFound = referenceChildOrg;
-								break;
+							referenceChildNewFound = null;
+
+							for(Reference referenceChildNew: listReferenceNew) {
+								if (referenceChildNew.getModuleVersion() == null) {
+									continue;
+								}
+
+								if (referenceChildNew.equalsNoVersion(referenceChildOrg)) {
+									referenceChildNewFound = referenceChildNew;
+								}
+							}
+
+							if (referenceChildNewFound == null) {
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REFERENCE_IN_NEW_VERSION_NOT_FOUND), referenceChildOrg));
+								indDifferencesInReferences = true;
+							} else {
+								if (!referenceChildOrg.getModuleVersion().getVersion().equals(referenceChildNewFound.getModuleVersion().getVersion())) {
+									Version versionEstablishedOrg;
+									String difference;
+
+									// The established version may be null (if the original reference was not
+									// processed).
+									versionEstablishedOrg = this.mapNodePathVersionDynamic.get(referenceChildOrg.getModuleVersion().getNodePath());
+
+									// Since we are iterating through the original references, we expect to find an
+									// entry in this Map for all of them.
+									switch (mapReferenceVisitModuleActionPerformed.get(referenceChildOrg)) {
+									case NONE:
+										difference = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_NOT_PROCESSED), referenceChildOrg, referenceChildNewFound);
+										break;
+
+									case PROCESSED_NO_SWITCH:
+										if (referenceChildNewFound.getModuleVersion().getVersion().equals(versionEstablishedOrg)) {
+											difference = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED_NEW_SAME_AS_ESTABLISHED), referenceChildOrg, referenceChildNewFound, versionEstablishedOrg);
+										} else {
+											difference = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_PROCESSED_NOT_SWITCHED), referenceChildOrg, referenceChildNewFound, versionEstablishedOrg);
+										}
+
+										mapReferenceVisitModuleActionPerformed.put(referenceChildNewFound, VisitModuleActionPerformed.PROCESSED_NO_SWITCH);
+										break;
+
+									case SWITCH:
+										if (referenceChildNewFound.getModuleVersion().getVersion().equals(versionEstablishedOrg)) {
+											difference = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_SWITCHED_NEW_SAME_AS_ESTABLISHED), referenceChildOrg, referenceChildNewFound, versionEstablishedOrg);
+										} else {
+											difference = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_REFERENCE_VERSION_ORG_SWITCHED), referenceChildOrg, referenceChildNewFound, versionEstablishedOrg);
+										}
+
+										mapReferenceVisitModuleActionPerformed.put(referenceChildNewFound, VisitModuleActionPerformed.SWITCH);
+										break;
+
+									default:
+										throw new RuntimeException("Must not get here.");
+									}
+
+									userInteractionCallbackPlugin.provideInfo(difference);
+									indDifferencesInReferences = true;
+								}
 							}
 						}
 
-						if (referenceChildOrgFound == null) {
-							userInteractionCallbackPlugin.provideInfo(  "New reference: " + referenceChildNew + ".\n"
-							                                          + "  No original reference is found that corresponds to this new reference. It will therefore be visited.");
-							indDifferencesInReferences = true;
+						for(Reference referenceChildNew: listReferenceNew) {
+							Reference referenceChildOrgFound;
+
+							if (referenceChildNew.getModuleVersion() == null) {
+								continue;
+							}
+
+							referenceChildOrgFound = null;
+
+							for(Reference referenceChildOrg: listReference) {
+								if (referenceChildOrg.getModuleVersion() == null) {
+									continue;
+								}
+
+								if (referenceChildOrg.equalsNoVersion(referenceChildNew)) {
+									referenceChildOrgFound = referenceChildOrg;
+									break;
+								}
+							}
+
+							if (referenceChildOrgFound == null) {
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REFERENCE_IN_ORG_VERSION_NOT_FOUND), referenceChildNew));
+								indDifferencesInReferences = true;
+							}
 						}
+
+						if (!indDifferencesInReferences) {
+							userInteractionCallbackPlugin.provideInfo(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NO_REFERENCE_DIFFERENCES));
+						}
+					} finally {
+						bracketHandleReferenceDifferences.close();
 					}
 
-					if (!indDifferencesInReferences) {
-						userInteractionCallbackPlugin.provideInfo("No difference in the references where found.");
-					} else {
+					if (indDifferencesInReferences) {
 						if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING)) {
 							return visitModuleActionPerformed;
 						}
@@ -475,7 +542,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					// The current ReferencePath is matched by the ReferencePathMatcherAnd. The
 					// current ModuleVersion must be processed.
 
-					userInteractionCallbackPlugin.provideInfo("The ReferencePathpath " + this.referencePath + " of the current ModuleVersion is matched by the ReferencePath matcher.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
 
 					indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 
@@ -577,7 +644,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 							versionNewDynamic = this.mapNodePathVersionDynamic.get(referenceChild.getModuleVersion().getNodePath());
 
 							if (!versionNewDynamic.equals(referenceChild.getModuleVersion().getVersion())) {
-								userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within ReferencePath " + this.referencePath + " was established at " + versionNewDynamic + " during its visit. We must update the parent.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, versionNewDynamic));
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 									return visitModuleActionPerformed;
@@ -597,7 +664,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 						if (this.visitModuleForSwitchToDynamicVersion(referenceChild, byReferenceVersionChild) == VisitModuleActionPerformed.SWITCH) {
-							userInteractionCallbackPlugin.provideInfo("The version of the reference " + referenceChild + " within ReferencePath " + this.referencePath + " was switched to " + byReferenceVersionChild.object + " during its visit. We must update the parent.");
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 								return visitModuleActionPerformed;

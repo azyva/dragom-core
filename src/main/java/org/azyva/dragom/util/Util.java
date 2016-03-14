@@ -208,6 +208,11 @@ public final class Util {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	public static final String MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE = "DO_YOU_WANT_TO_CONTINUE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	public static final String MSG_PATTERN_KEY_JOB_COMPLETED = "JOB_COMPLETED";
 
 	/**
@@ -458,14 +463,14 @@ public final class Util {
 	 * "NEVER" and "ASK").
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param info See corresponding parameter in
+	 * @param prompt See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param alwaysNeverAskUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return AlwaysNeverAskUserResponse.
 	 */
-	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
+	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
 		String alwaysNeverAskResponseChoices;
 		String alwaysResponse;
 		String neverResponse;
@@ -478,7 +483,7 @@ public final class Util {
 		neverResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
 		askResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ASK_RESPONSE);
 
-		if (info.endsWith("*")) {
+		if (prompt.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (alwaysNeverAskUserResponseDefaultValue) {
@@ -495,11 +500,11 @@ public final class Util {
 				break;
 			}
 
-			info = info.substring(0, info.length() - 1) + " (" + alwaysNeverAskResponseChoices + ") [" + defaultValue + "]? ";
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + alwaysNeverAskResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, alwaysNeverAskUserResponseDefaultValue.toString());
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, alwaysNeverAskUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -580,14 +585,14 @@ public final class Util {
 	 * "YES_ALWAYS" and "NO").
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param info See corresponding parameter in
+	 * @param prompt See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param yesAlwaysNoUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return YesAlwaysNoUserResponse.
 	 */
-	public static YesAlwaysNoUserResponse getInfoYesAlwaysNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
+	public static YesAlwaysNoUserResponse getInfoYesAlwaysNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
 		String yesAlwaysNoResponseChoices;
 		String yesResponse;
 		String yesAlwaysResponse;
@@ -600,7 +605,7 @@ public final class Util {
 		yesAlwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
 		noResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
 
-		if (info.endsWith("*")) {
+		if (prompt.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (yesAlwaysNoUserResponseDefaultValue) {
@@ -617,11 +622,11 @@ public final class Util {
 				break;
 			}
 
-			info = info.substring(0, info.length() - 1) + " (" + yesAlwaysNoResponseChoices + ") [" + defaultValue + "]? ";
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + yesAlwaysNoResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, yesAlwaysNoUserResponseDefaultValue.toString());
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, yesAlwaysNoUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -657,14 +662,14 @@ public final class Util {
 	 * returned.
 	 *
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param info See corresponding parameter in
+	 * @param prompt See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param yesAlwaysNoUserResponseDefaultValue Default user response. It is
 	 *   translated to the defaultValue parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @return YesAlwaysNoUserResponse.
 	 */
-	public static YesAlwaysNoUserResponse getInfoYesNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
+	public static YesAlwaysNoUserResponse getInfoYesNoUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
 		String yesNoResponseChoices;
 		String yesResponse;
 		String noResponse;
@@ -675,7 +680,7 @@ public final class Util {
 		yesResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
 		noResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
 
-		if (info.endsWith("*")) {
+		if (prompt.endsWith("*")) {
 			String defaultValue = null;
 
 			switch (yesAlwaysNoUserResponseDefaultValue) {
@@ -691,11 +696,11 @@ public final class Util {
 				break;
 			}
 
-			info = info.substring(0, info.length() - 1) + " (" + yesNoResponseChoices + ") [" + defaultValue + "]? ";
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + yesNoResponseChoices + ") [" + defaultValue + "]? ";
 		}
 
 		do {
-			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, yesAlwaysNoUserResponseDefaultValue.toString());
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, yesAlwaysNoUserResponseDefaultValue.toString());
 
 			userResponse = userResponse.toUpperCase().trim();
 
@@ -750,13 +755,13 @@ public final class Util {
 	 * @param versionType
 	 * @param scmPlugin
 	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
-	 * @param info See corresponding parameter in
+	 * @param prompt See corresponding parameter in
 	 *   UserInteractionCallbackPlugin.getInfo.
 	 * @param versionDefaultValue Default user response. It is translated to the
 	 *   defaultValue parameter in UserInteractionCallbackPlugin.getInfo.
 	 * @return Version.
 	 */
-	public static Version getInfoVersion(VersionType versionType, ScmPlugin scmPlugin, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, Version versionDefaultValue) {
+	public static Version getInfoVersion(VersionType versionType, ScmPlugin scmPlugin, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, Version versionDefaultValue) {
 		String msgPatternVersionFormatHelp;
 		String userResponse;
 		Version version = null;
@@ -767,7 +772,7 @@ public final class Util {
 			msgPatternVersionFormatHelp = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_VERSION_FORMAT_HELP);
 		}
 
-		if (info.endsWith("*")) {
+		if (prompt.endsWith("*")) {
 			String stringVersionType;
 			String defaultValue;
 
@@ -778,7 +783,7 @@ public final class Util {
 			} else if (versionType == VersionType.DYNAMIC){
 				stringVersionType = "D";
 			} else {
-				throw new RuntimeException("Should never get here.");
+				throw new RuntimeException("Must not get here.");
 			}
 
 			if (versionDefaultValue != null) {
@@ -787,15 +792,15 @@ public final class Util {
 				defaultValue = "";
 			}
 
-			info = info.substring(0, info.length() - 1) + " (" + MessageFormat.format(msgPatternVersionFormatHelp, stringVersionType) + ")" + defaultValue + "? ";
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + MessageFormat.format(msgPatternVersionFormatHelp, stringVersionType) + ")" + defaultValue + "? ";
 
 		}
 
 		do {
 			if (versionDefaultValue != null) {
-				userResponse = userInteractionCallbackPlugin.getInfoWithDefault(info, versionDefaultValue.toString());
+				userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, versionDefaultValue.toString());
 			} else {
-				userResponse = userInteractionCallbackPlugin.getInfo(info);
+				userResponse = userInteractionCallbackPlugin.getInfo(prompt);
 			}
 
 			try {
@@ -1021,7 +1026,7 @@ public final class Util {
 			return true;
 		}
 
-		switch (Util.getInfoYesAlwaysNoUserResponse(userInteractionCallbackPlugin, "Do you want to continue*", YesAlwaysNoUserResponse.YES)) {
+		switch (Util.getInfoYesAlwaysNoUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
 		case NO:
 			Util.setAbort();
 			return false;
