@@ -226,6 +226,16 @@ public final class Util {
 	public static final String MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC = "WORKSPACE_DIRECTORY_NOT_SYNC";
 
 	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM = "PREVIOUS_CHANGE_COMMITTED_SCM";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM = "PREVIOUS_CHANGE_SCM";
+
+	/**
 	 * ResourceBundle specific to this class.
 	 * <p>
 	 * Being a utility class, this ResourceBundle also contains global locale-specific
@@ -550,18 +560,18 @@ public final class Util {
 	 * @param runtimeProperty Runtime property.
 	 * @param userInteractionCallbackPlugin See corresponding parameter in
 	 *   getInfoAlwaysNeverAskUserResponse.
-	 * @param info See corresponding parameter in getInfoAlwaysNeverAskUserResponse.
+	 * @param prompt See corresponding parameter in getInfoAlwaysNeverAskUserResponse.
 	 * @param alwaysNeverAskUserResponseDefaultValue See corresponding parameter in
 	 *   getInfoAlwaysNeverAskUserResponse.
 	 * @return AlwaysNeverAskUserResponse.
 	 */
-	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String info, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
+	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
 		alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(null, runtimeProperty));
 
 		if (alwaysNeverAskUserResponse.isAsk()) {
-			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, info, alwaysNeverAskUserResponseDefaultValue);
+			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, prompt, alwaysNeverAskUserResponseDefaultValue);
 
 			if (!alwaysNeverAskUserResponse.isAsk()) {
 				runtimePropertiesPlugin.setProperty(null, runtimeProperty, alwaysNeverAskUserResponse.toString());
@@ -734,7 +744,7 @@ public final class Util {
 	/**
 	 * Facilitates letting the user input a Version.
 	 *
-	 * If info ends with "*" it is replaced with text that gides the user in inputting
+	 * If info ends with "*" it is replaced with text that guides the user in inputting
 	 * the Version.
 	 *
 	 * If scmPlugin is not null that text is

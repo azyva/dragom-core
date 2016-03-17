@@ -19,8 +19,10 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,6 +70,26 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	private static final String MODEL_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE_PREFIX = "VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE_";
 	private static final String RUNTIME_PROPERTY_PHASE = "PHASE";
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_PHASE = "CAN_REUSE_PHASE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_PHASE = "INPUT_PHASE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT = "INPUT_PHASE_WITH_DEFAULT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REUSE_PHASE = "REUSE_PHASE";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ConfigArtifactVersionMapperPluginImpl.class.getName() + "ResourceBundle");
 
 	/**
 	 * Holds one version mapping.
@@ -264,9 +286,9 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 						if (!alwaysNeverAskUserResponseCanReusePhase.isAlways()) {
 							if (phase == null) {
-								phase = userInteractionCallbackPlugin.getInfo("Which phase do you want to use for mapping version " + version + " to artifact version " + artifactVersion + " for module " + this.getModule() + "? ");
+								phase = userInteractionCallbackPlugin.getInfo(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, artifactVersion));
 							} else {
-								phase = userInteractionCallbackPlugin.getInfoWithDefault("Which phase do you want to use for mapping version " + version + " to artifact version " + artifactVersion + " for module " + this.getModule() + " [" + phase + "]? ", phase);
+								phase = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, artifactVersion, phase), phase);
 							}
 
 							runtimePropertiesPlugin.setProperty(null, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PHASE, phase);
@@ -276,7 +298,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 											runtimePropertiesPlugin,
 											ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_PHASE,
 											userInteractionCallbackPlugin,
-											"Do you want to automatically reuse phase " + phase + " for all subsequent version to artifact version mapping*",
+											MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_REUSE_PHASE), phase),
 											AlwaysNeverAskUserResponse.ALWAYS);
 						}
 

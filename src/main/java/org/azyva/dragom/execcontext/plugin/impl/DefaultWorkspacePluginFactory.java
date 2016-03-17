@@ -22,11 +22,13 @@ package org.azyva.dragom.execcontext.plugin.impl;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
@@ -81,6 +83,27 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	private static final String WORKSPACE_METADATA_FILE = "workspace-metadata.xml";
 
 	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_WORKSPACE_LOCKED = "WORKSPACE_LOCKED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_USER_WORKSPACE_DIRECTORY_CONFLICT = "USER_WORKSPACE_DIRECTORY_CONFLICT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SYSTEM_WORKSPACE_DIRECTORY_CONFLICT = "SYSTEM_WORKSPACE_DIRECTORY_CONFLICT";
+
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultWorkspacePluginFactory.class.getName() + "ResourceBundle");
+
+	/**
 	 * Default WorkspacePlugin implementation.
 	 * Simple workspace implementation.
 	 *
@@ -88,9 +111,6 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	 * This implementation does not keep track of the modules created within the
 	 * workspace and simpl assumes the module path is a directory whose name is the
 	 * module name within the workspace directory, regardless of the version.
-	 *
-	 * In case of conflicts, which are naively assumed to not happen, unexpected
-	 * exceptions will likely be eventually be raised by the tool.
 	 */
 	@XmlAccessorType(XmlAccessType.NONE)
 	@XmlRootElement(name = "workspace-default-impl")
@@ -248,8 +268,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				workspaceDirOther = this.mapPathWorkspaceDir.get(path);
 
 				if (workspaceDirOther != null) {
-					DefaultWorkspacePluginFactory.logger.error("A workspace directory for " + workspaceDirUserModuleVersion + " is requested. The corresponding path " + path + " is already used for " + workspaceDirOther + ". This workspace implementation does not support resolving such conflicts.");
-					return null;
+					throw new RuntimeExceptionUserError(MessageFormat.format(DefaultWorkspacePluginFactory.resourceBundle.getString(DefaultWorkspacePluginFactory.MSG_PATTERN_KEY_USER_WORKSPACE_DIRECTORY_CONFLICT), workspaceDirUserModuleVersion, path, workspaceDirOther));
 				}
 
 				DefaultWorkspacePluginFactory.logger.info("Path " + path + " is created for " + workspaceDirUserModuleVersion + '.');
@@ -289,7 +308,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				workspaceDirOther = this.mapPathWorkspaceDir.get(path);
 
 				if (workspaceDirOther != null) {
-					throw new RuntimeException("A workspace directory for " + workspaceDirSystemModule + " is requested. The corresponding path " + path + " is already used for " + workspaceDirOther + ". This workspace implementation does not support resolving such conflicts.");
+					throw new RuntimeExceptionUserError(MessageFormat.format(DefaultWorkspacePluginFactory.resourceBundle.getString(DefaultWorkspacePluginFactory.MSG_PATTERN_KEY_SYSTEM_WORKSPACE_DIRECTORY_CONFLICT), workspaceDirSystemModule, path, workspaceDirOther));
 				}
 
 				DefaultWorkspacePluginFactory.logger.info("Path " + path + " is created for " + workspaceDirSystemModule + '.');
@@ -524,7 +543,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
 			try {
 				if (!workspaceLockedIndicatorFile.createNewFile()) {
-					throw new RuntimeExceptionUserError("Workspace " + this.pathWorkspace + " is currently locked.");
+					throw new RuntimeExceptionUserError(MessageFormat.format(DefaultWorkspacePluginFactory.resourceBundle.getString(DefaultWorkspacePluginFactory.MSG_PATTERN_KEY_WORKSPACE_LOCKED), this.pathWorkspace, workspaceLockedIndicatorFile));
 				}
 			} catch (IOException ioe) {
 				throw new RuntimeException(ioe);

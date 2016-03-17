@@ -20,10 +20,12 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
@@ -86,6 +88,31 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 	 * Default ID of this plugin.
 	 */
 	public static final String DEFAULT_PLUGIN_ID = "change-reference-to-module-version";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REFERENCE_WILL_BE_CHANGED = "REFERENCE_WILL_BE_CHANGED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY = "MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION = "CHANGE_REFERENCE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE = "CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ChangeReferenceToModuleVersionTaskPluginImpl.class.getName() + "ResourceBundle");
 
 	public ChangeReferenceToModuleVersionTaskPluginImpl(Module module) {
 		super(module);
@@ -190,14 +217,14 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 			if (versionNew != null) {
 				String message;
 
-				userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + referencePath + " will be changed to version " + versionNew + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_REFERENCE_WILL_BE_CHANGED), referencePath, referenceChild, versionNew));
 
 				workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
 
 				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), new ModuleVersion(module.getNodePath(), version), pathModuleWorkspace));
 				}
 
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
@@ -208,7 +235,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 					Map<String, String> mapCommitAttr;
 					taskEffects.referenceChanged();
 
-					message = "Reference " + referenceChild + " within ReferencePath " + referencePath + " was changed to version " + versionNew + '.';
+					message = MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), referencePath, referenceChild, versionNew);
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
@@ -216,16 +243,14 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 					taskEffects.actionPerformed(message);
 
 					if (indUserWorkspaceDir) {
-						message = "The previous change was performed in " + pathModuleWorkspace + " which belongs to the user (you) and was committed to the SCM.";
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
 						userInteractionCallbackPlugin.provideInfo(message);
+						taskEffects.actionPerformed(message);
 					} else {
-						message = "The previous change was performed in " + pathModuleWorkspace + " which belongs to the system and was committed to the SCM.";
-						ChangeReferenceToModuleVersionTaskPluginImpl.logger.info(message);
+						ChangeReferenceToModuleVersionTaskPluginImpl.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 					}
-
-					taskEffects.actionPerformed(message);
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + referencePath + " needed to be changed to version " + versionNew + ", but this did not result in a real change in the reference. No change was performed.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), referencePath, referenceChild, versionNew));
 				}
 			}
 		}

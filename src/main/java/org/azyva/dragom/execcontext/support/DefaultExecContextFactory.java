@@ -346,6 +346,15 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 			this.mapTransientData.put(name, value);
 		}
 
+		/**
+		 * @return Simply returns the Path to the workspace directory associated with the
+		 *   ExecContext.
+		 */
+		@Override
+		public String getName() {
+			return this.pathWorkspaceDir.toString();
+		}
+
 		@Override
 		public Path getPathWorkspaceDir() {
 			return this.pathWorkspaceDir;

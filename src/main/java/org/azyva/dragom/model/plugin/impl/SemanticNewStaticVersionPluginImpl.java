@@ -19,12 +19,15 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.text.MessageFormat;
 import java.util.List;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
@@ -92,6 +95,41 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	 * semantic Version.
 	 */
 	private static final int DEFAULT_REVISION_DECIMAL_POSITION_COUNT = 1;
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_SPECIFIED = "NEW_SEMANTIC_VERSION_TYPE_SPECIFIED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_AUTOMATICALLY_REUSED = "NEW_SEMANTIC_VERSION_TYPE_AUTOMATICALLY_REUSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE = "INPUT_NEW_SEMANTIC_VERSION_TYPE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE_WITH_DEFAULT = "INPUT_NEW_SEMANTIC_VERSION_TYPE_WITH_DEFAULT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_INVALID = "NEW_SEMANTIC_VERSION_TYPE_INVALID";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE = "AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SemanticNewStaticVersionPluginImpl.class.getName() + "ResourceBundle");
 
 	private enum NewSemanticVersionType {
 		MINOR,
@@ -233,8 +271,8 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 				runtimeProperty = runtimePropertiesPlugin.getProperty(module, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_NEW_SEMANTIC_VERSION_TYPE);
 
 				if (runtimeProperty != null) {
-					userInteractionCallbackPlugin.provideInfo("The specific new semantic version type " + runtimeProperty + " is specified for the module " + module + ". It is used as is.");
 					newSemanticVersionType = NewSemanticVersionType.valueOf(runtimeProperty);
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_SPECIFIED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionType));
 				} else {
 					String stringNewSemanticVersionType;
 					AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseNewSemanticVersionType;
@@ -261,14 +299,14 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 					}
 
 					if (alwaysNeverAskUserResponseCanReuseNewSemanticVersionType.isAlways()) {
-						userInteractionCallbackPlugin.provideInfo("The new semantic version type " + newSemanticVersionTypeReuse + " is automatically reused for module " + module + '.');
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_AUTOMATICALLY_REUSED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionTypeReuse));
 						newSemanticVersionType = newSemanticVersionTypeReuse;
 					} else {
 						do {
 							if (newSemanticVersionTypeReuse == null) {
-								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfo("Which new semantic version type do you want to use for creating a new static version for module " + module + " based on version " + versionDynamic + " given that " + versionStaticMax + " is the greatest current static version of the module (mAjor, mInor)? ");
+								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax));
 							} else {
-								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfoWithDefault("Which new semantic version type do you want to use for creating a new static version for module " + module + " based on version " + versionDynamic + " given that " + versionStaticMax + " is the greatest current static version of the module (mAjor, mInor) [" + newSemanticVersionTypeReuse + "]? ", newSemanticVersionTypeReuse.toString());
+								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE_WITH_DEFAULT), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax, newSemanticVersionTypeReuse), newSemanticVersionTypeReuse.toString());
 							}
 
 							stringNewSemanticVersionType = stringNewSemanticVersionType.toUpperCase().trim();
@@ -286,7 +324,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 							}
 
 							if (newSemanticVersionTypeReuse == null) {
-								userInteractionCallbackPlugin.provideInfo("The new semantic version type " + stringNewSemanticVersionType + " is invalid. Please try again.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_INVALID), stringNewSemanticVersionType));
 								continue;
 							}
 
@@ -301,7 +339,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 										runtimePropertiesPlugin,
 										SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE,
 										userInteractionCallbackPlugin,
-										"Do you want to automatically reuse the new semantic version type " + newSemanticVersionTypeReuse + " for all subsequent modules for which a new static version needs to be created*",
+										MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE), newSemanticVersionTypeReuse),
 										AlwaysNeverAskUserResponse.ALWAYS);
 					}
 				}

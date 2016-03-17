@@ -71,11 +71,6 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED = "UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
 	public static final String MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION = "REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION";
 
 	/**
@@ -122,6 +117,66 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 * See description in ResourceBundle.
 	 */
 	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED = "PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION = "CHANGE_REFERENCE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE = "CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REFERENCES_UPDATED = "REFERENCES_UPDATED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_DYNAMIC_MODULE_VERSION_KEPT = "DYNAMIC_MODULE_VERSION_KEPT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_WILL_BE_SWITCHED = "MODULE_VERSION_WILL_BE_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY = "MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED = "NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SWITCHED = "NEW_DYNAMIC_VERSION_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED = "NEW_DYNAMIC_VERSION_CREATED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED = "ARTIFACT_VERSION_CHANGED";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -324,7 +379,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				&& (workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion)
 				&& !scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
 
-				throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this job.");
+				throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
 			}
 
 			if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -620,9 +675,9 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
-				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo("This ModuleVersion is already checked out in " + pathModuleWorkspace + ". The change will be performed in this directory.");
-				}
+				// We would typically want to inform the user here that changes are about to be
+				// performed in a user workspace directory. But the user was necessarily informed
+				// before when processing the ModuleVersion for switching its Version.
 
 				// We want to perform a single commit for all reference updates, but only if at
 				// least one such update is performed.
@@ -644,7 +699,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 							versionNewDynamic = this.mapNodePathVersionDynamic.get(referenceChild.getModuleVersion().getNodePath());
 
 							if (!versionNewDynamic.equals(referenceChild.getModuleVersion().getVersion())) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, versionNewDynamic));
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, versionNewDynamic));
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 									return visitModuleActionPerformed;
@@ -652,11 +707,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic)) {
 									indReferenceUpdated = true;
-									message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to " + versionNewDynamic + '.';
+									message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNewDynamic);
 									userInteractionCallbackPlugin.provideInfo(message);
 									this.listActionsPerformed.add(message);
 								} else {
-									userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + versionNewDynamic + ", but this did not result in a real change in the reference. No change was performed.");
+									userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), this.referencePath, referenceChild, versionNewDynamic));
 								}
 							}
 						}
@@ -664,7 +719,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
 						if (this.visitModuleForSwitchToDynamicVersion(referenceChild, byReferenceVersionChild) == VisitModuleActionPerformed.SWITCH) {
-							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_UPDATE_PARENT_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 								return visitModuleActionPerformed;
@@ -672,11 +727,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object)) {
 								indReferenceUpdated = true;
-								message = "Reference " + referenceChild + " within ReferencePath " + this.referencePath + " was changed to " + byReferenceVersionChild.object + '.';
+								message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionChild.object);
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
 							} else {
-								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), this.referencePath, referenceChild, byReferenceVersionChild.object));
 							}
 						}
 
@@ -691,14 +746,16 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-					scmPlugin.commit(pathModuleWorkspace, "One or more references within ReferencePath " + this.referencePath + " were updated following their switch to a dynamic version.", mapCommitAttr);
+					message = "One or more references within ReferencePath " + this.referencePath + " were updated following their switch to a dynamic version.";
+					message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
+					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
 
 					if (indUserWorkspaceDir) {
-						message = "The previous changes were performed in " + pathModuleWorkspace + " which belongs to the user (you) and were committed to the SCM.";
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
-						SwitchToDynamicVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " which belongs to the system and were committed to the SCM.");
+						SwitchToDynamicVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " and were committed to the SCM.");
 					}
 				}
 			}
@@ -801,31 +858,29 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 		indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
 
-		if (indSameVersion) {
-			userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is to be kept. The artifact version will simply be adjusted if required.");
-		} else {
-			userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " will be switched to version " + versionNewDynamic + '.');
-		}
-
 		bracketHandle = null;
 
 		try {
-			bracketHandle = userInteractionCallbackPlugin.startBracket();
+			if (indSameVersion) {
+				bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_DYNAMIC_MODULE_VERSION_KEPT), moduleVersion));
+			} else {
+				bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_WILL_BE_SWITCHED), moduleVersion, versionNewDynamic));
+			}
 
 			if (indUserWorkspaceDir) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-				userInteractionCallbackPlugin.provideInfo("Original ModuleVersion " + moduleVersion + " is already checked out in " + pathModuleWorkspace + ". The version in this directory will be switched to the new version " + versionNewDynamic + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), moduleVersion, pathModuleWorkspace));
 
 				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
-					throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this job.");
+					throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
 				}
 			}
 
 			indCreateNewVersion = !scmPlugin.isVersionExists(versionNewDynamic);
 
 			if (indCreateNewVersion) {
-				userInteractionCallbackPlugin.provideInfo("The new version " + versionNewDynamic + " does not exist and will be created based on version " + byReferenceVersionBase.object + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST), moduleVersion, versionNewDynamic, byReferenceVersionBase.object));
 			}
 
 			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_DYNAMIC_VERSION)) {
@@ -840,24 +895,28 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					if (indCreateNewVersion) {
 						scmPlugin.switchVersion(pathModuleWorkspace, byReferenceVersionBase.object);
 						scmPlugin.createVersion(pathModuleWorkspace, versionNewDynamic, true);
-						message = "The version in directory " + pathModuleWorkspace + " was switched to the base version " + byReferenceVersionBase.object + ", a new version " + versionNewDynamic + " was created based on it and was switched to.";
+						message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
 						SwitchToDynamicVersion.logger.info("Switching the version in directory " + pathModuleWorkspace + " to the new version " + versionNewDynamic + '.');
 						scmPlugin.switchVersion(pathModuleWorkspace, versionNewDynamic);
-						message = "The version in directory " + pathModuleWorkspace + " was switched to the new version " + versionNewDynamic + '.';
+						message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SWITCHED), moduleVersion, versionNewDynamic);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					}
+
+					message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM), pathModuleWorkspace);
+					userInteractionCallbackPlugin.provideInfo(message);
+					this.listActionsPerformed.add(message);
 				} else {
 					if (indCreateNewVersion) {
 						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionBase.object);
 						scmPlugin.createVersion(pathModuleWorkspace, versionNewDynamic, true);
-						message = "New version " + versionNewDynamic + " was created based on version " + byReferenceVersionBase.object + " for module " + moduleVersion.getNodePath() + '.';
+						message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
-						SwitchToDynamicVersion.logger.info("The pevious change was performed in the system directory " + pathModuleWorkspace + '.');
+						SwitchToDynamicVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + '.');
 					} else {
 						// We need to perform the checkout even if this is a system working directory
 						// since the path is used below.
@@ -943,7 +1002,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						versionEquivalentStatic = null;
 					}
 
-					message = "Artifact version within module " + module.getNodePath() + " has been updated to " + artifactVersionNew + " from " + artifactVersion + " following the creation of, the switch to or the reuse of the new version " + versionNewDynamic + '.';
+					message = MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED), module, versionNewDynamic, artifactVersion, artifactVersionNew);
 
 					mapCommitAttr = new HashMap<String, String>();
 
@@ -958,11 +1017,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					this.listActionsPerformed.add(message);
 
 					if (indUserWorkspaceDir) {
-						message = "The pevious change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
-						SwitchToDynamicVersion.logger.info("The pevious change was performed in the system directory " + pathModuleWorkspace + " and was committed to the SCM.");
+						SwitchToDynamicVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 					}
 				}
 			}

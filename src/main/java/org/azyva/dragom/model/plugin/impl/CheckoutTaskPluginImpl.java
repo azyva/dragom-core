@@ -20,6 +20,8 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
@@ -33,7 +35,6 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.ReferencePath;
-import org.azyva.dragom.util.RuntimeExceptionUserError;
 
 /**
  * Factory for TaskPlugin that implements the checkout functionality.
@@ -55,6 +56,21 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 	 * Default ID of this plugin.
 	 */
 	public static final String DEFAULT_PLUGIN_ID = "checkout";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(CheckoutTaskPluginImpl.class.getName() + "ResourceBundle");
 
 	public CheckoutTaskPluginImpl(Module module) {
 		super(module);
@@ -104,15 +120,12 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 
 			userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " already exists. It is assumed to already contain the checked out sources for ModuleVersion " + moduleVersion + ". No action taken.");
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
 		} else {
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
-			if (pathModuleWorkspace == null) {
-				throw new RuntimeExceptionUserError("A workspace directory for " + workspaceDirUserModuleVersion + " could not be obtained, probably because of a conflict.");
-			}
-
 			try {
-				userInteractionCallbackPlugin.provideInfo("Checking out ModuleVersion " + moduleVersion + " into " + pathModuleWorkspace + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));
 
 				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);

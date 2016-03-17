@@ -19,8 +19,10 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import java.util.ResourceBundle;
+
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.impl.simple.SimpleNode;
@@ -63,6 +65,16 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 	 * Prefix for the runtime property specifying the plugin ID to delegate to.
 	 */
 	public static final String RUNTIME_PROPERTY_PLUGIN_ID_PREFIX = "PLUGIN_ID.";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(.class.getName() + "ResourceBundle");
 
 	/**
 	 * RuntimeSelectionPluginFactory singleton.

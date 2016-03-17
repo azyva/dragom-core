@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -34,6 +35,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.apache.commons.exec.CommandLine;
@@ -194,6 +196,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	private static final String TRANSIENT_DATA_PATH_ALREADY_FETCHED = GitScmPluginImpl.class.getName() + ".PathAlreadyFetched";
 
 	private static final Version VERSION_DEFAULT = new Version(VersionType.DYNAMIC, "master");
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(GitScmPluginImpl.class.getName() + "ResourceBundle");
 
 	/**
 	 * Enumerates the possible values for the allowExitCodeEnum parameter of the
@@ -1825,15 +1837,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					// UserInteractionCallbackPlugin as it would seem this plugin should operate at a
 					// low level. But for now this seems to be the only way to properly inform the
 					// user about what to do with the merge conflicts.
-					userInteractionCallbackPlugin.provideInfo(
-						  "WARNING: Conflicts were encoutered during the merge of version " + versionSrc + " into version " + versionDest + " within the workspace directory " + pathModuleWorkspace + ".\n"
-						+ "This merge is performed using multiple distinct patches because some commits are excluded.\n"
-						+ "The dragom-patch-##.patch files are still in the root of the workspace directory for the module.\n"
-						+ "The conflicts occurred while merging the dragom-patch-##.patch.current file and the merge process has not been aborted.\n"
-						+ "Please resolve these conflicts and apply the remaining dragom-patch-##.patch files in sequence with \"git apply --3way <patch file>\", resolving any other conflicts thay may be encountered.\n"
-						+ "Finally, complete the merge with \"git commit\" and delete the dragom-patch-##.patch files.\n"
-						+ "IT IS VERY IMPORTANT that the merge operation not be completed before resolving the conflicts and applying the remaining patch files.\n"
-						+ "If it is, the merge commit will tell Git that the merge is complete, whereas unmerged changes probably exist.");
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest));
 
 					return false;
 				}

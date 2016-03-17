@@ -100,7 +100,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_VERSION_NOT_EXIST = "VERSION_NOT_EXIST";
+	public static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
@@ -367,7 +367,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			}
 
 			if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-				throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VERSION_NOT_EXIST), moduleVersion));
+				throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), moduleVersion));
 			}
 		}
 

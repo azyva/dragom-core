@@ -22,6 +22,8 @@ package org.azyva.dragom.model.plugin.impl;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Path;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
@@ -70,6 +72,31 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 	public static final String DEFAULT_PLUGIN_ID = "build";
 
 	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER = "IGNORING_MODULE_VERSION_ONLY_USER";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM = "ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT = "ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INITIATING_BUILD = "INITIATING_BUILD";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(BuildTaskPluginImpl.class.getName() + "ResourceBundle");
+
+	/**
 	 * Defines the build scopes.
 	 * <p>
 	 * Used to parse the BUILD_SCOPE initialization property.
@@ -77,16 +104,16 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 	public enum BuildScope {
 		/**
 		 * Build only {@link ModuleVersion}'s that are in a user workspace directory and
-		 * fail if a ModuleVersion needing to be built is not. This is the default value
-		 * of the BUILD_SCOPE property if not defined.
+		 * ignore ModuleVersion's that are not. This is the default value of the
+		 * BUILD_SCOPE tool property if not defined.
 		 */
 		ONLY_USER,
 
 		/**
 		 * Build only {@link ModuleVersion}'s that are in a user workspace directory and
-		 * ignore ModuleVersion's that are not.
+		 * fail if a ModuleVersion needing to be built is not.
 		 */
-		ONLY_USER_NO_ABORT_IF_SYSTEM,
+		ONLY_USER_ABORT_IF_SYSTEM,
 
 		/**
 		 * Build all {@link ModuleVersion}'s, whether they are in a user workspace
@@ -180,19 +207,18 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 		try {
 			if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
-
-				userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " exists.");
 			} else {
 				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 				switch (buildScope) {
 				case ONLY_USER:
-					userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is not checked out in a user workspace directory and needs to be built. Aborting the build..");
-					return taskEffects.abort();
-
-				case ONLY_USER_NO_ABORT_IF_SYSTEM:
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER), moduleVersion));
 					return taskEffects;
+
+				case ONLY_USER_ABORT_IF_SYSTEM:
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM), moduleVersion));
+					return taskEffects.abort();
 
 				case ALL:
 					pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
@@ -200,7 +226,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 				case ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT:
 					if (!module.isNodePluginExists(ArtifactInfoPlugin.class, null)) {
-						userInteractionCallbackPlugin.provideInfo("ModuleVersion " + moduleVersion + " is not checked out in a user workspace directory, does not produce artifacts and and needs to be built. Aborting the build..");
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT), moduleVersion));
 						return taskEffects.abort();
 					}
 
@@ -213,7 +239,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 			if (taskId.equals(BuildTaskPluginImpl.TASK_ID_BUILD)) {
 				if (builderPlugin.isSomethingToBuild(pathModuleWorkspace)) {
-					try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter("Initiating the build process for ModuleVersion " + moduleVersion + " in workspace directory " + pathModuleWorkspace + '.')) {
+					try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace))) {
 						if (!builderPlugin.build(pathModuleWorkspace, buildContext, writerLog)) {
 							taskEffects.abort();
 						}

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
@@ -95,6 +96,16 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	private static final String RUNTIME_PROPERTY_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD = "NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD";
 
 	private static final String RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION = "REVERT_ARTIFACT_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(.class.getName() + "ResourceBundle");
 
 	/**
 	 * Map of all ModuleVersion which were created during the processing. The value
@@ -291,7 +302,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 									userInteractionCallbackPlugin.provideInfo(message);
 									this.listActionsPerformed.add(message);
 								} else {
-									CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " which belongs to the system and was committed to the SCM.");
+									CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 								}
 							} else {
 								userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionChild.object + ", but this did not result in a real change in the reference. No change was performed.");
@@ -458,7 +469,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
-						CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " which belongs to the system and was committed to the SCM.");
+						CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 					}
 				} else {
 					userInteractionCallbackPlugin.provideInfo("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " needed to be changed to version " + byReferenceVersionReference.object + ", but this did not result in a real change in the reference. No change was performed.");
@@ -642,11 +653,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				this.listActionsPerformed.add(message);
 
 				if (indUserWorkspaceDir) {
-					message = "The pevious change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
+					message = "The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
 					userInteractionCallbackPlugin.provideInfo(message);
 					this.listActionsPerformed.add(message);
 				} else {
-					CreateStaticVersion.logger.info("The pevious change was performed in the system directory " + pathModuleWorkspace + " and was committed to the SCM.");
+					CreateStaticVersion.logger.info("The previous change was performed in the system directory " + pathModuleWorkspace + " and was committed to the SCM.");
 				}
 			}
 
@@ -658,11 +669,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			this.listActionsPerformed.add(message);
 
 			if (indUserWorkspaceDir) {
-				message = "The pevious change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
+				message = "The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
 				userInteractionCallbackPlugin.provideInfo(message);
 				this.listActionsPerformed.add(message);
 			} else {
-				CreateStaticVersion.logger.info("The pevious change was performed in the system directory " + pathModuleWorkspace + " and was committed to the SCM.");
+				CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 			}
 
 			if (artifactVersionManagerPlugin != null) {
@@ -736,11 +747,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 							this.listActionsPerformed.add(message);
 
 							if (indUserWorkspaceDir) {
-								message = "The pevious change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
+								message = "The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.";
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
 							} else {
-								CreateStaticVersion.logger.info("The pevious change was performed in the system directory " + pathModuleWorkspace + " and was committed to the SCM.");
+								CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 							}
 						}
 					} else {

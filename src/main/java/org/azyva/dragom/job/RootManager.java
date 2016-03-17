@@ -86,12 +86,12 @@ public class RootManager {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_MODULE_NOT_EXIST = "MODULE_NOT_EXIST";
+	public static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_VERSION_NOT_EXIST = "VERSION_NOT_EXIST";
+	public static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -312,7 +312,7 @@ public class RootManager {
 		module = model.getModule(moduleVersion.getNodePath());
 
 		if (module == null) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_MODULE_NOT_EXIST), moduleVersion));
+			throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST), moduleVersion));
 		}
 
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -320,7 +320,7 @@ public class RootManager {
 		// We assume the default version, when getVersion returns null, always exists.
 		if (moduleVersion.getVersion() != null) {
 			if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-				throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_VERSION_NOT_EXIST), moduleVersion));
+				throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), moduleVersion));
 			}
 		}
 	}

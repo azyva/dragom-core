@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
@@ -190,6 +191,16 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	 * Runtime property that specifies the source {@link Version} to reuse.
 	 */
 	private static final String RUNTIME_PROPERTY_REUSE_SRC_VERSION = "REUSE_SRC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(.class.getName() + "ResourceBundle");
 
 	/**
 	 * Specifies the behavior when merge conflicts are encountered.
@@ -488,10 +499,6 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 			if (!workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
-
-				if (pathModuleWorkspace == null) {
-					throw new RuntimeExceptionUserError("A workspace directory for " + workspaceDirUserModuleVersion + " could not be obtained, probably because of a conflict.");
-				}
 
 				try {
 					userInteractionCallbackPlugin.provideInfo("Checking out ModuleVersion " + moduleVersionDest + " into " + pathModuleWorkspace + '.');

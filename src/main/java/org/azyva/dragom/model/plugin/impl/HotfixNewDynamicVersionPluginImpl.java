@@ -19,40 +19,50 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
+
 import org.azyva.dragom.apiutil.ByReference;
-import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewDynamicVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
-import org.azyva.dragom.util.Util;
 
 /**
- * Factory for NewDynamicVersionPlugin that implements a strategy for hotfixes.
+ * {@link NewDynamicVersionPlugin} that implements a strategy for hotfixes.
  * <p>
- * The current Version must be static.
+ * The current {@link Version} must be static.
  * <p>
  * The strategy is such that the new dynamic Version is created directly from the
  * current Version itself.
  *
  * @author David Raymond
  */
-public class HotfixNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl implements NewDynamicVersionPlugin {
+public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBaseImpl implements NewDynamicVersionPlugin {
 	/**
-	 * Runtime property of type AlwaysNeverAskUserResponse that indicates if a
-	 * previously established dynamic Version can be reused.
+	 * See description in ResourceBundle.
 	 */
-	private static final String RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION = "CAN_REUSE_DYNAMIC_VERSION";
+	public static final String MSG_PATTERN_KEY_VERSION_MUST_BE_STATIC = "VERSION_MUST_BE_STATIC";
 
 	/**
-	 * Runtime property that specifies the dynamic Version to reuse.
+	 * See description in ResourceBundle.
 	 */
-	private static final String RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION = "REUSE_DYNAMIC_VERSION";
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE = "NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(HotfixNewDynamicVersionPluginImpl.class.getName() + "ResourceBundle");
 
 	public HotfixNewDynamicVersionPluginImpl(Module module) {
 		super(module);
@@ -60,77 +70,24 @@ public class HotfixNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl 
 
 	@Override
 	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase) {
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		Module module;
 		ScmPlugin scmPlugin;
-		String runtimeProperty;
-		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDynamicVersion;
-		Version versionReuseDynamic;
-		Version versionNewDynamic = null;
+		Version versionNewDynamic;
 
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		module = this.getModule();
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-		alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, HotfixNewDynamicVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION));
-
-		runtimeProperty = runtimePropertiesPlugin.getProperty(module, HotfixNewDynamicVersionPluginImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION);
-
-		if (runtimeProperty != null) {
-			versionReuseDynamic = new Version(runtimeProperty);
-
-			if (versionReuseDynamic.getVersionType() != VersionType.DYNAMIC) {
-				throw new RuntimeException("Version " + versionReuseDynamic + " must be dynamic.");
-			}
-		} else {
-			versionReuseDynamic = null;
-
-			if (alwaysNeverAskUserResponseCanReuseDynamicVersion.isAlways()) {
-				// Normally if the runtime property CAN_REUSE_DYNAMIC_VERSION is ALWAYS the
-				// REUSE_DYNAMIC_VERSION runtime property should also be set. But since these
-				// properties are independent and stored externally, it can happen that they
-				// are not synchronized. We make an adjustment here to avoid problems.
-				alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.ASK;
-			}
-		}
-
-		// The main algorithm is after this "if". This "if" is for taking care of the case
-		// where the Version of the module is dynamic in which case it is possible that no
-		// switch is required. But if a switch is required, the algorithm after this "if"
-		// gets executed regardless of whether the Version is dynamic or static.
-
 		if (version.getVersionType() != VersionType.STATIC) {
-			throw new RuntimeExceptionUserError("Version " + version + " must be static.");
+			throw new RuntimeExceptionUserError(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_VERSION_MUST_BE_STATIC), new ModuleVersion(module.getNodePath(), version)));
 		}
 
-		if (alwaysNeverAskUserResponseCanReuseDynamicVersion.isAlways()) {
-			userInteractionCallbackPlugin.provideInfo("New dynamic version " + versionReuseDynamic + " is automatically reused for module " + module + " whose version is currently " + version + '.');
-			versionNewDynamic = versionReuseDynamic;
-		} else {
-			versionNewDynamic =
-					Util.getInfoVersion(
-							VersionType.DYNAMIC,
-							null,
-							userInteractionCallbackPlugin,
-							"To which dynamic version do you want to switch version " + version + " of module " + module + " to*",
-							versionReuseDynamic);
+		versionNewDynamic = this.handleReuseDynamicVersion(version);
 
-			runtimePropertiesPlugin.setProperty(null, HotfixNewDynamicVersionPluginImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION, versionNewDynamic.toString());
-
-			alwaysNeverAskUserResponseCanReuseDynamicVersion =
-					Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-							runtimePropertiesPlugin,
-							HotfixNewDynamicVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION,
-							userInteractionCallbackPlugin,
-							"Do you want to automatically reuse dynamic version " + versionNewDynamic + " for all subsequent modules for which a new version needs to be created*",
-							AlwaysNeverAskUserResponse.ALWAYS);
-		}
-
-		// After all this, the new version may be the same as the current version.
+		// If the new dynamic Version is equal to the current one, the user will have
+		// been informed by this.handleReuseDynamicVersion.
 		if (versionNewDynamic.equals(version)) {
-			userInteractionCallbackPlugin.provideInfo("The new dynamic version " + versionNewDynamic + " is the same as the current version " + version + " of module " + module + ". We simply keep it.");
 			return version;
 		}
 
@@ -139,8 +96,7 @@ public class HotfixNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl 
 		// that its base Version is the current one.
 
 		if (!scmPlugin.isVersionExists(versionNewDynamic)) {
-			userInteractionCallbackPlugin.provideInfo("The dynamic version " + versionNewDynamic + " does not exist in module " + module + '.');
-			userInteractionCallbackPlugin.provideInfo("Current version " + version + " is used as the base for that new version.");
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE), module, versionNewDynamic, version));
 			byReferenceVersionBase.object = version;
 		} else {
 			ScmPlugin.BaseVersion baseVersion;
@@ -148,7 +104,7 @@ public class HotfixNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl 
 			baseVersion = scmPlugin.getBaseVersion(versionNewDynamic);
 
 			if (!baseVersion.versionBase.equals(version)) {
-				throw new RuntimeExceptionUserError("The dynamic version " + versionNewDynamic + " already exists in module " + module + ", but it is not based on the current version " + version + '.');
+				throw new RuntimeExceptionUserError(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE), module, versionNewDynamic, version));
 			}
 		}
 

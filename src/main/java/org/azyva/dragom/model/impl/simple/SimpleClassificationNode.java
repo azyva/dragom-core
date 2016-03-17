@@ -291,7 +291,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			SimpleClassificationNode simpleClassificationNode;
 
 			if (!this.isNodePluginExists(UndefinedDescendantNodeManagerPlugin.class, null)) {
-				SimpleClassificationNode.logger.trace("Dynamic creation request for child classification node " + name + " of parent classification node " + this.getNodePath() + " denied since the UndefinedDescendantNodeManagerPlugin plugin is not defined for the node.");
+				SimpleClassificationNode.logger.trace("Dynamic creation request for child classification node " + name + " of parent classification node " + this + " denied since the UndefinedDescendantNodeManagerPlugin plugin is not defined for the node.");
 				return null;
 			}
 
@@ -300,7 +300,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			simpleClassificationNode = (SimpleClassificationNode)undefinedDescendantNodeManagerPlugin.requestClassificationNode(name);
 
 			if (simpleClassificationNode == null) {
-				SimpleClassificationNode.logger.trace("Dynamic creation request for child classification node " + name + " of parent classification node " + this.getNodePath() + " denied, probably because classification nodes must be preconfigured.");
+				SimpleClassificationNode.logger.trace("Dynamic creation request for child classification node " + name + " of parent classification node " + this + " denied, probably because classification nodes must be preconfigured.");
 			}
 
 			return simpleClassificationNode;
@@ -328,7 +328,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			SimpleModule module;
 
 			if (!this.isNodePluginExists(UndefinedDescendantNodeManagerPlugin.class, null)) {
-				SimpleClassificationNode.logger.trace("Dynamic creation request for child module " + name + " of parent classification node " + this.getNodePath() + " denied since the UndefinedDescendantNodeManagerPlugin plugin is not defined for the node.");
+				SimpleClassificationNode.logger.trace("Dynamic creation request for child module " + name + " of parent classification node " + this + " denied since the UndefinedDescendantNodeManagerPlugin plugin is not defined for the node.");
 				return null;
 			}
 
@@ -337,7 +337,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			module = (SimpleModule)undefinedDescendantNodeManagerPlugin.requestModule(name);
 
 			if (module == null) {
-				SimpleClassificationNode.logger.trace("Dynamic creation request for child module " + name + " of parent classification node " + this.getNodePath() + " denied, probably because the module does not exist in the SCM.");
+				SimpleClassificationNode.logger.trace("Dynamic creation request for child module " + name + " of parent classification node " + this + " denied, probably because the module does not exist in the SCM.");
 			}
 
 			return module;

@@ -19,16 +19,19 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Formatter;
 import java.util.List;
+import java.util.ResourceBundle;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ScmPlugin;
@@ -42,12 +45,41 @@ import org.azyva.dragom.util.YesAlwaysNoUserResponse;
  *
  * @author David Raymond
  */
-
 public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION = "SPECIFIC_STATIC_VERSION";
-	private static final String RUNTIME_PROPERTY_CAN_REUSE_EXISTING_STATIC_VERSION = "CAN_REUSE_EXISTING_STATIC_VERSION";
+	private static final String RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION = "CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION";
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX = "SPECIFIC_STATIC_VERSION_PREFIX";
 	private static final String RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT = "REVISION_DECIMAL_POSITION_COUNT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED = "NEW_STATIC_VERSION_SPECIFIED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED = "EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION = "REUSE_EQUIVALENT_STATIC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION = "AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED = "NEW_STATIC_VERSION_PREFIX_SPECIFIED";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(NewStaticVersionPluginBaseImpl.class.getName() + "ResourceBundle");
 
 	private int initialRevision;
 	private int defaultRevisionDecimalPositionCount;
@@ -111,7 +143,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 				throw new RuntimeException("Version " + versionNewStatic + " must be static.");
 			}
 
-			userInteractionCallbackPlugin.provideInfo("The specific static version " + versionNewStatic + " is specified for the module " + this.getModule() + ". It is used as is.");
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic)));
 			return versionNewStatic;
 		} else {
 			return null;
@@ -119,8 +151,8 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	}
 
 	/**
-	 * Handles the case where an existing static Version exists that is equivalent to
-	 * the dynamic Version.
+	 * Handles the case where an existing equivalent static Version exists that is
+	 * equivalent to the dynamic Version.
 	 *
 	 * When getting a new static version for the current dynamic version, it may be
 	 * pertinent to verify if there is already a static Version corresponding to the
@@ -131,46 +163,50 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 * previous execution does the trick.
 	 *
 	 * @param versionDynamic Dynamic Version.
-	 * @return Existing static Version. null if none.
+	 * @return Existing equivalent static Version. null if none.
 	 */
 	protected Version handleExistingEquivalentStaticVersion(Version versionDynamic) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseExistingStaticVersion;
+		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion;
 		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		alwaysNeverAskUserResponseCanReuseExistingStaticVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_STATIC_VERSION));
+		alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION));
 
-		if (!alwaysNeverAskUserResponseCanReuseExistingStaticVersion.isNever()) {
-			Version versionEquivalentStatic;
+		if (!alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion.isNever()) {
+			Version versionExistingEquivalentStatic;
 
-			versionEquivalentStatic = this.getVersionEquivalentStatic(versionDynamic);
+			versionExistingEquivalentStatic = this.getVersionExistingEquivalentStatic(versionDynamic);
 
-			if (versionEquivalentStatic != null) {
-				if (alwaysNeverAskUserResponseCanReuseExistingStaticVersion.isAlways()) {
-					userInteractionCallbackPlugin.provideInfo("The existing static version " + versionEquivalentStatic + " is automatically reused for module " + this.getModule() + '.');
-					return versionEquivalentStatic;
+			if (versionExistingEquivalentStatic != null) {
+				if (alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion.isAlways()) {
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic));
+					return versionExistingEquivalentStatic;
 				}
 
 				// Here, alwaysNeverAskUserResponseCanReuseExistingVersion is necessarily ASK.
 
-				yesAlwaysNoUserResponse = Util.getInfoYesNoUserResponse(userInteractionCallbackPlugin, "Do you want to reuse the existing static version " + versionEquivalentStatic + " for module " + this.getModule() + "*", YesAlwaysNoUserResponse.YES);
+				yesAlwaysNoUserResponse =
+						Util.getInfoYesNoUserResponse(
+								userInteractionCallbackPlugin,
+								MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic),
+								YesAlwaysNoUserResponse.YES);
 
-				alwaysNeverAskUserResponseCanReuseExistingStaticVersion =
+				alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion =
 						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
 								runtimePropertiesPlugin,
-								NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_STATIC_VERSION,
+								NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION,
 								userInteractionCallbackPlugin,
-								"Do you want to apply that response (automatically reuse the existing static version or not) for all subsequent modules for which a new static version needs to be created*",
+								NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION),
 								AlwaysNeverAskUserResponse.ALWAYS);
 
 				// This is the user response from the first question above, not about
 				// automatically reusing the response.
 				if (yesAlwaysNoUserResponse.isYes()) {
-					return versionEquivalentStatic;
+					return versionExistingEquivalentStatic;
 				}
 			}
 		}
@@ -196,7 +232,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		stringStaticVersionPrefix = runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX);
 
 		if (stringStaticVersionPrefix != null) {
-			userInteractionCallbackPlugin.provideInfo("The specific static version prefix " + stringStaticVersionPrefix + " is specified for the module " + this.getModule() + ". It is used as is.");
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), stringStaticVersionPrefix));
 			return new Version(stringStaticVersionPrefix);
 		}
 
@@ -283,17 +319,17 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	}
 
 	/**
-	 * Gets the static Version that is equivalent to a dynamic Version.
+	 * Gets the existing static Version that is equivalent to a dynamic Version.
 	 *
 	 * @param versionDynamic Dynamic Version.
 	 * @return Equivalent static Version. null if there is no equivalent static
 	 *   Version.
 	 */
-	private Version getVersionEquivalentStatic(Version versionDynamic) {
+	private Version getVersionExistingEquivalentStatic(Version versionDynamic) {
 		ScmPlugin scmPlugin;
 		List<ScmPlugin.Commit> listCommit;
 		String stringEquivalentStaticVersion;
-		Version versionEquivalentStatic;
+		Version versionExistingEquivalentStatic;
 
 		// In order to check for an existing static version corresponding to the current
 		// dynamic version we consider the message of the last commit of the current
@@ -320,21 +356,21 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 			stringEquivalentStaticVersion = commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
 
 			if (stringEquivalentStaticVersion != null) {
-				versionEquivalentStatic = new Version(stringEquivalentStaticVersion);
+				versionExistingEquivalentStatic = new Version(stringEquivalentStaticVersion);
 
-				if (versionEquivalentStatic.getVersionType() != VersionType.STATIC) {
-					throw new RuntimeException("Version " + versionEquivalentStatic + " must be static.");
+				if (versionExistingEquivalentStatic.getVersionType() != VersionType.STATIC) {
+					throw new RuntimeException("Version " + versionExistingEquivalentStatic + " must be static.");
 				}
 			} else if (commit.arrayVersionStatic.length >= 1) {
-				versionEquivalentStatic = commit.arrayVersionStatic[0];
+				versionExistingEquivalentStatic = commit.arrayVersionStatic[0];
 			} else {
-				versionEquivalentStatic = null;
+				versionExistingEquivalentStatic = null;
 			}
 		} else {
-			versionEquivalentStatic = null;
+			versionExistingEquivalentStatic = null;
 		}
 
-		return versionEquivalentStatic;
+		return versionExistingEquivalentStatic;
 	}
 
 	/**

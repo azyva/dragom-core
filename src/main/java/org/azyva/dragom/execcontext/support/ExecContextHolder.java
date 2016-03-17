@@ -19,12 +19,15 @@
 
 package org.azyva.dragom.execcontext.support;
 
+import java.text.MessageFormat;
 import java.util.HashSet;
 import java.util.Properties;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
+import org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 
 
@@ -66,6 +69,16 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  */
 public class ExecContextHolder {
 	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED = "EXEC_CONTEXT_LOCKED";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultWorkspacePluginFactory.class.getName() + "ResourceBundle");
+
+	/**
 	 * Thread-local holder variable for the ExecContext.
 	 */
 	private static ThreadLocal<ExecContext> threadLocalExecContext = new ThreadLocal<ExecContext>();
@@ -73,7 +86,7 @@ public class ExecContextHolder {
 	/**
 	 * Set of ExecContext currently being used.
 	 */
-	private static Set<ExecContext> setExecContextUsed = new HashSet<ExecContext>();
+	private static Set<ExecContext> setExecContextLocked = new HashSet<ExecContext>();
 
 	/**
 	 * Sets the {@link ExecContext} in thread-local storage and starts tool
@@ -88,12 +101,12 @@ public class ExecContextHolder {
 	 * @param propertiesInit Initialization properties specific to the tool.
 	 */
 	public static void setAndStartTool(ExecContext execContext, Properties propertiesInit) {
-		if (ExecContextHolder.setExecContextUsed.contains(execContext)) {
-			throw new RuntimeExceptionUserError("ExecContext is already being used.");
+		if (ExecContextHolder.setExecContextLocked.contains(execContext)) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(ExecContextHolder.resourceBundle.getString(ExecContextHolder.MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED), execContext.getName()));
 		}
 
 		ExecContextHolder.threadLocalExecContext.set(execContext);
-		ExecContextHolder.setExecContextUsed.add(execContext);
+		ExecContextHolder.setExecContextLocked.add(execContext);
 
 		if (execContext instanceof ToolLifeCycleExecContext) {
 			ToolLifeCycleExecContext toolLifeCycleExecContext;
@@ -115,8 +128,8 @@ public class ExecContextHolder {
 	 *   {@link #setAndStartTool} has already been called.
 	 */
 	public static void setSecondaryThread(ExecContext execContext) {
-		if (!ExecContextHolder.setExecContextUsed.contains(execContext)) {
-			throw new RuntimeExceptionUserError("ExecContext is not currenly being used.");
+		if (!ExecContextHolder.setExecContextLocked.contains(execContext)) {
+			throw new RuntimeException("ExecContext is not currenly being used.");
 		}
 
 		ExecContextHolder.threadLocalExecContext.set(execContext);
@@ -148,7 +161,7 @@ public class ExecContextHolder {
 				toolLifeCycleExecContext.endTool();
 			}
 
-			ExecContextHolder.setExecContextUsed.remove(execContext);
+			ExecContextHolder.setExecContextLocked.remove(execContext);
 			ExecContextHolder.threadLocalExecContext.set(null);
 		}
 	}
@@ -172,7 +185,7 @@ public class ExecContextHolder {
 			toolLifeCycleExecContext.endTool();
 		}
 
-		ExecContextHolder.setExecContextUsed.remove(execContext);
+		ExecContextHolder.setExecContextLocked.remove(execContext);
 	}
 
 	/**

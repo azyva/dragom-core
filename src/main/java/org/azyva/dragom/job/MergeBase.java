@@ -19,6 +19,8 @@
 
 package org.azyva.dragom.job;
 
+import java.util.ResourceBundle;
+
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
@@ -153,5 +155,16 @@ public class MergeBase {
 	 * Logger for the class.
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(MergeBase.class);
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ = "";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(.class.getName() + "ResourceBundle");
+
 }
 bracket

@@ -19,10 +19,14 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
+
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
@@ -46,6 +50,26 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 	private static final String RUNTIME_PROPERTY_REUSE_STATIC_VERSION_PREFIX = "REUSE_STATIC_VERSION_PREFIX";
 	private static final int INITIAL_REVISION = 1;
 	private static final int DEFAULT_REVISION_DECIMAL_POSITION_COUNT = 2;
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED = "NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_NEW_STATIC_VERSION_PREFIX = "INPUT_NEW_STATIC_VERSION_PREFIX";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX = "AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX";
+
+	/**
+	 * ResourceBundle specific to this class.
+	 */
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(UniformNewStaticVersionPluginImpl.class.getName() + "ResourceBundle");
 
 	public UniformNewStaticVersionPluginImpl(Module module) {
 		super(module);
@@ -129,7 +153,7 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 		}
 
 		if (alwaysNeverAskUserResponseCanReuseStaticVersionPrefix.isAlways()) {
-			userInteractionCallbackPlugin.provideInfo("The static version prefix " + versionReuseStaticPrefix + " is automatically reused for module " + this.getModule() + '.');
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(UniformNewStaticVersionPluginImpl.resourceBundle.getString(UniformNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionReuseStaticPrefix));
 			return versionReuseStaticPrefix;
 		} else {
 			versionReuseStaticPrefix =
@@ -137,7 +161,7 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 							VersionType.STATIC,
 							null,
 							userInteractionCallbackPlugin,
-							"Which prefix do you want to use for creating a new static version for module " + this.getModule() + " based on version " + versionDynamic + "*",
+							MessageFormat.format(UniformNewStaticVersionPluginImpl.resourceBundle.getString(UniformNewStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_STATIC_VERSION_PREFIX), new ModuleVersion(this.getModule().getNodePath(), versionDynamic)),
 							versionReuseStaticPrefix);
 
 			runtimePropertiesPlugin.setProperty(null, UniformNewStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_STATIC_VERSION_PREFIX, versionReuseStaticPrefix.toString());
@@ -148,7 +172,7 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 							runtimePropertiesPlugin,
 							UniformNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_STATIC_VERSION_PREFIX,
 							userInteractionCallbackPlugin,
-							"Do you want to automatically reuse the static version prefix " + versionReuseStaticPrefix + " for all subsequent modules for which a new static version needs to be created*",
+							MessageFormat.format(UniformNewStaticVersionPluginImpl.resourceBundle.getString(UniformNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX), versionReuseStaticPrefix),
 							AlwaysNeverAskUserResponse.ALWAYS);
 
 			return versionStaticPrefix;
