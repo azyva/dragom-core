@@ -508,12 +508,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 				// We are about to delegate to visitMatchedModuleVersion for the rest of the
 				// processing. This method starts working on the same current module and also
-				// manages the ReferencePath and UserInteractionCallback BracketHandle. We must
-				// therefore reset them now. And we must prevent the finally block to reset them.
+				// manages the ReferencePath. We must therefore reset it now. And we must prevent
+				// the finally block from resetting it.
 				this.referencePath.removeLeafReference();;
 				indReferencePathAlreadyReverted = true;
-				bracketHandle.close();
-				bracketHandle = null;
 
 				// Util.isAbort() may be set, but it is not necessary to handle it since we are
 				// done after this call.
@@ -526,7 +524,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				// We redo the things that were undone before calling visitMatchedModuleVersion.
 				this.referencePath.add(referenceParent);
 				indReferencePathAlreadyReverted = false;
-				bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 			}
 
 			if (indVisitChildren && this.referencePathMatcher.canMatchChildren(this.referencePath)) {
