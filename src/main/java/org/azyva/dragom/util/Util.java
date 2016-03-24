@@ -37,6 +37,7 @@ import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.job.MergeReferenceGraph;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -124,6 +125,14 @@ public final class Util {
 	 * a workspace directory (not containing any unsynchronized local changes).
 	 */
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY = "DELETE_WORKSPACE_DIRECTORY";
+
+	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+	 * that following the selection of a new dynamic Version during a merge
+	 * ({@link MergeReferenceGraph}) diverging commits in the destination are not
+	 * present in the new selected dynamic Version and may be lost.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS = "MAY_LOOSE_COMMITS";
 
 	/**
 	 * Path to the static Dragom properties resource within the classpath.

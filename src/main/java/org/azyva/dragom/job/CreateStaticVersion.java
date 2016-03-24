@@ -379,7 +379,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 								this.listActionsPerformed.add(message);
 
 								if (indUserWorkspaceDir) {
-									message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+									message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 									userInteractionCallbackPlugin.provideInfo(message);
 									this.listActionsPerformed.add(message);
 								} else {
@@ -546,7 +546,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					this.listActionsPerformed.add(message);
 
 					if (indUserWorkspaceDir) {
-						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
@@ -740,7 +740,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				this.listActionsPerformed.add(message);
 
 				if (indUserWorkspaceDir) {
-					message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+					message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 					userInteractionCallbackPlugin.provideInfo(message);
 					this.listActionsPerformed.add(message);
 				} else {
@@ -824,7 +824,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 							this.listActionsPerformed.add(message);
 
 							if (indUserWorkspaceDir) {
-								message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+								message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
 							} else {

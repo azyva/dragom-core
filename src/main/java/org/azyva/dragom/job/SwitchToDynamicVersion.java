@@ -746,12 +746,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-					message = "One or more references within ReferencePath " + this.referencePath + " were updated following their switch to a dynamic version.";
 					message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
 					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
 
 					if (indUserWorkspaceDir) {
-						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
@@ -1015,7 +1014,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					this.listActionsPerformed.add(message);
 
 					if (indUserWorkspaceDir) {
-						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {

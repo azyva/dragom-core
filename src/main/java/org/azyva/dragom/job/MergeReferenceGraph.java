@@ -17,10 +17,10 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//TODO: ??? record important actions.
 package org.azyva.dragom.job;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -51,7 +51,6 @@ import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
-import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,7 +120,7 @@ import org.slf4j.LoggerFactory;
  * ModuleVersion without considering the Version, we perform the following
  * algorithm. Note that a corresponding reference in the source ModuleVersion
  * may not exist and there is nothing we can do. The presence or absence of a
- * corresponding reference is handled by the merge process itself.
+ * corresponding reference is handled by the merge process itself at the SCM level.
  * <p>
  * <h2>Source and destination are static</h2>
  * <p>
@@ -165,6 +164,7 @@ import org.slf4j.LoggerFactory;
  * below (both source and destination reference Version's dynamic). If the
  * destination reference graph also diverges issue a warning that the user should
  * expect the switched-to dynamic Version to also include these diverging commits.
+TODO: Should we revalidate after the new dynamic Version has been created.
  * <p>
  * If only the destination reference graph diverges, no merge is required.
  * <p>
@@ -195,12 +195,152 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ = "";
+	public static final String MSG_PATTERN_KEY_SRC_VERSION_AUTOMATICALLY_REUSED = "SRC_VERSION_AUTOMATICALLY_REUSED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INPUT_SRC_VERSION = "INPUT_SRC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_SRC_VERSION = "AUTOMATICALLY_REUSE_SRC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_LOCATING_SRC_MODULE_VERSION = "LOCATING_SRC_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SRC_MODULE_VERSION_NOT_FOUND = "SRC_MODULE_VERSION_NOT_FOUND";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MERGING_LEAF_MODULE_VERSION = "MERGING_LEAF_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION = "AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION = "AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE = "BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SRC_STATIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE = "SRC_STATIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_CHANGE_DEST_REFERENCE_VERSION = "CHANGE_DEST_REFERENCE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SRC_DYNAMIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE = "SRC_DYNAMIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_DEST_STATIC_REFERENCE_ALSO_DIVERGES_FROM_SRC_DYNAMIC_REFERENCE = "DEST_STATIC_REFERENCE_ALSO_DIVERGES_FROM_SRC_DYNAMIC_REFERENCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED = "DEST_STATIC_VERSION_NOT_SWITCHED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NEW_DEST_DYNAMIC_VERSION_DOES_NOT_INCLUDE_ORIGINALLY_DIVERGING_COMMITS = "NEW_DEST_DYNAMIC_VERSION_DOES_NOT_INCLUDE_ORIGINALLY_DIVERGING_COMMITS";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_DEST_REFERENCE_WILL_BE_CHANGED = "DEST_REFERENCE_WILL_BE_CHANGED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_RECURSIVELY_MERGING_SRC_DYNAMIC_REFERENCE_INTO_DEST_DYNAMIC_REFERENCE = "RECURSIVELY_MERGING_SRC_DYNAMIC_REFERENCE_INTO_DEST_DYNAMIC_REFERENCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERIFYING_SRC_DIVERGES_FROM_DEST_MODULE_VERSION = "VERIFYING_SRC_DIVERGES_FROM_DEST_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_DIVERGENCES_FOUND_IN_SRC_COMPARED_TO_DEST_MODULE_VERSION = "NO_DIVERGENCES_FOUND_IN_SRC_COMPARED_TO_DEST_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_SRC_DIVERGES_FROM_DEST_MODULE_VERSION = "SRC_DIVERGES_FROM_DEST_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_VERIFYING_DEST_DIVERGES_FROM_SRC_MODULE_VERSION = "VERIFYING_DEST_DIVERGES_FROM_SRC_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_DIVERGENCES_FOUND_IN_DEST_COMPARED_TO_SRC_MODULE_VERSION = "NO_DIVERGENCES_FOUND_IN_DEST_COMPARED_TO_SRC_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_DEST_DIVERGES_FROM_SRC_MODULE_VERSION = "DEST_DIVERGES_FROM_SRC_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_DIVERGENCES_BETWEEN_SRC_AND_DEST_MODULE_VERSIONS = "NO_DIVERGENCES_BETWEEN_SRC_AND_DEST_MODULE_VERSIONS";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_RECURSIVELY_VERIFYING_DIVERGENCES_BETWEEN_SRC_AND_DEST_REFERENCES = "RECURSIVELY_VERIFYING_DIVERGENCES_BETWEEN_SRC_AND_DEST_REFERENCES";
 
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeReferenceGraph.class.getName() + "ResourceBundle");
 
 	/**
 	 * Specifies the behavior when merge conflicts are encountered.
@@ -295,7 +435,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		bracketHandle = null;
 
 		try {
-			bracketHandle = userInteractionCallbackPlugin.startBracket();
+//			bracketHandle = userInteractionCallbackPlugin.startBracket();
 
 			//********************************************************************************
 			// Determine the source Version corresponding to the root destination
@@ -329,7 +469,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			}
 
 			if (alwaysNeverAskUserResponseCanReuseSrcVersion.isAlways()) {
-				userInteractionCallbackPlugin.provideInfo("Source version " + versionReuseSrc + " is automatically reused for module " + module + " whose destination version is " + moduleVersionRootDest.getVersion() + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_VERSION_AUTOMATICALLY_REUSED), moduleVersionRootDest, versionReuseSrc));
 				versionSrc = versionReuseSrc;
 			} else {
 				versionSrc =
@@ -337,7 +477,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								null,
 								scmPlugin,
 								userInteractionCallbackPlugin,
-								"Which source version do you want to merge module " + module + " from*",
+								MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_INPUT_SRC_VERSION), moduleVersionRootDest),
 								versionReuseSrc);
 
 				runtimePropertiesPlugin.setProperty(null, MergeReferenceGraph.RUNTIME_PROPERTY_REUSE_SRC_VERSION, versionSrc.toString());
@@ -347,7 +487,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								runtimePropertiesPlugin,
 								MergeReferenceGraph.RUNTIME_PROPERTY_CAN_REUSE_SRC_VERSION,
 								userInteractionCallbackPlugin,
-								"Do you want to automatically reuse source version " + versionSrc + " for all subsequent modules for which a source version needs to be specified*",
+								MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_SRC_VERSION), versionSrc),
 								AlwaysNeverAskUserResponse.ALWAYS);
 			}
 
@@ -359,7 +499,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			// in the source, constructing along the way the source  ReferencePath.
 			//********************************************************************************
 
-			userInteractionCallbackPlugin.provideInfo("Locating source ModuleVersion within reference graph rooted at ModuleVersion " + moduleVersionSrc + " corresponding to destination ReferencePath " + this.referencePath + '.');
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_LOCATING_SRC_MODULE_VERSION), moduleVersionSrc, this.referencePath));
 
 			referencePathSrc = new ReferencePath();
 			referencePathSrc.add(new Reference(moduleVersionSrc));
@@ -399,7 +539,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (referenceChildSrc == null) {
-					userInteractionCallbackPlugin.provideInfo("A source ModuleVersion corresponding to destination reference " + referenceDest + " could not be found within source ReferencePath " + referencePathSrc + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_LOCATING_SRC_MODULE_VERSION), referencePathSrc, referenceDest));
 					return false;
 				}
 
@@ -488,8 +628,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			module = model.getModule(moduleVersionDest.getNodePath());
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			bracketHandle = userInteractionCallbackPlugin.startBracket();
-			userInteractionCallbackPlugin.provideInfo("Merging leaf ModuleVersion of source ReferencePath " + referencePathSrc + " into " + this.referencePath + '.');
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGING_LEAF_MODULE_VERSION), referencePathSrc, this.referencePath));
 
 			//********************************************************************************
 			// Ensure destination ModuleVersion is in a user workspace directory.
@@ -501,7 +640,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
 				try {
-					userInteractionCallbackPlugin.provideInfo("Checking out ModuleVersion " + moduleVersionDest + " into " + pathModuleWorkspace + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
 
 					scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
 				} catch (RuntimeException re) {
@@ -537,9 +676,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			}
 
 			if (listCommit.isEmpty()) {
-				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 			} else {
-				userInteractionCallbackPlugin.provideInfo("About to shallow-merge source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + " excluding version-changing commits " + listCommit + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, listCommit));
 			}
 
 			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
@@ -548,17 +687,20 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 			// ScmPlugin.merge ensures that the working directory is synchronized.
 			if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
-				userInteractionCallbackPlugin.provideInfo("WARNING: Merge conflicts occurred in " + pathModuleWorkspace + " while merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + ". Merge process for current matched destination ModuleVersion aborted.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
 				switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 				case ALWAYS:
-					userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
+					userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION));
 					break;
 				case NEVER:
 					Util.setAbort();
 					break;
 				case ASK:
-					this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
+					this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(
+							userInteractionCallbackPlugin,
+							MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION),
+							AlwaysNeverAskUserResponse.ASK);
 
 					if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 						Util.setAbort();
@@ -626,17 +768,20 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 						if (byReferenceBooleanSrcDiverges.object.booleanValue()) {
 							if (byReferenceBooleanDestDiverges.object.booleanValue()) {
-								userInteractionCallbackPlugin.provideInfo("WARNING: Both the reference static source ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " and destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " diverge. This is a conflict at the reference graph level. Merge process for current matched destination ModuleVersion aborted.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
 								switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 								case ALWAYS:
-									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
+									userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION));
 									break;
 								case NEVER:
 									Util.setAbort();
 									break;
 								case ASK:
-									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
+									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(
+											userInteractionCallbackPlugin,
+											MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION),
+											AlwaysNeverAskUserResponse.ASK);
 
 									if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 										Util.setAbort();
@@ -648,22 +793,26 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								String message;
 								Map<String, String> mapCommitAttr;
 
-								userInteractionCallbackPlugin.provideInfo("Reference source static ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " diverges compared to destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + ". Destination version will be updated to source version.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_STATIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 									return true;
 								}
 
-								referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion());
+								if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion())) {
+									throw new RuntimeException("Updating the version of reference " + referenceChildDest + " in " + pathModuleWorkspace + " to the ArtifactVersion equivalent to " + referenceChildSrc.getModuleVersion().getVersion() + " did not result in any change. This is unexpected in the context of this job.");
+								}
 
-								message = "Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " was changed to version " + referenceChildSrc.getModuleVersion().getVersion() + '.';
+								message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHANGE_DEST_REFERENCE_VERSION), this.referencePath, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion());
 								mapCommitAttr = new HashMap<String, String>();
 								mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 								scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
 								userInteractionCallbackPlugin.provideInfo(message);
+								this.listActionsPerformed.add(message);
 
-								message = "The previous change was performed in " + pathModuleWorkspace + " which belongs to the user (you) and was committed to the SCM.";
+								message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 								userInteractionCallbackPlugin.provideInfo(message);
+								this.listActionsPerformed.add(message);
 							}
 						}
 					} else if (   (referenceChildSrc.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC)
@@ -687,10 +836,10 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							Version versionDynamicNew;
 							ByReference<Boolean> byReferenceBooleanOldDestDiverges;
 
-							userInteractionCallbackPlugin.provideInfo("Reference source dynamic ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + " diverge compared to destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + ". Destination will be switched to a dynamic version so that changes from the source can be merged.");
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_DYNAMIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
 							if (byReferenceBooleanDestDiverges.object.booleanValue()) {
-								userInteractionCallbackPlugin.provideInfo("WARNING: Destination static version also diverges compared to source. Selected dynamic version to switch to should include these changes.");
+								userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_REFERENCE_ALSO_DIVERGES_FROM_SRC_DYNAMIC_REFERENCE));
 							}
 
 							listModuleVersion = new ArrayList<ModuleVersion>();
@@ -700,17 +849,20 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							switchToDynamicVersion.performTask();
 
 							if (!switchToDynamicVersion.isListModuleVersionRootChanged()) {
-								userInteractionCallbackPlugin.provideInfo("Destination static version " + referenceChildDest.getModuleVersion() + " within ReferencePath " + this.referencePath + " was not switched. Merge process for current matched destination ModuleVersion aborted.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), this.referencePath, referenceChildDest));
 
 								switch (this.alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 								case ALWAYS:
-									userInteractionCallbackPlugin.provideInfo("Automaticallying continuing to the next matching destination ModuleVersion, if any.");
+									userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION));
 									break;
 								case NEVER:
 									Util.setAbort();
 									break;
 								case ASK:
-									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, "Do you want to continue with the next matching destination ModuleVersion, if any*", AlwaysNeverAskUserResponse.ASK);
+									this.alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponse(
+											userInteractionCallbackPlugin,
+											MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION),
+											AlwaysNeverAskUserResponse.ASK);
 
 									if (this.alwaysNeverAskUserResponseContinueOnMergeConflicts == AlwaysNeverAskUserResponse.NEVER) {
 										Util.setAbort();
@@ -726,25 +878,33 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							this.verifyDivergences(referenceChildDest.getModuleVersion().getNodePath(), referenceChildDest.getModuleVersion().getVersion(), versionDynamicNew, byReferenceBooleanOldDestDiverges, null);
 
 							if (byReferenceBooleanOldDestDiverges.object.booleanValue()) {
-								userInteractionCallbackPlugin.provideInfo("WARNING: Destination static ModuleVersion " + referenceChildDest.getModuleVersion()+ " was diverging compared to source. New selected dynamic version " + versionDynamicNew + " does not include these changes which may be lost.");
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NEW_DEST_DYNAMIC_VERSION_DOES_NOT_INCLUDE_ORIGINALLY_DIVERGING_COMMITS), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest, versionDynamicNew));
 							}
 
-							userInteractionCallbackPlugin.provideInfo("Reference destination static ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " was switched to version " + versionDynamicNew + " and will be updated.");
+							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS)) {
+								return true;
+							}
+
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_REFERENCE_WILL_BE_CHANGED), this.referencePath, referenceChildDest, versionDynamicNew));
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
 								return true;
 							}
 
-							referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, versionDynamicNew);
+							if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, versionDynamicNew)) {
+								throw new RuntimeException("Updating the version of reference " + referenceChildDest + " in " + pathModuleWorkspace + " to the ArtifactVersion equivalent to " + referenceChildSrc.getModuleVersion().getVersion() + " did not result in any change. This is unexpected in the context of this job.");
+							}
 
-							message = "Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " was changed to version " + versionDynamicNew + '.';
+							message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHANGE_DEST_REFERENCE_VERSION), this.referencePath, referenceChildDest, versionDynamicNew);
 							mapCommitAttr = new HashMap<String, String>();
 							mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 							scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
 							userInteractionCallbackPlugin.provideInfo(message);
+							this.listActionsPerformed.add(message);
 
-							message = "The previous change was performed in " + pathModuleWorkspace + " which belongs to the user (you) and was committed to the SCM.";
+							message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 							userInteractionCallbackPlugin.provideInfo(message);
+							this.listActionsPerformed.add(message);
 
 							// We change the destination reference to reflect the new switched-to dynamic
 							// Version to fall through to the recursive call.
@@ -760,7 +920,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 						referencePathSrc.add(referenceChildSrc);
 
-						userInteractionCallbackPlugin.provideInfo("Reference destination ModuleVersion " + referenceChildDest.getModuleVersion() + " from ReferencePath " + this.referencePath + " is dynamic. Recursively merging source ModuleVersion " + referenceChildSrc.getModuleVersion() + " from ReferencePath " + referencePathSrc + '.');
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_RECURSIVELY_MERGING_SRC_DYNAMIC_REFERENCE_INTO_DEST_DYNAMIC_REFERENCE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
 						try {
 							if (this.mergeModuleVersion(referencePathSrc, referenceChildDest)) {
@@ -835,7 +995,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 			if (byReferenceBooleanSrcDiverges != null) {
-				userInteractionCallbackPlugin.provideInfo("Verifying divergences of source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_VERIFYING_SRC_DIVERGES_FROM_DEST_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 
 				listCommit = scmPlugin.getListCommitDiverge(versionSrc, versionDest, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
@@ -851,16 +1011,16 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (listCommit.isEmpty()) {
-					userInteractionCallbackPlugin.provideInfo("No divergence found in source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NO_DIVERGENCES_FOUND_IN_SRC_COMPARED_TO_DEST_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Divergences found in source ModuleVersion " + moduleVersionSrc + " compared to destination ModuleVersion " + moduleVersionDest + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_DIVERGES_FROM_DEST_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 				}
 
 				byReferenceBooleanSrcDiverges.object = Boolean.valueOf(!listCommit.isEmpty());
 			}
 
 			if (byReferenceBooleanDestDiverges != null) {
-				userInteractionCallbackPlugin.provideInfo("Verifying divergences of destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_VERIFYING_DEST_DIVERGES_FROM_SRC_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 
 				listCommit = scmPlugin.getListCommitDiverge(versionDest, versionSrc, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
@@ -876,9 +1036,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (listCommit.isEmpty()) {
-					userInteractionCallbackPlugin.provideInfo("No divergence found in destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NO_DIVERGENCES_FOUND_IN_DEST_COMPARED_TO_SRC_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 				} else {
-					userInteractionCallbackPlugin.provideInfo("Divergences found in destination ModuleVersion " + moduleVersionDest + " compared to source ModuleVersion " + moduleVersionSrc + '.');
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_DIVERGES_FROM_SRC_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 				}
 
 				byReferenceBooleanDestDiverges.object = Boolean.valueOf(!listCommit.isEmpty());
@@ -888,7 +1048,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			if (   ((byReferenceBooleanSrcDiverges != null) && !byReferenceBooleanSrcDiverges.object.booleanValue())
 			    || ((byReferenceBooleanDestDiverges != null) && !byReferenceBooleanDestDiverges.object.booleanValue())) {
 
-				userInteractionCallbackPlugin.provideInfo("No divergence found either in source or destination. Considering common references.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NO_DIVERGENCES_BETWEEN_SRC_AND_DEST_MODULE_VERSIONS), moduleVersionSrc, moduleVersionDest));
 
 				pathModuleWorkspaceDest = scmPlugin.checkoutSystem(versionDest);
 				pathModuleWorkspaceSrc = scmPlugin.checkoutSystem(versionSrc);
@@ -928,7 +1088,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							continue;
 						}
 
-						userInteractionCallbackPlugin.provideInfo("Found common source reference " + referenceChildSrc + " and destination reference " + referenceChildDest + ". Recursing to find divergences between them.");
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_RECURSIVELY_VERIFYING_DIVERGENCES_BETWEEN_SRC_AND_DEST_REFERENCES), referenceChildSrc, referenceChildDest));
 
 						this.verifyDivergences(referenceChildDest.getModuleVersion().getNodePath(), referenceChildSrc.getModuleVersion().getVersion(), referenceChildDest.getModuleVersion().getVersion(), byReferenceBooleanSrcDiverges, byReferenceBooleanDestDiverges);
 

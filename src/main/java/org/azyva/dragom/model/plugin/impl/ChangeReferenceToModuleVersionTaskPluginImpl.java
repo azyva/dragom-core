@@ -243,7 +243,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 					taskEffects.actionPerformed(message);
 
 					if (indUserWorkspaceDir) {
-						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, message);
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 						userInteractionCallbackPlugin.provideInfo(message);
 						taskEffects.actionPerformed(message);
 					} else {
