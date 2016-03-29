@@ -581,7 +581,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					// last element.
 					//TODO: This recreates a simple reference with less information. Don't know if OK.
 					referenceParent = new Reference(new ModuleVersion(referenceParent.getModuleVersion().getNodePath(), byReferenceVersionParent.object));
-					this.referencePath.set(this.referencePath.size() - 1, referenceParent);
+					this.referencePath.removeLeafReference();
+					this.referencePath.add(referenceParent);
 				} else {
 					visitModuleActionPerformed = VisitModuleActionPerformed.PROCESSED_NO_SWITCH;
 				}
@@ -615,7 +616,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						// last element.
 						//TODO: This recreates a simple reference with less information. Don't know if OK.
 						referenceParent = new Reference(new ModuleVersion(referenceParent.getModuleVersion().getNodePath(), byReferenceVersionParent.object));
-						this.referencePath.set(this.referencePath.size() - 1, referenceParent);
+						this.referencePath.removeLeafReference();
+						this.referencePath.add(referenceParent);
 
 						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
 

@@ -164,7 +164,6 @@ import org.slf4j.LoggerFactory;
  * below (both source and destination reference Version's dynamic). If the
  * destination reference graph also diverges issue a warning that the user should
  * expect the switched-to dynamic Version to also include these diverging commits.
-TODO: Should we revalidate after the new dynamic Version has been created.
  * <p>
  * If only the destination reference graph diverges, no merge is required.
  * <p>
@@ -191,6 +190,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	 * Runtime property that specifies the source {@link Version} to reuse.
 	 */
 	private static final String RUNTIME_PROPERTY_REUSE_SRC_VERSION = "REUSE_SRC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION = "INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
@@ -435,7 +439,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		bracketHandle = null;
 
 		try {
-//			bracketHandle = userInteractionCallbackPlugin.startBracket();
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION), this.referencePath));
 
 			//********************************************************************************
 			// Determine the source Version corresponding to the root destination
