@@ -74,22 +74,22 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER = "IGNORING_MODULE_VERSION_ONLY_USER";
+	private static final String MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER = "IGNORING_MODULE_VERSION_ONLY_USER";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM = "ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM";
+	private static final String MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM = "ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT = "ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT";
+	private static final String MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT = "ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INITIATING_BUILD = "INITIATING_BUILD";
+	private static final String MSG_PATTERN_KEY_INITIATING_BUILD = "INITIATING_BUILD";
 
 	/**
 	 * ResourceBundle specific to this class.

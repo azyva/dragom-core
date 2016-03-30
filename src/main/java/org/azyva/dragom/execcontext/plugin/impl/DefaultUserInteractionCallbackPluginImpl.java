@@ -44,7 +44,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	/**
 	 * Runtime property indicating that no information must be obtained from the user.
 	 */
-	private static final String RUNTIME_PROPERTY_BATCH_MODE = "BATCH_MODE";
+	private static final String RUNTIME_PROPERTY_IND_BATCH_MODE = "IND_BATCH_MODE";
 
 	/**
 	 * Runtime property specifying the indentation for each bracket level.
@@ -238,7 +238,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 		this.bufferedReaderStdin = new BufferedReader(new InputStreamReader(System.in));
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-		this.indBatchMode = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BATCH_MODE));
+		this.indBatchMode = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_IND_BATCH_MODE));
 
 		runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BRACKET_INDENT);
 

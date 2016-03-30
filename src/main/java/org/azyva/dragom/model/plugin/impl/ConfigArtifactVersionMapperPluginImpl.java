@@ -74,17 +74,17 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INPUT_PHASE = "INPUT_PHASE";
+	private static final String MSG_PATTERN_KEY_INPUT_PHASE = "INPUT_PHASE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT = "INPUT_PHASE_WITH_DEFAULT";
+	private static final String MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT = "INPUT_PHASE_WITH_DEFAULT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_REUSE_PHASE = "REUSE_PHASE";
+	private static final String MSG_PATTERN_KEY_REUSE_PHASE = "REUSE_PHASE";
 
 	/**
 	 * ResourceBundle specific to this class.

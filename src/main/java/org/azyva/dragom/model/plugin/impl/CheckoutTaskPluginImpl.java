@@ -43,11 +43,6 @@ import org.azyva.dragom.reference.ReferencePath;
  */
 public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements TaskPlugin {
 	/**
-	 * Logger for the class.
-	 */
-	//private static final Logger logger = LoggerFactory.getLogger(TaskCheckoutPluginFactory.class);
-
-	/**
 	 * ID of the only task supported by this TaskPlugin.
 	 */
 	public static final String TASK_ID = "checkout";
@@ -60,12 +55,12 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
+	private static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+	private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
 
 	/**
 	 * ResourceBundle specific to this class.

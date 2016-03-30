@@ -54,27 +54,27 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED = "NEW_STATIC_VERSION_SPECIFIED";
+	private static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED = "NEW_STATIC_VERSION_SPECIFIED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED = "EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED";
+	private static final String MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED = "EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION = "REUSE_EQUIVALENT_STATIC_VERSION";
+	private static final String MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION = "REUSE_EQUIVALENT_STATIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION = "AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION";
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION = "AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED = "NEW_STATIC_VERSION_PREFIX_SPECIFIED";
+	private static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED = "NEW_STATIC_VERSION_PREFIX_SPECIFIED";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -132,8 +132,6 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 			throw new RuntimeException("Version " + versionDynamic + " of module " + this.getModule() + " is not dynamic.");
 		}
 
-		// We first check if a specific static version is specified for the module.
-
 		stringSpecificStaticVersion = runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION);
 
 		if (stringSpecificStaticVersion != null) {
@@ -143,7 +141,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 				throw new RuntimeException("Version " + versionNewStatic + " must be static.");
 			}
 
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic)));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionNewStatic));
 			return versionNewStatic;
 		} else {
 			return null;

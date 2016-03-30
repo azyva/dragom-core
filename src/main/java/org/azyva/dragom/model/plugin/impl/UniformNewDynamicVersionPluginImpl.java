@@ -68,47 +68,47 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_NOT_TO_BE_PROCESSED = "DYNAMIC_VERSION_NOT_TO_BE_PROCESSED";
+	private static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_NOT_TO_BE_PROCESSED = "DYNAMIC_VERSION_NOT_TO_BE_PROCESSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_TO_BE_PROCESSED = "DYNAMIC_VERSION_TO_BE_PROCESSED";
+	private static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_TO_BE_PROCESSED = "DYNAMIC_VERSION_TO_BE_PROCESSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_PROCESS_DYNAMIC_VERSION = "DO_YOU_WANT_TO_PROCESS_DYNAMIC_VERSION";
+	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_PROCESS_DYNAMIC_VERSION = "DO_YOU_WANT_TO_PROCESS_DYNAMIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_PROCESS_DYNAMIC_VERSION = "AUTOMATICALLY_PROCESS_DYNAMIC_VERSION";
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_PROCESS_DYNAMIC_VERSION = "AUTOMATICALLY_PROCESS_DYNAMIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST";
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_BASE_VERSION_AUTOMATICALLY_REUSED = "BASE_VERSION_AUTOMATICALLY_REUSED";
+	private static final String MSG_PATTERN_KEY_BASE_VERSION_AUTOMATICALLY_REUSED = "BASE_VERSION_AUTOMATICALLY_REUSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSED_BASE_VERSION_DOES_NOT_EXIST = "AUTOMATICALLY_REUSED_BASE_VERSION_DOES_NOT_EXIST";
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSED_BASE_VERSION_DOES_NOT_EXIST = "AUTOMATICALLY_REUSED_BASE_VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INPUT_NEW_BASE_VERSION = "INPUT_NEW_BASE_VERSION";
+	private static final String MSG_PATTERN_KEY_INPUT_NEW_BASE_VERSION = "INPUT_NEW_BASE_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_BASE_VERSION = "AUTOMATICALLY_REUSE_BASE_VERSION";
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_BASE_VERSION = "AUTOMATICALLY_REUSE_BASE_VERSION";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -178,6 +178,14 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 
 		// Here we know a new version is required (even if the current Version is
 		// dynamic).
+
+		versionNewDynamic = this.handleSpecificDynamicVersion(version);
+
+		// If the new dynamic Version is equal to the current one, the user will have
+		// been informed by this.handleSpecificDynamicVersion.
+		if (versionNewDynamic.equals(version)) {
+			return version;
+		}
 
 		versionNewDynamic = this.handleReuseDynamicVersion(version);
 

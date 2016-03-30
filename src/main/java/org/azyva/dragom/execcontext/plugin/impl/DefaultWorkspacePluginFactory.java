@@ -85,17 +85,17 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_WORKSPACE_LOCKED = "WORKSPACE_LOCKED";
+	private static final String MSG_PATTERN_KEY_WORKSPACE_LOCKED = "WORKSPACE_LOCKED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_USER_WORKSPACE_DIRECTORY_CONFLICT = "USER_WORKSPACE_DIRECTORY_CONFLICT";
+	private static final String MSG_PATTERN_KEY_USER_WORKSPACE_DIRECTORY_CONFLICT = "USER_WORKSPACE_DIRECTORY_CONFLICT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_SYSTEM_WORKSPACE_DIRECTORY_CONFLICT = "SYSTEM_WORKSPACE_DIRECTORY_CONFLICT";
+	private static final String MSG_PATTERN_KEY_SYSTEM_WORKSPACE_DIRECTORY_CONFLICT = "SYSTEM_WORKSPACE_DIRECTORY_CONFLICT";
 
 
 	/**

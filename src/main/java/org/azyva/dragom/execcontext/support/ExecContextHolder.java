@@ -71,7 +71,7 @@ public class ExecContextHolder {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED = "EXEC_CONTEXT_LOCKED";
+	private static final String MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED = "EXEC_CONTEXT_LOCKED";
 
 	/**
 	 * ResourceBundle specific to this class.

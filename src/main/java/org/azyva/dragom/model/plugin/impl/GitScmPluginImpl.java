@@ -83,7 +83,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * If that property is not defined for a Module, the URL of the Git repository for
 	 * the module is inferred using the other model properties below.
 	 */
-	public static final String MODEL_PROPERTY_GIT_REPOS_COMPLETE_URL = "GIT_REPOS_COMPLETE_URL";
+	private static final String MODEL_PROPERTY_GIT_REPOS_COMPLETE_URL = "GIT_REPOS_COMPLETE_URL";
 
 	/**
 	 * Base URL of the Git repository for the Module.
@@ -95,7 +95,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * If the property GIT_REPOS_COMPLETE_URL is not defined for the Module, this
 	 * property must be defined for the Module.
 	 */
-	public static final String MODEL_PROPERTY_GIT_REPOS_BASE_URL = "GIT_REPOS_BASE_URL";
+	private static final String MODEL_PROPERTY_GIT_REPOS_BASE_URL = "GIT_REPOS_BASE_URL";
 
 	/**
 	 * Model property specifying the "folder" within the URL of the Git repository for
@@ -107,7 +107,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * If this property is not defined for the module, the classification path of the
 	 * parent Node of the Module is used.
 	 */
-	public static final String MODEL_PROPERTY_GIT_REPOS_DOMAIN_FOLDER = "GIT_REPOS_DOMAIN_FOLDER";
+	private static final String MODEL_PROPERTY_GIT_REPOS_DOMAIN_FOLDER = "GIT_REPOS_DOMAIN_FOLDER";
 
 	/**
 	 * Model property specifying the repository name within the URL of the Git
@@ -121,7 +121,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 *
 	 * If this property is not defined for the module, its name is used.
 	 */
-	public static final String MODEL_PROPERTY_GIT_REPOS_NAME = "GIT_REPOS_NAME";
+	private static final String MODEL_PROPERTY_GIT_REPOS_NAME = "GIT_REPOS_NAME";
 
 	/**
 	 * Model property specifying the suffix of the repository name within the URL of
@@ -135,7 +135,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 *
 	 * If this property is not defined for the module, ".git" is used.
 	 */
-	public static final String MODEL_PROPERTY_GIT_REPOS_SUFFIX = "GIT_REPOS_SUFFIX";
+	private static final String MODEL_PROPERTY_GIT_REPOS_SUFFIX = "GIT_REPOS_SUFFIX";
 
 	/**
 	 * Prefix for the ExecContext property that holds the path of the main user
@@ -154,13 +154,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * design, there is at most one system workspace directory so sharing is not a
 	 * problem.
 	 */
-	public static final String EXEC_CONTEXT_PROPERTY_PREFIX_MAIN_WORKSPACE_DIR = "main-workspace-dir.";
+	private static final String EXEC_CONTEXT_PROPERTY_PREFIX_MAIN_WORKSPACE_DIR = "main-workspace-dir.";
 
 	/**
 	 * Runtime property indicating the fetch and push behavior. The possible values
 	 * are defined by FetchPushBehavior.
 	 */
-	public static final String RUNTIME_PROPERTY_GIT_FETCH_PUSH_BEHAVIOR = "GIT_FETCH_PUSH_BEHAVIOR";
+	private static final String RUNTIME_PROPERTY_GIT_FETCH_PUSH_BEHAVIOR = "GIT_FETCH_PUSH_BEHAVIOR";
 
 	/**
 	 * The user may specify one of the FetchPushBehavior.*_NO_PUSH values for the
@@ -185,13 +185,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * piggyback the push all unpushed commits functionality transparently on top of
 	 * the isSync method.
 	 */
-	public static final String RUNTIME_PROPERTY_GIT_IND_PUSH_ALL = "GIT_IND_PUSH_ALL";
+	private static final String RUNTIME_PROPERTY_GIT_IND_PUSH_ALL = "GIT_IND_PUSH_ALL";
 
 	/**
 	 * Runtime property indicating to perform a pull with a rebase mode instead of a
 	 * merge.
 	 */
-	public static final String RUNTIME_PROPERTY_IND_PULL_REBASE = "GIT_IND_PULL_REBASE";
+	private static final String RUNTIME_PROPERTY_IND_PULL_REBASE = "GIT_IND_PULL_REBASE";
 
 	private static final String TRANSIENT_DATA_PATH_ALREADY_FETCHED = GitScmPluginImpl.class.getName() + ".PathAlreadyFetched";
 
@@ -200,7 +200,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
+	private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
 
 	/**
 	 * ResourceBundle specific to this class.

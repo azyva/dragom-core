@@ -1,0 +1,86 @@
+/*
+ * Copyright 2015 AZYVA INC.
+ *
+ * This file is part of Dragom.
+ *
+ * Dragom is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Dragom is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.azyva.dragom.job;
+
+import java.util.List;
+
+import org.azyva.dragom.apiutil.ByReference;
+import org.azyva.dragom.model.ModuleVersion;
+import org.azyva.dragom.model.Version;
+import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.support.SimpleReferenceGraph;
+
+/**
+ * The principle of operation of this class is to traverse reference graphs in the
+ * standard way using a List of root ModuleVersion's and a ReferencePathMatcher to
+ * build the ReferenceGraph.
+ *
+ * This is implemented in a way that is similar to other job classes, but it is only
+ * intended to be used internally.
+ *
+ * @author David Raymond
+ */
+public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
+	/**
+	 * ReferenceGraph that will be built.
+	 */
+	private ReferenceGraph referenceGraph;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param referenceGraph ReferenceGraph that will be built or completed. Can be
+	 *   null in which case a new initially empty SimpleReferenceGraph is used.
+	 * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
+	 *   the traversal of the reference graphs.
+	 */
+	public BuildReferenceGraph(ReferenceGraph referenceGraph, List<ModuleVersion> listModuleVersionRoot) {
+		super(listModuleVersionRoot);
+
+		if (referenceGraph == null) {
+			this.referenceGraph = new SimpleReferenceGraph();
+		}
+	}
+
+	/**
+	 * @return ReferenceGraph that was provided to or created by the constructor.
+	 */
+	public ReferenceGraph getReferenceGraph() {
+		return this.referenceGraph;
+	}
+
+	@Override
+	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
+		this.referenceGraph.addRootModuleVersion(referenceParent.getModuleVersion());
+
+		super.visitModuleVersion(referenceParent, byReferenceVersion);
+
+		return false;
+	}
+
+	@Override
+	protected boolean visitMatchedModuleVersion(Reference referenceParent) {
+		this.referenceGraph.addReference(this.referencePath.getLeafModuleVersion(), referenceParent);
+
+		return true;
+	}
+
+}

@@ -41,6 +41,11 @@ import org.azyva.dragom.util.Util;
 
 public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
+	 * Runtime property that spécifies the specific dynamic Version to use.
+	 */
+	private static final String RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION = "SPECIFIC_DYNAMIC_VERSION";
+
+	/**
 	 * Runtime property of type AlwaysNeverAskUserResponse that indicates if a
 	 * previously established dynamic Version can be reused.
 	 */
@@ -54,22 +59,27 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_AUTOMATICALLY_REUSED = "DYNAMIC_VERSION_AUTOMATICALLY_REUSED";
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SPECIFIED = "NEW_DYNAMIC_VERSION_SPECIFIED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INPUT_NEW_DYNAMIC_VERSION = "INPUT_NEW_DYNAMIC_VERSION";
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT = "NEW_DYNAMIC_VERSION_SAME_AS_CURRENT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION = "AUTOMATICALLY_REUSE_DYNAMIC_VERSION";
+	private static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_AUTOMATICALLY_REUSED = "DYNAMIC_VERSION_AUTOMATICALLY_REUSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT = "NEW_DYNAMIC_VERSION_SAME_AS_CURRENT";
+	private static final String MSG_PATTERN_KEY_INPUT_NEW_DYNAMIC_VERSION = "INPUT_NEW_DYNAMIC_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION = "AUTOMATICALLY_REUSE_DYNAMIC_VERSION";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -78,6 +88,46 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 	public NewDynamicVersionPluginBaseImpl(Module module) {
 		super(module);
+	}
+
+	/**
+	 * Handles the case where a specific dynamic version is specified for the
+	 * module.
+	 *
+	 * @param version Version.
+	 * @return Specific dynamic Version. null if none specified.
+	 */
+	protected Version handleSpecificDynamicVersion(Version version) {
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		String stringSpecificDynamicVersion;
+		Version versionNewDynamic;
+
+		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+		stringSpecificDynamicVersion = runtimePropertiesPlugin.getProperty(this.getModule(), NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION);
+
+		if (stringSpecificDynamicVersion != null) {
+			versionNewDynamic = new Version(stringSpecificDynamicVersion);
+
+			if (versionNewDynamic.getVersionType() != VersionType.DYNAMIC) {
+				throw new RuntimeException("Version " + versionNewDynamic + " must be dynamic.");
+			}
+
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), version), versionNewDynamic));
+
+			// After all this, the new version may be the same as the current version. In this
+			// case we expect the caller to automatically use this version. We simply inform
+			// the user here.
+			if (versionNewDynamic.equals(version)) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT), new ModuleVersion(this.getModule().getNodePath(), version), versionNewDynamic));
+			}
+
+			return versionNewDynamic;
+		} else {
+			return null;
+		}
 	}
 
 	/**

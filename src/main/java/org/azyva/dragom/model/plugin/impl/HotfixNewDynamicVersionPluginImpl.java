@@ -47,17 +47,17 @@ public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBa
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_VERSION_MUST_BE_STATIC = "VERSION_MUST_BE_STATIC";
+	private static final String MSG_PATTERN_KEY_VERSION_MUST_BE_STATIC = "VERSION_MUST_BE_STATIC";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE";
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE = "NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE";
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE = "NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE";
 
 	/**
 	 * ResourceBundle specific to this class.

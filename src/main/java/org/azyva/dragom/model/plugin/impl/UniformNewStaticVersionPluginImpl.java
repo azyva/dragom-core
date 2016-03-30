@@ -54,17 +54,17 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED = "NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED";
+	private static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED = "NEW_STATIC_VERSION_PREFIX_AUTOMATICALLY_REUSED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_INPUT_NEW_STATIC_VERSION_PREFIX = "INPUT_NEW_STATIC_VERSION_PREFIX";
+	private static final String MSG_PATTERN_KEY_INPUT_NEW_STATIC_VERSION_PREFIX = "INPUT_NEW_STATIC_VERSION_PREFIX";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX = "AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX";
+	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX = "AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX";
 
 	/**
 	 * ResourceBundle specific to this class.

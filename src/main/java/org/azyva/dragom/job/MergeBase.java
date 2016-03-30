@@ -159,7 +159,7 @@ public class MergeBase {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ = "";
+	private static final String MSG_PATTERN_KEY_ = "";
 
 	/**
 	 * ResourceBundle specific to this class.

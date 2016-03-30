@@ -93,94 +93,94 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 */
 	private static final String RUNTIME_PROPERTY_CREATE_STATIC_VERSION_BUILD_CONTEXT = "CREATE_STATIC_VERSION_BUILD_CONTEXT";
 
-	private static final String RUNTIME_PROPERTY_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD = "NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD";
+	private static final String RUNTIME_PROPERTY_IND_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD = "IND_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD";
 
 	private static final String RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION = "REVERT_ARTIFACT_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_REUSING_ALREADY_ESTABLISHED_STATIC_VERSION = "REUSING_ALREADY_ESTABLISHED_STATIC_VERSION";
+	private static final String MSG_PATTERN_KEY_REUSING_ALREADY_ESTABLISHED_STATIC_VERSION = "REUSING_ALREADY_ESTABLISHED_STATIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED = "PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED";
+	private static final String MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED = "PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY = "MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY";
+	private static final String MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY = "MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_REFERENCE_UPDATED = "REFERENCE_UPDATED";
+	private static final String MSG_PATTERN_KEY_REFERENCE_UPDATED = "REFERENCE_UPDATED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE = "CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE";
+	private static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE = "CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE = "REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE";
+	private static final String MSG_PATTERN_KEY_REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE = "REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_EXISTING_STATIC_VERSION_SELECTED = "EXISTING_STATIC_VERSION_SELECTED";
+	private static final String MSG_PATTERN_KEY_EXISTING_STATIC_VERSION_SELECTED = "EXISTING_STATIC_VERSION_SELECTED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_CREATING_NEW_STATIC_VERSION = "CREATING_NEW_STATIC_VERSION";
+	private static final String MSG_PATTERN_KEY_CREATING_NEW_STATIC_VERSION = "CREATING_NEW_STATIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED = "ARTIFACT_VERSION_CHANGED";
+	private static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED = "ARTIFACT_VERSION_CHANGED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NO_ARTIFACT_VERSION_CHANGE = "NO_ARTIFACT_VERSION_CHANGE";
+	private static final String MSG_PATTERN_KEY_NO_ARTIFACT_VERSION_CHANGE = "NO_ARTIFACT_VERSION_CHANGE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_BUILD_FAILED = "BUILD_FAILED";
+	private static final String MSG_PATTERN_KEY_BUILD_FAILED = "BUILD_FAILED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED_BEFORE_CREATING_NEW_STATIC_VERSION = "ARTIFACT_VERSION_CHANGED_BEFORE_CREATING_NEW_STATIC_VERSION";
+	private static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED_BEFORE_CREATING_NEW_STATIC_VERSION = "ARTIFACT_VERSION_CHANGED_BEFORE_CREATING_NEW_STATIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_STATIC_VERSION_CREATED = "STATIC_VERSION_CREATED";
+	private static final String MSG_PATTERN_KEY_STATIC_VERSION_CREATED = "STATIC_VERSION_CREATED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION = "DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION";
+	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION = "DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT = "DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT";
+	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT = "DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_REVERTED = "ARTIFACT_VERSION_REVERTED";
+	private static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_REVERTED = "ARTIFACT_VERSION_REVERTED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_NO_REVERTED_ARTIFACT_VERSION_CHANGE = "NO_REVERTED_ARTIFACT_VERSION_CHANGE";
+	private static final String MSG_PATTERN_KEY_NO_REVERTED_ARTIFACT_VERSION_CHANGE = "NO_REVERTED_ARTIFACT_VERSION_CHANGE";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -699,7 +699,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 
 			// Before creating the Version, ensure that building the Module is successful.
 
-			if (   !Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, CreateStaticVersion.RUNTIME_PROPERTY_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD))
+			if (   !Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, CreateStaticVersion.RUNTIME_PROPERTY_IND_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD))
 			    && module.isNodePluginExists(BuilderPlugin.class, null)) {
 
 				BuilderPlugin builderPlugin;

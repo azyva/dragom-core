@@ -66,7 +66,7 @@ public class RootManager {
 	 * The value of this property is a space-separated list of stringified
 	 * ModuleVersion.
 	 */
-	public static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "root-module-versions";
+	private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "root-module-versions";
 
 	/**
 	 * Prefix of the properties that hold the global ReferencePathMatcherOr.
@@ -76,22 +76,22 @@ public class RootManager {
 	 *
 	 * The ReferencePathMatcherByElement's are represented with their literal form.
 	 */
-	public static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
+	private static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+	private static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
+	private static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	public static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
+	private static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * ResourceBundle specific to this class.
