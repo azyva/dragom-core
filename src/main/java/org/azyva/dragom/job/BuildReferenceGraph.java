@@ -26,15 +26,18 @@ import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.reference.support.SimpleReferenceGraph;
 
 /**
  * The principle of operation of this class is to traverse reference graphs in the
- * standard way using a List of root ModuleVersion's and a ReferencePathMatcher to
- * build the ReferenceGraph.
- *
- * This is implemented in a way that is similar to other job classes, but it is only
- * intended to be used internally.
+ * standard way using a List of root {@link ModuleVersion}'s and a
+ * {@link ReferencePathMatcher} to build the {@link ReferenceGraph}.
+ * <p>
+ * This is implemented in a way that is similar to other job classes, but it is
+ * only intended to be used internally as building a ReferenceGraph is not really
+ * useful in itself. If can be useful however to produce a ReferenceGraph report,
+ * as {@link ReferenceGraphReport} does.
  *
  * @author David Raymond
  */

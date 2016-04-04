@@ -116,11 +116,6 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_ = "";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
 	private static final String MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED = "PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED";
 
 	/**

@@ -58,13 +58,15 @@ import org.azyva.dragom.reference.Reference;
  */
 public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl implements ReferenceManagerPlugin {
 	/**
-	 * We override the class Reference to add implementation-specific fields that will
-	 * allow the methods updateReferenceVersion and updateReferenceArtifactVersion to
-	 * locate the reference.
-	 *
-	 * We preserve the immutable property of the base class.
+	 * Extra implementation data to be attached to {@link Reference}'s.
+	 * <p>
+	 * This will allow the methods updateReferenceVersion and
+	 * updateReferenceArtifactVersion to locate the reference.
+	 * <p>
+	 * See Reference for more information about constrained imposed on the extra
+	 * implementation data.
 	 */
-	private class ReferenceImplSpecific extends Reference {
+	private class ReferenceImplData {
 		/**
 		 * Path to the pom.
 		 */
@@ -73,7 +75,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		/**
 		 * ReferencedArtifact.
 		 */
-		private Pom.ReferencedArtifact referencedArtifact;
+		private Pom.ReferencedArtifactTypeEnum referencedArtifactType;
 
 		/**
 		 * Constructor.
@@ -84,8 +86,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		 * @param pathPom Path to the pom.
 		 * @param referencedArtifact ReferencedArtifact.
 		 */
-		public ReferenceImplSpecific(ModuleVersion moduleVersion, ArtifactGroupId artifactGroupId, ArtifactVersion artifactVersion, Path pathPom, ReferencedArtifact referencedArtifact) {
-			super(moduleVersion, artifactGroupId, artifactVersion);
+		public ReferenceImplData(Path pathPom, ReferencedArtifact referencedArtifact) {
 			this.pathPom = pathPom;
 			this.referencedArtifact = referencedArtifact;
 		}
@@ -107,19 +108,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		 */
 		@Override
 		public String toString() {
-			StringBuilder stringBuilder;
-
-			stringBuilder = new StringBuilder();
-
-			if (this.getModuleVersion() != null) {
-				stringBuilder.append(this.getModuleVersion());
-
-				stringBuilder.append(" (from parent ").append(this.pathPom).append("->").append(this.referencedArtifact).append(")");
-			} else {
-				stringBuilder.append(this.pathPom).append("->").append(this.referencedArtifact);
-			}
-
-			return stringBuilder.toString();
+			return "ref " + this.pathPom + " " + this.referencedArtifact.getReferencedArtifactTypeEnum();
 		}
 
 		@Override
@@ -128,7 +117,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 			int result;
 
 			result = 1;
-			result = (prime * result) + super.hashCode();
 			result = (prime * result) + this.pathPom.hashCode();
 			result = (prime * result) + this.referencedArtifact.hashCode();
 
@@ -137,47 +125,23 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
 		@Override
 		public boolean equals(Object other) {
-			ReferenceImplSpecific referenceImplSpecificOther;
+			ReferenceImplData referenceImplDataOther;
 
 			if (this == other) {
 				return true;
 			}
 
-			if (!(other instanceof ReferenceImplSpecific)) {
+			if (!(other instanceof ReferenceImplData)) {
 				return false;
 			}
 
-			referenceImplSpecificOther = (ReferenceImplSpecific)other;
+			referenceImplDataOther = (ReferenceImplData)other;
 
-			if (this.getArtifactGroupId() == null) {
-				if (referenceImplSpecificOther.getArtifactGroupId() != null) {
-					return false;
-				}
-			} else if (!this.getArtifactGroupId().equals(referenceImplSpecificOther.getArtifactGroupId())) {
+			if (!this.pathPom.equals(referenceImplDataOther.pathPom)) {
 				return false;
 			}
 
-			if (this.getArtifactVersion() == null) {
-				if (referenceImplSpecificOther.getArtifactVersion() != null) {
-					return false;
-				}
-			} else if (!this.getArtifactVersion().equals(referenceImplSpecificOther.getArtifactVersion())) {
-				return false;
-			}
-
-			if (this.getModuleVersion() == null) {
-				if (referenceImplSpecificOther.getModuleVersion() != null) {
-					return false;
-				}
-			} else if (!this.getModuleVersion().equals(referenceImplSpecificOther.getModuleVersion())) {
-				return false;
-			}
-
-			if (!this.pathPom.equals(referenceImplSpecificOther.pathPom)) {
-				return false;
-			}
-
-			if (!this.referencedArtifact.equals(referenceImplSpecificOther.referencedArtifact)) {
+			if (!this.referencedArtifact.equals(referenceImplDataOther.referencedArtifact)) {
 				return false;
 			}
 

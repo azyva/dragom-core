@@ -850,7 +850,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 							listModuleVersion.add(referenceChildDest.getModuleVersion());
 							switchToDynamicVersion = new SwitchToDynamicVersion(listModuleVersion);
 
-							switchToDynamicVersion.performTask();
+							switchToDynamicVersion.performJob();
 
 							if (!switchToDynamicVersion.isListModuleVersionRootChanged()) {
 								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), this.referencePath, referenceChildDest));
