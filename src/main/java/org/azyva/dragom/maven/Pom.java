@@ -98,7 +98,7 @@ public class Pom {
 	 * Enumeration of the different types of referenced artifacts managed by this
 	 * class.
 	 */
-	public static enum ReferencedArtifactTypeEnum {
+	public static enum ReferencedArtifactType {
 		PARENT, // Parent.
 		DEPENDENCY, // A dependency in the dependencies element.
 		DEPENDENCY_MANAGEMENT // A dependency in the dependencyManagement element.
@@ -113,7 +113,7 @@ public class Pom {
 		/**
 		 * Type of referenced artifact.
 		 */
-		private ReferencedArtifactTypeEnum referencedArtifactTypeEnum;
+		private ReferencedArtifactType referencedArtifactType;
 
 		/**
 		 * GroupId.
@@ -133,23 +133,23 @@ public class Pom {
 		/**
 		 * Constructor.
 		 *
-		 * @param referencedArtifactTypeEnum ReferenceArtifactTypeEnum.
+		 * @param referencedArtifactType ReferenceArtifactType.
 		 * @param groupId GroupId.
 		 * @param artifactId ArtifactId.
 		 * @param version Version.
 		 */
-		public ReferencedArtifact(ReferencedArtifactTypeEnum referencedArtifactTypeEnum, String groupId, String artifactId, String version) {
-			this.referencedArtifactTypeEnum = referencedArtifactTypeEnum;
+		public ReferencedArtifact(ReferencedArtifactType referencedArtifactType, String groupId, String artifactId, String version) {
+			this.referencedArtifactType = referencedArtifactType;
 			this.groupId = groupId;
 			this.artifactId = artifactId;
 			this.version = version;
 		}
 
 		/**
-		 * @return ReferencedArtifactTypeEnum.
+		 * @return ReferencedArtifactType.
 		 */
-		public ReferencedArtifactTypeEnum getReferencedArtifactTypeEnum() {
-			return this.referencedArtifactTypeEnum;
+		public ReferencedArtifactType getReferencedArtifactType() {
+			return this.referencedArtifactType;
 		}
 
 		/**
@@ -175,7 +175,7 @@ public class Pom {
 
 		@Override
 		public String toString() {
-			return this.referencedArtifactTypeEnum + "/" + this.groupId + ":" + this.artifactId + ":" + this.version;
+			return this.referencedArtifactType + "/" + this.groupId + ":" + this.artifactId + ":" + this.version;
 		}
 
 		@Override
@@ -186,7 +186,7 @@ public class Pom {
 			result = 1;
 			result = (prime * result) + ((this.artifactId == null) ? 0 : this.artifactId.hashCode());
 			result = (prime * result) + ((this.groupId == null) ? 0 : this.groupId.hashCode());
-			result = (prime * result) + ((this.referencedArtifactTypeEnum == null) ? 0 : this.referencedArtifactTypeEnum.hashCode());
+			result = (prime * result) + ((this.referencedArtifactType == null) ? 0 : this.referencedArtifactType.hashCode());
 			result = (prime * result) + ((this.version == null) ? 0 : this.version.hashCode());
 
 			return result;
@@ -226,7 +226,7 @@ public class Pom {
 				return false;
 			}
 
-			if (this.referencedArtifactTypeEnum != referencedArtifactOther.referencedArtifactTypeEnum) {
+			if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
 				return false;
 			}
 
@@ -266,7 +266,7 @@ public class Pom {
 				return false;
 			}
 
-			if (this.referencedArtifactTypeEnum != referencedArtifactOther.referencedArtifactTypeEnum) {
+			if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
 				return false;
 			}
 
@@ -509,10 +509,10 @@ public class Pom {
 	 * version (because it is specified in a dependencyManagement element of some
 	 * parent, it is not returned because it is of no interest to the Dragom.
 	 *
-	 * @param enumSetReferencedArtifactTypeEnum EnumSet of the types of referenced
+	 * @param enumSetReferencedArtifactType EnumSet of the types of referenced
 	 *   artifact to return. For example, if only the parent is needed, specify
-	 *   EnumSet.of(ReferencedArtifactTypeEnum.PARENT). If all types of referenced
-	 *   artifacts are needed, specify EnumSet.allOf(ReferencedArtifactTypeEnum.class).
+	 *   EnumSet.of(ReferencedArtifactType.PARENT). If all types of referenced
+	 *   artifacts are needed, specify EnumSet.allOf(ReferencedArtifactType.class).
 	 * @param filterGroupId Restrict retrieved referenced artifacts to those matching
 	 *   this groupId. If null, no filtering is applied on the groupId.
 	 * @param filterArtifactId Restrict retrieved referenced artifacts to those
@@ -522,7 +522,7 @@ public class Pom {
 	 * @return List of ReferencedArtifact.
 	 */
 	public List<ReferencedArtifact> getListReferencedArtifact(
-			EnumSet<ReferencedArtifactTypeEnum> enumSetReferencedArtifactTypeEnum,
+			EnumSet<ReferencedArtifactType> enumSetReferencedArtifactType,
 			String filterGroupId,
 			String filterArtifactId,
 			String filterVersion) {
@@ -539,7 +539,7 @@ public class Pom {
 		xPathFactory = XPathFactory.newInstance();
 		xPath = xPathFactory.newXPath();
 
-		if (enumSetReferencedArtifactTypeEnum.contains(ReferencedArtifactTypeEnum.PARENT)) {
+		if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.PARENT)) {
 			try {
 				nodeParent = (Node)xPath.evaluate("/project/parent", this.documentPom, XPathConstants.NODE);
 			} catch (XPathExpressionException xpee) {
@@ -548,7 +548,7 @@ public class Pom {
 
 			if (nodeParent != null) {
 				try {
-					referencedArtifact = new ReferencedArtifact(ReferencedArtifactTypeEnum.PARENT, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
+					referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PARENT, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
 				} catch (XPathExpressionException xpee) {
 					throw new RuntimeException(xpee);
 				}
@@ -560,7 +560,7 @@ public class Pom {
 			}
 		}
 
-		if (enumSetReferencedArtifactTypeEnum.contains(ReferencedArtifactTypeEnum.DEPENDENCY)) {
+		if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.DEPENDENCY)) {
 			try {
 				nodeListDependencies = (NodeList)xPath.evaluate("/project/dependencies/dependency", this.documentPom, XPathConstants.NODESET);
 			} catch (XPathExpressionException xpee) {
@@ -597,7 +597,7 @@ public class Pom {
 
 
 				try {
-					referencedArtifact = new ReferencedArtifact(ReferencedArtifactTypeEnum.DEPENDENCY, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
+					referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
 				} catch (XPathExpressionException xpee) {
 					throw new RuntimeException(xpee);
 				}
@@ -609,7 +609,7 @@ public class Pom {
 			}
 		}
 
-		if (enumSetReferencedArtifactTypeEnum.contains(ReferencedArtifactTypeEnum.DEPENDENCY_MANAGEMENT)) {
+		if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.DEPENDENCY_MANAGEMENT)) {
 			try {
 				nodeListDependencies = (NodeList)xPath.evaluate("/project/dependencyManagement/dependency", this.documentPom, XPathConstants.NODESET);
 			} catch (XPathExpressionException xpee) {
@@ -637,7 +637,7 @@ public class Pom {
 				}
 
 				try {
-					referencedArtifact = new ReferencedArtifact(ReferencedArtifactTypeEnum.DEPENDENCY_MANAGEMENT, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
+					referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
 				} catch (XPathExpressionException xpee) {
 					throw new RuntimeException(xpee);
 				}
@@ -705,7 +705,7 @@ public class Pom {
 	 */
 	public ReferencedArtifact getParentReferencedArtifact() {
 
-		List<ReferencedArtifact> listReferencedArtifact = this.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactTypeEnum.PARENT), null,  null,  null);
+		List<ReferencedArtifact> listReferencedArtifact = this.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.PARENT), null,  null,  null);
 
 		if (listReferencedArtifact.isEmpty()) {
 			return null;
@@ -734,7 +734,7 @@ public class Pom {
 		xPathFactory = XPathFactory.newInstance();
 		xPath = xPathFactory.newXPath();
 
-		switch (referencedArtifact.referencedArtifactTypeEnum) {
+		switch (referencedArtifact.referencedArtifactType) {
 		case PARENT:
 			try {
 				nodeVersion = (Node)xPath.evaluate(
@@ -857,9 +857,9 @@ public class Pom {
 		pom.setPathPom(Paths.get("C:/Projects/test.xml"));
 		pom.loadPom();
 		System.out.println("Version: " + pom.getVersion());
-		List<ReferencedArtifact> list = pom.getListReferencedArtifact(EnumSet.allOf(ReferencedArtifactTypeEnum.class),  null,  null,  null);
+		List<ReferencedArtifact> list = pom.getListReferencedArtifact(EnumSet.allOf(ReferencedArtifactType.class),  null,  null,  null);
 		System.out.println("List: " + list);
-		ReferencedArtifact referencedArtifact = new Pom.ReferencedArtifact(ReferencedArtifactTypeEnum.DEPENDENCY_MANAGEMENT, "org.azyva", "dependency-management", "1.2");
+		ReferencedArtifact referencedArtifact = new Pom.ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, "org.azyva", "dependency-management", "1.2");
 		pom.setReferencedArtifactVersion(referencedArtifact, "1.10");
 		System.out.println("Submodules: " + pom.getListSubmodule());
 		pom.savePom();

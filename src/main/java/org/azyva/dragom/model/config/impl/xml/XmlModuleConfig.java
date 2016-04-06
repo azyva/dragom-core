@@ -24,7 +24,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.azyva.dragom.model.config.ModuleConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 
 /**
  * Implementation for {@link ModuleConfig} that allows reading from an XML file.
@@ -36,7 +36,7 @@ import org.azyva.dragom.model.config.NodeTypeEnum;
 @XmlRootElement(name = "module")
 public class XmlModuleConfig extends XmlNodeConfig implements ModuleConfig {
 	@Override
-	public NodeTypeEnum getNodeType() {
-		return NodeTypeEnum.MODULE;
+	public NodeType getNodeType() {
+		return NodeType.MODULE;
 	}
 }

@@ -20,7 +20,7 @@
 package org.azyva.dragom.model.config.impl.simple;
 
 import org.azyva.dragom.model.config.ModuleConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 
 /**
  * Simple implementation for {@link ModuleConfig}.
@@ -39,7 +39,7 @@ public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig
 	}
 
 	@Override
-	public NodeTypeEnum getNodeType() {
-		return NodeTypeEnum.MODULE;
+	public NodeType getNodeType() {
+		return NodeType.MODULE;
 	}
 }

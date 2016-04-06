@@ -21,7 +21,7 @@ package org.azyva.dragom.model.plugin.impl;
 
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Node;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ModulePlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.PluginFactory;
@@ -78,7 +78,7 @@ public class ExamplePluginFactory implements PluginFactory {
 
 	@Override
 	public <NodePluginInterface extends NodePlugin> NodePluginInterface getPlugin(Class<NodePluginInterface> classNodePlugin, Node node) {
-		if (node.getNodeType() != NodeTypeEnum.MODULE) {
+		if (node.getNodeType() != NodeType.MODULE) {
 			throw new RuntimeException("Node " + node + " must be a module.");
 		}
 

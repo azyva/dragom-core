@@ -29,7 +29,7 @@ import java.util.Map;
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.EventPlugin;
 import org.azyva.dragom.model.Node;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.event.ClassificationNodeEvent;
 import org.azyva.dragom.model.event.ModuleEvent;
 import org.azyva.dragom.model.event.NodeEvent;
@@ -173,9 +173,9 @@ public class EventManager {
 	}
 
 	public void raiseNodeEvent(NodeEvent nodeEvent) {
-		if ((nodeEvent instanceof ModuleEvent) && (nodeEvent.getNode().getNodeType() != NodeTypeEnum.MODULE)) {
+		if ((nodeEvent instanceof ModuleEvent) && (nodeEvent.getNode().getNodeType() != NodeType.MODULE)) {
 			throw new RuntimeException("Module events must be raised on modules.");
-		} else if ((nodeEvent instanceof ClassificationNodeEvent) && (nodeEvent.getNode().getNodeType() != NodeTypeEnum.CLASSIFICATION)) {
+		} else if ((nodeEvent instanceof ClassificationNodeEvent) && (nodeEvent.getNode().getNodeType() != NodeType.CLASSIFICATION)) {
 			throw new RuntimeException("Classification node events must be raised on modules.");
 		}
 

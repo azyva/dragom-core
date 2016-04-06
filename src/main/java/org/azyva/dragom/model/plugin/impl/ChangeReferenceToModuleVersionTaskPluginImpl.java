@@ -191,7 +191,7 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 
 		pathModuleWorkspace = scmPlugin.checkoutSystem(version);
 
-		if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
+		if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
 			throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this task.");
 		}
 

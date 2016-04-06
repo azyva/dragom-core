@@ -19,13 +19,17 @@
 
 package org.azyva.dragom.job;
 
+import java.io.Writer;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.azyva.dragom.apiutil.ByReference;
+import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.support.SimpleReferenceGraph;
 
 
@@ -43,8 +47,20 @@ report [--graph] [--module-versions [--reference-graph-paths] [--most-recent-ver
  * @author David Raymond
  */
 public class ReferenceGraphReport {
-	private class InternalReport {
+	public enum OutputFormat {
+		XML,
+		JSON,
+		TEXT
+	}
 
+	public enum ReferenceGraphMode {
+		FULL_TREE,
+		TREE_NO_REDUNDANCY
+	}
+
+	public enum ModuleFilter {
+		ALL,
+		ONLY_MULTIPLE_VERSIONS
 	}
 
 	/**
@@ -52,16 +68,62 @@ public class ReferenceGraphReport {
 	 */
 	private ReferenceGraph referenceGraph;
 
+	private OutputFormat outputFormat;
+
+	private Path pathOutputFile;
+
+	private Writer writerOutput;
+
+	private boolean indIncludeReferenceGraph;
+
+	private ReferenceGraphMode referenceGraphMode;
+
+	private boolean indIncludeModules;
+
+	private ModuleFilter moduleFilter;
+
 	/**
 	 * Constructor.
 	 *
 	 * @param referenceGraph ReferenceGraph.
 	 */
-	public ReferenceGraphReport(ReferenceGraph referenceGraph) {
+	public ReferenceGraphReport(ReferenceGraph referenceGraph, ReferenceGraphReport.OutputFormat outputFormat) {
 		this.referenceGraph = referenceGraph;
+		this.outputFormat = outputFormat;
 	}
 
-	public set
+	public void setOutputFilePath(Path pathOutputFile) {
+		if (this.writerOutput != null) {
+			throw new RuntimeException("Output Writer already set.");
+		}
+
+		this.pathOutputFile = pathOutputFile;
+	}
+
+	public void setOutputWriter(Writer writerOutput) {
+		if (this.pathOutputFile != null) {
+			throw new RuntimeException("Output file Path already set.");
+		}
+
+		this.writerOutput = writerOutput;
+	}
+
+	public void includeReferenceGraph() {
+		this.indIncludeReferenceGraph = true;
+	}
+
+	public void setReferenceGraphMode(ReferenceGraphReport.ReferenceGraphMode referenceGraphMode) {
+		if (!this.indIncludeReferenceGraph) {
+			throw new RuntimeException("Must include ReferenceGraph before setting mode.");
+		}
+
+		this.referenceGraphMode = referenceGraphMode;
+	}
+
+	public void includeModules(ReferenceGraphReport.ModuleFilter moduleFilter) {
+		this.indIncludeModules = true;
+		this.moduleFilter = moduleFilter;
+	}
 
 	/**
 	 * Main method for performing the job.
@@ -81,15 +143,16 @@ class ReportReferenceGraphNode {
 }
 
 class ReportReference {
-	public Reference
+	// ??? One or the other two following fields.
+	public ReportReferenceGraphNode reportReferenceGraphNode;
+	public ModuleVersion moduleVersion;
+	public String extraInfo;
 }
 
 class ReportModule {
+	public List<ReportModuleVersion> listReportModuleVersion;
 }
 
 class ReportModuleVersion {
+	public List<ReferencePath> listReferencePath;
 }
-
-class ReportModuleVersionReferencePath {
-}
-

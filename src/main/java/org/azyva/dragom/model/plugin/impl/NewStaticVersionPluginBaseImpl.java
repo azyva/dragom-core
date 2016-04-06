@@ -344,7 +344,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
-		listCommit = scmPlugin.getListCommit(versionDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_VERSION_STATIC));
+		listCommit = scmPlugin.getListCommit(versionDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
 		if (!listCommit.isEmpty()) {
 			ScmPlugin.Commit commit;
@@ -407,7 +407,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 		listVersionStatic = new ArrayList<Version>();
-		listCommit = scmPlugin.getListCommit(versionDynamic, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_VERSION_STATIC));
+		listCommit = scmPlugin.getListCommit(versionDynamic, null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
 		for (ScmPlugin.Commit commit: listCommit) {
 			listVersionStatic.addAll(Arrays.asList(commit.arrayVersionStatic));

@@ -26,7 +26,7 @@ import java.util.Map;
 
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 
 /**
  * Simple implementation for {@link ClassificationNodeConfig}.
@@ -50,8 +50,8 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 	}
 
 	@Override
-	public NodeTypeEnum getNodeType() {
-		return NodeTypeEnum.CLASSIFICATION;
+	public NodeType getNodeType() {
+		return NodeType.CLASSIFICATION;
 	}
 
 	@Override

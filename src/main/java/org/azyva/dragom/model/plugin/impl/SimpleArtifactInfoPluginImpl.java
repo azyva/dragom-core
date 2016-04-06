@@ -44,7 +44,7 @@ import org.json.JSONArray;
  *
  * For example if the value of the BASE_GROUP_ID property is com.acme and the
  * module classification path is Foo/Bar/PascalCaseNodeName/my-module, the
- * ArtifactGroupId "com.acme.foo.bar.pascal-cas-node-name:my-module" is assumed
+ * ArtifactGroupId "com.acme.foo.bar.pascal-case-node-name:my-module" is assumed
  * to be definitively produced by builds of the module.
  *
  * Rule 2: Submodules

@@ -24,7 +24,7 @@ import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.ModuleConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 
 /**
  * Represents a module at runtime.
@@ -60,7 +60,7 @@ public class SimpleModule extends SimpleNode implements Module {
 	}
 
 	@Override
-	public NodeTypeEnum getNodeType() {
-		return NodeTypeEnum.MODULE;
+	public NodeType getNodeType() {
+		return NodeType.MODULE;
 	}
 }

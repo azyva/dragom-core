@@ -40,7 +40,7 @@ import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PropertyDefConfig;
 import org.azyva.dragom.model.event.NodeEvent;
@@ -280,10 +280,10 @@ public abstract class SimpleNode implements Node {
 	}
 
 	/**
-	 * @return NodeTypeEnum. Must be overridden by subclasses.
+	 * @return NodeType. Must be overridden by subclasses.
 	 */
 	@Override
-	public abstract NodeTypeEnum getNodeType();
+	public abstract NodeType getNodeType();
 
 	/**
 	 * @return NodePath. null for the root {@link ClassificationNode}.
@@ -296,7 +296,7 @@ public abstract class SimpleNode implements Node {
 		}
 
 		if (this.nodePath == null) {
-			this.nodePath = new NodePath(this.simpleClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeTypeEnum.CLASSIFICATION);
+			this.nodePath = new NodePath(this.simpleClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeType.CLASSIFICATION);
 		}
 
 		return this.nodePath;

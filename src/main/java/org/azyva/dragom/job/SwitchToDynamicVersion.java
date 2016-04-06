@@ -372,7 +372,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 			if (   (referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC)
 				&& (workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion)
-				&& !scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
+				&& !scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
 
 				throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
 			}
@@ -862,11 +862,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			}
 
 			if (indUserWorkspaceDir) {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), moduleVersion, pathModuleWorkspace));
 
-				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlagEnum.ALL_CHANGES)) {
+				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
 					throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
 				}
 			}
@@ -972,7 +972,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					// that commit attribute.
 	//TODO: Not sure if that logic should not be in some plugin. Probably it is OK here since the logic is also in CreateStaticVersion, a job.
 	// But maybe the logic to retrieve that information (equivalent static Version) should be centralized. It exists in NewStaticVersionPluginBaseImpl and here.
-					listCommit = scmPlugin.getListCommit(versionNewDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_VERSION_STATIC));
+					listCommit = scmPlugin.getListCommit(versionNewDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
 					if (!listCommit.isEmpty()) {
 						ScmPlugin.Commit commit;

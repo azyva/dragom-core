@@ -194,7 +194,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 		//Fow now. Eventually, maybe the caller would be interested in knowing if fail because of conflict behave
 		//gracefully in that case. But for now, make it simple.
 		@Override
-		public Path getWorkspaceDir(WorkspaceDir workspaceDir, EnumSet<GetWorkspaceDirModeEnum> enumSetGetWorkspaceDirModeEnum, WorkspaceDirAccessMode workspaceDirAccessMode) {
+		public Path getWorkspaceDir(WorkspaceDir workspaceDir, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode, WorkspaceDirAccessMode workspaceDirAccessMode) {
 			Integer readCount;
 			Path path;
 
@@ -224,11 +224,11 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
 			path = this.mapWorkspaceDirPath.get(workspaceDir);
 
-			if ((path == null) && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.MUST_EXIST)) {
+			if ((path == null) && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.MUST_EXIST)) {
 				throw new RuntimeException("WorkspacePlugin directory " + workspaceDir + " does not exist and is assumed to exist.");
 			}
 
-			if ((path != null) && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.MUST_NOT_EXIST)) {
+			if ((path != null) && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.MUST_NOT_EXIST)) {
 				throw new RuntimeException("WorkspacePlugin directory " + workspaceDir + " exists and mapped to " + path + " but is assumed to not exist.");
 			}
 
@@ -236,9 +236,9 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			 */
 
 			if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
-				path = this.getWorkspaceDirUserModuleVersion((WorkspaceDirUserModuleVersion)workspaceDir, enumSetGetWorkspaceDirModeEnum);
+				path = this.getWorkspaceDirUserModuleVersion((WorkspaceDirUserModuleVersion)workspaceDir, enumSetGetWorkspaceDirMode);
 			} else if (workspaceDir instanceof WorkspaceDirSystemModule) {
-				path = this.getWorkspaceDirSystemModule((WorkspaceDirSystemModule)workspaceDir, enumSetGetWorkspaceDirModeEnum);
+				path = this.getWorkspaceDirSystemModule((WorkspaceDirSystemModule)workspaceDir, enumSetGetWorkspaceDirMode);
 			} else {
 				throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDir.getClass().getName() + '.');
 			}
@@ -246,7 +246,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			/* Generically ensure the path is created if the caller requests it.
 			 */
 
-			if ((path != null) && !path.toFile().isDirectory() && !enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.DO_NOT_CREATE_PATH)) {
+			if ((path != null) && !path.toFile().isDirectory() && !enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.DO_NOT_CREATE_PATH)) {
 				if (!path.toFile().mkdir()) {
 					throw new RuntimeException("The path " + path + " could not be created for an unknown reason.");
 				}
@@ -255,12 +255,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			return path;
 		}
 
-		private Path getWorkspaceDirUserModuleVersion(WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion, EnumSet<GetWorkspaceDirModeEnum> enumSetGetWorkspaceDirModeEnum) {
+		private Path getWorkspaceDirUserModuleVersion(WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {
 			Path path;
 
 			path = this.mapWorkspaceDirPath.get(workspaceDirUserModuleVersion);
 
-			if (path == null && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.CREATE_IF_NOT_EXIST)) {
+			if (path == null && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.CREATE_IF_NOT_EXIST)) {
 				WorkspaceDir workspaceDirOther;
 
 				path = this.pathWorkspace.resolve(workspaceDirUserModuleVersion.getModuleVersion().getNodePath().getModuleName());
@@ -281,7 +281,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				this.mapPathWorkspaceDir.put(path, workspaceDirUserModuleVersion);
 
 				this.save();
-			} else if (path != null && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.RESET_IF_EXIST)) {
+			} else if (path != null && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.RESET_IF_EXIST)) {
 				DefaultWorkspacePluginFactory.logger.info("Existing path " + path + " is reset (deleted and recreated empty) for " + workspaceDirUserModuleVersion + '.');
 
 				try {
@@ -295,12 +295,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			return path;
 		}
 
-		private Path getWorkspaceDirSystemModule(WorkspaceDirSystemModule workspaceDirSystemModule, EnumSet<GetWorkspaceDirModeEnum> enumSetGetWorkspaceDirModeEnum) {
+		private Path getWorkspaceDirSystemModule(WorkspaceDirSystemModule workspaceDirSystemModule, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {
 			Path path;
 
 			path = this.mapWorkspaceDirPath.get(workspaceDirSystemModule);
 
-			if (path == null && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.CREATE_IF_NOT_EXIST)) {
+			if (path == null && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.CREATE_IF_NOT_EXIST)) {
 				WorkspaceDir workspaceDirOther;
 
 				path = this.pathDragomMetadataDir.resolve(workspaceDirSystemModule.getNodePath().getModuleName());
@@ -321,7 +321,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				this.mapPathWorkspaceDir.put(path, workspaceDirSystemModule);
 
 				this.save();
-			} else if (path != null && enumSetGetWorkspaceDirModeEnum.contains(GetWorkspaceDirModeEnum.RESET_IF_EXIST)) {
+			} else if (path != null && enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.RESET_IF_EXIST)) {
 				DefaultWorkspacePluginFactory.logger.info("Existing path " + path + " is reset (deleted and recreated empty) for " + workspaceDirSystemModule + '.');
 
 				try {

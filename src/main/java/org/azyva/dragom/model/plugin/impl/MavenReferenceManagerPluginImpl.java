@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.azyva.dragom.maven.Pom;
-import org.azyva.dragom.maven.Pom.ReferencedArtifact;
 import org.azyva.dragom.maven.PomUtil;
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ArtifactVersion;
@@ -75,7 +74,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		/**
 		 * ReferencedArtifact.
 		 */
-		private Pom.ReferencedArtifactTypeEnum referencedArtifactType;
+		private Pom.ReferencedArtifactType referencedArtifactType;
 
 		/**
 		 * Constructor.
@@ -86,9 +85,9 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		 * @param pathPom Path to the pom.
 		 * @param referencedArtifact ReferencedArtifact.
 		 */
-		public ReferenceImplData(Path pathPom, ReferencedArtifact referencedArtifact) {
+		public ReferenceImplData(Path pathPom, Pom.ReferencedArtifactType referencedArtifactType) {
 			this.pathPom = pathPom;
-			this.referencedArtifact = referencedArtifact;
+			this.referencedArtifactType = referencedArtifactType;
 		}
 
 		/* To allow validating that references passed back to updateReferenceVersion and
@@ -108,7 +107,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		 */
 		@Override
 		public String toString() {
-			return "ref " + this.pathPom + " " + this.referencedArtifact.getReferencedArtifactTypeEnum();
+			return "ref " + this.pathPom + " " + this.referencedArtifactType;
 		}
 
 		@Override
@@ -118,7 +117,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
 			result = 1;
 			result = (prime * result) + this.pathPom.hashCode();
-			result = (prime * result) + this.referencedArtifact.hashCode();
+			result = (prime * result) + this.referencedArtifactType.hashCode();
 
 			return result;
 		}
@@ -141,48 +140,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 				return false;
 			}
 
-			if (!this.referencedArtifact.equals(referenceImplDataOther.referencedArtifact)) {
-				return false;
-			}
-
-			return true;
-		}
-
-		@Override
-		public boolean equalsNoVersion(Reference referenceOther) {
-			ReferenceImplSpecific referenceImplSpecificOther;
-
-			if (this == referenceOther) {
-				return true;
-			}
-
-			if (!(referenceOther instanceof ReferenceImplSpecific)) {
-				return false;
-			}
-
-			referenceImplSpecificOther = (ReferenceImplSpecific)referenceOther;
-
-			if (this.getArtifactGroupId() == null) {
-				if (referenceImplSpecificOther.getArtifactGroupId() != null) {
-					return false;
-				}
-			} else if (!this.getArtifactGroupId().equals(referenceImplSpecificOther.getArtifactGroupId())) {
-				return false;
-			}
-
-			if (this.getModuleVersion() == null) {
-				if (referenceImplSpecificOther.getModuleVersion() != null) {
-					return false;
-				}
-			} else if (!this.getModuleVersion().getNodePath().equals(referenceImplSpecificOther.getModuleVersion().getNodePath())) {
-				return false;
-			}
-
-			if (!this.pathPom.equals(referenceImplSpecificOther.pathPom)) {
-				return false;
-			}
-
-			if (!this.referencedArtifact.equalsNoVersion(referenceImplSpecificOther.referencedArtifact)) {
+			if (!this.referencedArtifactType.equals(referenceImplDataOther.referencedArtifactType)) {
 				return false;
 			}
 
@@ -233,11 +191,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 			throw new RuntimeException("The submodule POM " + pathPom + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + versionContainer + '.');
 		}
 
-		for(Pom.ReferencedArtifact referencedArtifact: pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactTypeEnum.class),  null,  null,  null)) {
+		for(Pom.ReferencedArtifact referencedArtifact: pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class),  null,  null,  null)) {
 			ArtifactGroupId artifactGroupId;
 			Module module;
 			ModuleVersion moduleVersion;
-			ReferenceImplSpecific referenceImplSpecific;
+			Reference reference;
 
 			if (referencedArtifact.getGroupId().contains("${") || referencedArtifact.getArtifactId().contains("${")) {
 				throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ".");
@@ -267,9 +225,9 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 				moduleVersion = null;
 			}
 
-			referenceImplSpecific = new ReferenceImplSpecific(moduleVersion, artifactGroupId, new ArtifactVersion(referencedArtifact.getVersion()), pathPomRelative, referencedArtifact);
+			reference = new Reference(moduleVersion, artifactGroupId, new ArtifactVersion(referencedArtifact.getVersion()), new ReferenceImplData(pathPomRelative, referencedArtifact.getReferencedArtifactType()));
 
-			listReference.add(referenceImplSpecific);
+			listReference.add(reference);
 		}
 
 		for(String submodule: pom.getListSubmodule()) {
@@ -281,24 +239,25 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
 	@Override
 	public boolean updateReferenceVersion(Path pathModuleWorkspace, Reference reference, Version version) {
-		ReferenceImplSpecific referenceImplSpecific;
+		ReferenceImplData referenceImplData;
 		Path pathPom;
 		Pom pom;
 		ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
 		ArtifactVersion artifactVersion;
 
-		if (!(reference instanceof ReferenceImplSpecific)) {
-			throw new RuntimeException("Within " + this + ", reference must be of type ReferenceImplSpecific.");
+		if (!(reference.getImplData() instanceof ReferenceImplData)) {
+			throw new RuntimeException("Within " + this + ", reference extra implementation data must be of type ReferenceImplData.");
 		}
 
-		referenceImplSpecific = (ReferenceImplSpecific)reference;
+		referenceImplData = (ReferenceImplData)reference.getImplData();
 
-		if (referenceImplSpecific.getReferenceManagerPluginImpl() != this) {
+		if (referenceImplData.getReferenceManagerPluginImpl() != this) {
 			// TODO: Have a more precise message. Maybe have a toString on a plugin.
 			throw new RuntimeException("Within " + this + ", reference must have been produced by the same plugin instance.");
 		}
 
-		pathPom = pathModuleWorkspace.resolve(referenceImplSpecific.pathPom);
+		// TODO: Are we sure the path to the POM will be in a known location in the workspace?
+		pathPom = pathModuleWorkspace.resolve(referenceImplData.pathPom);
 		pom = new Pom();
 		pom.setPathPom(pathPom);
 		pom.loadPom();
@@ -308,8 +267,10 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		artifactVersionMapperPlugin = this.getModule().getModel().getModule(reference.getModuleVersion().getNodePath()).getNodePlugin(ArtifactVersionMapperPlugin.class, null);
 		artifactVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(version);
 
-		if (!artifactVersion.toString().equals(referenceImplSpecific.referencedArtifact.getVersion())) {
-			pom.setReferencedArtifactVersion(referenceImplSpecific.referencedArtifact, artifactVersion.toString());
+		if (!artifactVersion.toString().equals(reference.getArtifactVersion())) {
+			// We need to recreate a Pom.ReferencedArtifact since we do not keep it around.
+			// That is OK since we have all the required information.
+			pom.setReferencedArtifactVersion(new Pom.ReferencedArtifact(referenceImplData.referencedArtifactType, reference.getArtifactGroupId().getGroupId(), reference.getArtifactGroupId().getArtifactId(), reference.getArtifactVersion().getVersion()), artifactVersion.toString());
 			pom.savePom();
 			return true;
 		} else {

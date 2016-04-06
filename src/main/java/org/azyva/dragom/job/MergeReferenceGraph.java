@@ -36,7 +36,7 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
-import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirModeEnum;
+import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Model;
@@ -641,7 +641,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersionDest);
 
 			if (!workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
 				try {
 					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
@@ -657,7 +657,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 					}
 				}
 			} else {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 			}
 
 			//********************************************************************************
@@ -666,7 +666,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 			MergeReferenceGraph.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
 
-			listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR));
+			listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
 			iterCommit = listCommit.iterator();
 
 			while (iterCommit.hasNext()) {
@@ -1001,7 +1001,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			if (byReferenceBooleanSrcDiverges != null) {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_VERIFYING_SRC_DIVERGES_FROM_DEST_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 
-				listCommit = scmPlugin.getListCommitDiverge(versionSrc, versionDest, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
+				listCommit = scmPlugin.getListCommitDiverge(versionSrc, versionDest, null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
 
 				while (iterCommit.hasNext()) {
@@ -1026,7 +1026,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			if (byReferenceBooleanDestDiverges != null) {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_VERIFYING_DEST_DIVERGES_FROM_SRC_MODULE_VERSION), moduleVersionSrc, moduleVersionDest));
 
-				listCommit = scmPlugin.getListCommitDiverge(versionDest, versionSrc, null, EnumSet.of(ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlagEnum.IND_INCLUDE_MESSAGE));
+				listCommit = scmPlugin.getListCommitDiverge(versionDest, versionSrc, null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_MESSAGE));
 				iterCommit = listCommit.iterator();
 
 				while (iterCommit.hasNext()) {

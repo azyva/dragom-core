@@ -31,7 +31,7 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
-import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirModeEnum;
+import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
@@ -206,7 +206,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 		try {
 			if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 			} else {
 				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);

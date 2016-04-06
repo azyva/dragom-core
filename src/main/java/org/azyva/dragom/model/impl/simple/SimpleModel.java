@@ -34,7 +34,7 @@ import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.Config;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
 
@@ -111,7 +111,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 	 * {@link ArtifactGroupId} by using {@link ArtifactInfoPlugin}.
 	 * <p>
 	 * The nodes visited by this NodeVisitor must be Module's.
-	 * {@link NodeTypeEnum#MODULE} must be passed to
+	 * {@link NodeType#MODULE} must be passed to
 	 * {@link ClassificationNode#traverseNodeHierarchyDepthFirst}.
 	 * <p>
 	 * Used by {@link Model#findModuleByArtifactGroupId}.
@@ -178,7 +178,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 	 * ArtifactGroupId.
 	 * <p>
 	 * The nodes visited by this NodeVisitor must be ClassificationNode.
-	 * {@link NodeTypeEnum#CLASSIFICATION} must be passed to
+	 * {@link NodeType#CLASSIFICATION} must be passed to
 	 * {@link ClassificationNode#traverseNodeHierarchyDepthFirst}.
 	 * <p>
 	 * Used by {@link Model#findModuleByArtifactGroupId}.
@@ -407,7 +407,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 
 		findModuleByArtifactGroupIdModuleNodeVisitor = new FindModuleByArtifactGroupIdModuleNodeVisitor(artifactGroupId);
 
-		this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeTypeEnum.MODULE, findModuleByArtifactGroupIdModuleNodeVisitor);
+		this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.MODULE, findModuleByArtifactGroupIdModuleNodeVisitor);
 
 		moduleFound = (SimpleModule)findModuleByArtifactGroupIdModuleNodeVisitor.getModuleFound();
 
@@ -424,7 +424,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 
 		findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor = new FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor(artifactGroupId);
 
-		this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeTypeEnum.CLASSIFICATION, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
+		this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.CLASSIFICATION, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
 
 		moduleFound = (SimpleModule)findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor.getModuleFound();
 

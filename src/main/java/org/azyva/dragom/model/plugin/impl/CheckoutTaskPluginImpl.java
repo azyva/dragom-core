@@ -26,7 +26,7 @@ import java.util.ResourceBundle;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
-import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirModeEnum;
+import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
@@ -112,12 +112,12 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 			// We need to call workspacePlugin.getWorkspaceDir simply to obtain the workspace
 			// directory. But we do not need to reserve it.
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 
 			userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " already exists. It is assumed to already contain the checked out sources for ModuleVersion " + moduleVersion + ". No action taken.");
 			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
 		} else {
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirModeEnum.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
 			try {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));

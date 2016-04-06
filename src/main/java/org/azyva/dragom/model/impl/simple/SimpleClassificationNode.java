@@ -34,7 +34,7 @@ import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeTypeEnum;
+import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,13 +109,13 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 	/**
-	 * Returns {@link NodeTypeEnum#CLASSIFICATION}.
+	 * Returns {@link NodeType#CLASSIFICATION}.
 	 *
 	 * @return See description.
 	 */
 	@Override
-	public NodeTypeEnum getNodeType() {
-		return NodeTypeEnum.CLASSIFICATION;
+	public NodeType getNodeType() {
+		return NodeType.CLASSIFICATION;
 	}
 
 	/**
@@ -190,7 +190,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 	@Override
-	public boolean traverseNodeHierarchyDepthFirst(NodeTypeEnum nodeTypeEnumFilter, NodeVisitor nodeVisitor) {
+	public boolean traverseNodeHierarchyDepthFirst(NodeType nodeTypeFilter, NodeVisitor nodeVisitor) {
 		Set<Map.Entry<String, SimpleNode>> setMapEntry;
 
 		setMapEntry = this.mapSimpleNodeChild.entrySet();
@@ -205,7 +205,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 				/* If the children is a classification node, it must be traversed recursively. The
 				 * visiting of this node will be handled by its own traversal.
 				 */
-				if (((SimpleClassificationNode)simpleNode).traverseNodeHierarchyDepthFirst(nodeTypeEnumFilter, nodeVisitor)) {
+				if (((SimpleClassificationNode)simpleNode).traverseNodeHierarchyDepthFirst(nodeTypeFilter, nodeVisitor)) {
 					return true;
 				}
 				break;
@@ -214,7 +214,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 				/* If the children is a module, it cannot be traversed so its visiting must be
 				 * handled here.
 				 */
-				if ((nodeTypeEnumFilter == null) || (nodeTypeEnumFilter == NodeTypeEnum.MODULE)) {
+				if ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.MODULE)) {
 					if (nodeVisitor.visitNode(simpleNode)) {
 						return true;
 					}
@@ -227,7 +227,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		/* The visiting of the current node, which is necessarily a classification node,
 		 * must be handed separately in its own traversal.
 		 */
-		if ((nodeTypeEnumFilter == null) || (nodeTypeEnumFilter == NodeTypeEnum.CLASSIFICATION)) {
+		if ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.CLASSIFICATION)) {
 			if (nodeVisitor.visitNode(this)) {
 				return true;
 			}
@@ -306,7 +306,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			return simpleClassificationNode;
 		}
 
-		if (simpleNode.getNodeType() == NodeTypeEnum.CLASSIFICATION){
+		if (simpleNode.getNodeType() == NodeType.CLASSIFICATION){
 			return (SimpleClassificationNode)simpleNode;
 		} else {
 			throw new RuntimeException("The child node " + name + " is not a classification node.");
@@ -343,7 +343,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			return module;
 		}
 
-		if (simpleNode.getNodeType() == NodeTypeEnum.MODULE) {
+		if (simpleNode.getNodeType() == NodeType.MODULE) {
 			return (SimpleModule)simpleNode;
 		} else {
 			throw new RuntimeException("The child node " + name + " is not a module.");

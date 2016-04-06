@@ -193,7 +193,7 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
 			pom.setVersion(newVersion);
 		}
 
-		listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactTypeEnum.DEPENDENCY, Pom.ReferencedArtifactTypeEnum.DEPENDENCY_MANAGEMENT), null, null, null);
+		listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.DEPENDENCY, Pom.ReferencedArtifactType.DEPENDENCY_MANAGEMENT), null, null, null);
 
 		for (Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
 			if (referencedArtifactParent.getGroupId().contains("${") || referencedArtifactParent.getArtifactId().contains("${")) {
