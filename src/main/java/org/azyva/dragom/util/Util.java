@@ -265,13 +265,12 @@ public final class Util {
 	private static Boolean indWindows;
 
 	/**
-	 * Infers a groupId segment from a module classification path.
+	 * Infers a groupId segment from a module node path.
 	 *
 	 * We talk about the groupId segment since a complete groupId will generally be
 	 * some prefix plus a . to which the value returned is appended.
 	 *
-	 * Only the node classification path is used. The module classification path can
-	 * be partial or not.
+	 * Only the node path is used. The module node path can be partial or not.
 	 *
 	 * @param nodePath
 	 */

@@ -45,7 +45,7 @@ public class MapWorkspaceDirPathXmlAdapter extends XmlAdapter<ListWorkspaceDirPa
 		@XmlElement(name = "workspace-dir-class")
 		public String workspaceDirClass;
 
-		@XmlElement(name = "module-classification-path")
+		@XmlElement(name = "module-node-path")
 		public String stringNodePath;
 
 		@XmlElement(name = "version")

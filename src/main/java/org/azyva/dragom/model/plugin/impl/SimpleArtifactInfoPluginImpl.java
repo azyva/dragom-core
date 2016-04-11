@@ -30,22 +30,22 @@ import org.json.JSONArray;
 
 /**
  * Factory for ArtifactInfoPlugin that assumes a simple equivalence between a
- * module classification path and the ArtifactGroupId using inference rules.
+ * module node path and the ArtifactGroupId using inference rules.
  *
  * Rule 1: Base artifactId
  * -----------------------
  *
  * The value of the property BASE_GROUP_ID is used as the base groupId. Then each
- * node name in the node classification path (up to but not the module name) is
- * converted into an element of the groupId. The conversion algorithm is to
- * convert from PascalCase to lowercase-with-dash notation.
+ * node name in the node path (up to but not the module name) is converted into an
+ * element of the groupId. The conversion algorithm is to convert from PascalCase
+ * to lowercase-with-dash notation.
  *
  * The artifactId of the ArtifactGroupId is the module name.
  *
  * For example if the value of the BASE_GROUP_ID property is com.acme and the
- * module classification path is Foo/Bar/PascalCaseNodeName/my-module, the
- * ArtifactGroupId "com.acme.foo.bar.pascal-case-node-name:my-module" is assumed
- * to be definitively produced by builds of the module.
+ * module node path is Foo/Bar/PascalCaseNodeName/my-module, the ArtifactGroupId
+ * "com.acme.foo.bar.pascal-case-node-name:my-module" is assumed to be
+ * definitively produced by builds of the module.
  *
  * Rule 2: Submodules
  * ------------------
@@ -58,7 +58,7 @@ import org.json.JSONArray;
  * Rule selection
  * --------------
  *
- * The value of the MODULE_CLASSIFICATION_PATH_INFERENCE_RULES property affects the
+ * The value of the MODULE_NODE_PATH_INFERENCE_RULES property affects the
  * inference rules above:
  *
  * - Undefined (null) or "ALL": All inference rules are applied.
@@ -97,7 +97,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
 		String groupId = null;
 		String stringJsonArrayDefiniteArtifactGroupIdProduced;
 
-		inferenceRules = module.getProperty("MODULE_CLASSIFICATION_PATH_INFERENCE_RULES");
+		inferenceRules = module.getProperty("MODULE_NODE_PATH_INFERENCE_RULES");
 
 		if ((inferenceRules == null) || inferenceRules.equals("ALL")) {
 			isInferRuleBaseArtifactId = true;
@@ -111,7 +111,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
 		}
 
 		/* If either of the two rules must be applied, we need to know the groupId
-		 * inferred from the module classification path.
+		 * inferred from the module node path.
 		 */
 		if (isInferRuleBaseArtifactId || this.isInferRuleSubmodules) {
 			baseGroupId = module.getProperty("BASE_GROUP_ID");

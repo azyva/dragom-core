@@ -382,7 +382,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				}
 
 				if (!((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath().equals(((WorkspaceDirUserModuleVersion)workspaceDirNew).getModuleVersion().getNodePath())) {
-					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module classification path as original workspace directory " + workspaceDir + '.');
+					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module node path as original workspace directory " + workspaceDir + '.');
 				}
 			} else if (workspaceDir instanceof WorkspaceDirSystemModule) {
 				if (!(workspaceDirNew instanceof WorkspaceDirSystemModule)) {
@@ -390,7 +390,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				}
 
 				if (!((WorkspaceDirSystemModule)workspaceDir).getNodePath().equals(((WorkspaceDirSystemModule)workspaceDirNew).getNodePath())) {
-					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module classification path as original workspace directory " + workspaceDir + '.');
+					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module node path as original workspace directory " + workspaceDir + '.');
 				}
 			} else {
 				throw new RuntimeException("Invalid workspace directory type " + workspaceDir + '.');

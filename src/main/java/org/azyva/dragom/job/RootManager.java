@@ -148,13 +148,13 @@ public class RootManager {
 	 *
 	 * @return See description.
 	 */
-	public static ModuleVersion getModuleVersion(NodePath moduleClassificationPath) {
+	public static ModuleVersion getModuleVersion(NodePath nodePathModule) {
 		List<ModuleVersion> listModuleVersion;
 
 		listModuleVersion = RootManager.getListModuleVersion();
 
 		for (ModuleVersion moduleVersion: listModuleVersion) {
-			if (moduleVersion.getNodePath().equals(moduleClassificationPath)) {
+			if (moduleVersion.getNodePath().equals(nodePathModule)) {
 				return moduleVersion;
 			}
 		}

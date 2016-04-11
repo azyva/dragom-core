@@ -30,25 +30,25 @@ import org.azyva.dragom.util.Util;
 
 /**
  * Factory for FindModuleByArtifactGroupIdPlugin that assumes a simple equivalence
- * between a module classification path and the ArtifactGroupId using inference
+ * between a module node path and the ArtifactGroupId using inference
  * rules.
  *
  * The value of the property BASE_GROUP_ID is used as the base groupId. Then each
- * node name in the node classification path (up to but not the module name) is
- * converted into an element of the groupId. The conversion algorithm is to
- * convert from PascalCase to lowercase-with-dash notation.
+ * node name in the node path (up to but not the module name) is converted into an
+ * element of the groupId. The conversion algorithm is to convert from PascalCase
+ * to lowercase-with-dash notation.
  *
  * The groupId obtained must match the groupId of the ArtifactGroupId specified.
  *
- * Then the plugin constructs a list of module classification paths all using the
- * same node classification path associated with the plugin. The module names
- * start with the artifactId of the ArtifactGroupId specified and reduce down to
- * the base artifactId based on - separating the tokens.
+ * Then the plugin constructs a list of module node paths all using the same node
+ * path associated with the plugin. The module names start with the artifactId of
+ * the ArtifactGroupId specified and reduce down to the base artifactId based on -
+ * separating the tokens.
  *
  * For example if the value of the BASE_GROUP_ID property is com.acme and the node
- * classification path associated with the plugin is Foo/Bar/PascalCaseNodeName/,
- * then only ArtifactGroupId whose groupId is
- * com.acme.foo.bar.pascal-case-node-name are considered.
+ * node path associated with the plugin is Foo/Bar/PascalCaseNodeName/, then only
+ * ArtifactGroupId whose groupId is com.acme.foo.bar.pascal-case-node-name are
+ * considered.
  *
  * Then if the artifactId of the ArtifactGroupId specified is
  * my-module-submodule-name-with-many-tokens, the list of NodePath

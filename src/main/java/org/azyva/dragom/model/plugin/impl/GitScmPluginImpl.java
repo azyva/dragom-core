@@ -101,11 +101,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * Model property specifying the "folder" within the URL of the Git repository for
 	 * the Module.
 	 *
-	 * This property is intended to be specified on an intermetiate ClassificationNode
+	 * This property is intended to be specified on an intermediate ClassificationNode
 	 * under which all Module Git repositories share the same base URL.
 	 *
-	 * If this property is not defined for the module, the classification path of the
-	 * parent Node of the Module is used.
+	 * If this property is not defined for the module, the NodePath of the parent
+	 * Node of the Module is used.
 	 */
 	private static final String MODEL_PROPERTY_GIT_REPOS_DOMAIN_FOLDER = "GIT_REPOS_DOMAIN_FOLDER";
 
@@ -493,11 +493,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	}
 
 	private void fetch(Path pathModuleWorkspace) {
-		NodePath moduleClassificationPath;
+		NodePath nodePathModule;
 		Path pathMainUserWorkspaceDir;
 
-		moduleClassificationPath = this.getModule().getNodePath();
-		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+		nodePathModule = this.getModule().getNodePath();
+		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
 			// If the Workspace directory is not the main one, we first perform a regular
@@ -629,7 +629,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// main one will consider the new changes.
 	private void push(Path pathModuleWorkspace, String gitRef) {
 		String branch;
-		NodePath moduleClassificationPath;
+		NodePath nodePathModule;
 		Path pathMainUserWorkspaceDir;
 
 		branch = this.gitGetBranch(pathModuleWorkspace);
@@ -638,8 +638,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException("Within " + pathModuleWorkspace + " the HEAD is not a branch.");
 		}
 
-		moduleClassificationPath = this.getModule().getNodePath();
-		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+		nodePathModule = this.getModule().getNodePath();
+		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
 			// If the Workspace directory is not the main one we first perform a local fetch
@@ -698,13 +698,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	@Override
 	public void checkout(Version version, Path pathModuleWorkspace) {
 		WorkspacePlugin workspacePlugin;
-		NodePath moduleClassificationPath;
+		NodePath nodePathModule;
 		WorkspaceDirSystemModule workspaceDirSystemModule;
 		Path pathMainUserWorkspaceDir;
 		Path pathModuleWorkspaceRemote;
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-		moduleClassificationPath = this.getModule().getNodePath();
+		nodePathModule = this.getModule().getNodePath();
 
 		// If there is a main user workspace directory for the Module (whatever the
 		// Version) we want to clone from this directory instead of from the remote
@@ -713,7 +713,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// We expect pathMainUserWorkspaceDir to not be equal to pathModuleWorkspace since
 		// when the caller calls this method, the pathModuleWorkspace must not exist yet
 		// as it is meant to be created by this method.
-		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		if (pathMainUserWorkspaceDir != null) {
 			this.gitClone(version,  pathMainUserWorkspaceDir, pathModuleWorkspace);
@@ -724,7 +724,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// which case we simply clone from it instead of from the remote repository.
 		// Furthermore, we make the new user workspace directory the main one.
 
-		workspaceDirSystemModule = new WorkspaceDirSystemModule(moduleClassificationPath);
+		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
 			pathModuleWorkspaceRemote = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ);
@@ -740,7 +740,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			}
 		}
 
-		this.setPathMainUserWorkspaceDir(moduleClassificationPath, pathModuleWorkspace);
+		this.setPathMainUserWorkspaceDir(nodePathModule, pathModuleWorkspace);
 	}
 
 	//TODO: The path must come from the workspace so that caller can check what kind it is.
@@ -748,18 +748,18 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	@Override
 	public Path checkoutSystem(Version version) {
 		WorkspacePlugin workspacePlugin;
-		NodePath moduleClassificationPath;
+		NodePath nodePathModule;
 		WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
 		Path pathModuleWorkspace;
 		WorkspaceDirSystemModule workspaceDirSystemModule;
 		Path pathMainUserWorkspaceDir;
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-		moduleClassificationPath = this.getModule().getNodePath();
+		nodePathModule = this.getModule().getNodePath();
 
 		// We first check if a user workspace directory exists for the ModuleVersion.
 
-		workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(moduleClassificationPath, version));
+		workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, version));
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 			// If the module is already checked out for the user, the path is reused as is,
@@ -770,7 +770,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		// If not, we check if a system workspace directory exists for the module.
 
-		workspaceDirSystemModule = new WorkspaceDirSystemModule(moduleClassificationPath);
+		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
 			// If a system workspace directory already exists for the module, we reuse it.
@@ -785,7 +785,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// If the version is dynamic (a branch), we might have actually checked out the
 			// local version of it and it may not be up to date.
 			if (version.getVersionType() == VersionType.DYNAMIC) {
-				pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+				pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 				if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
 					// If the Workspace directory is not the main one, we fetch the same branch from
@@ -811,7 +811,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// Version) we want to clone from this directory instead of from the remote
 		// repository to avoid network access.
 
-		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+		pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
 
@@ -881,21 +881,21 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 */
 	private Path getPathModuleWorkspace() {
 		WorkspacePlugin workspacePlugin;
-		NodePath moduleClassificationPath;
+		NodePath nodePathModule;
 		Path pathModuleWorkspace;
 		WorkspaceDirSystemModule workspaceDirSystemModule;
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-		moduleClassificationPath = this.getModule().getNodePath();
+		nodePathModule = this.getModule().getNodePath();
 
-		pathModuleWorkspace = this.getPathMainUserWorkspaceDir(moduleClassificationPath);
+		pathModuleWorkspace = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		if (pathModuleWorkspace != null) {
 			this.fetch(pathModuleWorkspace);
 			return pathModuleWorkspace;
 		}
 
-		workspaceDirSystemModule = new WorkspaceDirSystemModule(moduleClassificationPath);
+		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
@@ -1893,7 +1893,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	//TODO: Probably should validate the path
 	// It may not exist anymore if the caller has deleted the workspace dir.
 	// Or...
-	private Path getPathMainUserWorkspaceDir(NodePath moduleClassificationPath) {
+	private Path getPathMainUserWorkspaceDir(NodePath nodePathModule) {
 		ExecContext execContext;
 		WorkspacePlugin workspacePlugin;
 		String stringPathMainWorkspaceDir;
@@ -1921,7 +1921,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			//   main workspace directory.
 			if (   !workspacePlugin.isPathWorkspaceDirExists(pathMainUserWorkspaceDir)
 				|| !(workspacePlugin.getWorkspaceDirFromPath(pathMainUserWorkspaceDir) instanceof WorkspaceDirUserModuleVersion)
-				|| !((WorkspaceDirUserModuleVersion)workspacePlugin.getWorkspaceDirFromPath(pathMainUserWorkspaceDir)).getModuleVersion().getNodePath().equals(moduleClassificationPath)) {
+				|| !((WorkspaceDirUserModuleVersion)workspacePlugin.getWorkspaceDirFromPath(pathMainUserWorkspaceDir)).getModuleVersion().getNodePath().equals(nodePathModule)) {
 
 				Set<WorkspaceDir> setWorkspaceDir;
 				WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
@@ -1929,7 +1929,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				// If the main workspace directory is not valid, we try to find another workspace
 				// directory for the module and elect it as being the main one.
 
-				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(moduleClassificationPath, null)));
+				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, null)));
 
 				workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)(setWorkspaceDir.iterator().next());
 
@@ -1940,14 +1940,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					pathMainUserWorkspaceDir = null;
 				}
 
-				this.setPathMainUserWorkspaceDir(moduleClassificationPath, pathMainUserWorkspaceDir);
+				this.setPathMainUserWorkspaceDir(nodePathModule, pathMainUserWorkspaceDir);
 			}
 
 			return pathMainUserWorkspaceDir;
 		}
 	}
 
-	private void setPathMainUserWorkspaceDir(NodePath moduleClassificationPath, Path pathMainUserWorkspaceDir) {
+	private void setPathMainUserWorkspaceDir(NodePath nodePathModule, Path pathMainUserWorkspaceDir) {
 		ExecContext execContext;
 		WorkspacePlugin workspacePlugin;
 
