@@ -21,11 +21,10 @@ package org.azyva.dragom.job;
 
 import java.util.List;
 
-import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.model.ModuleVersion;
-import org.azyva.dragom.model.Version;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.reference.support.SimpleReferenceGraph;
 
@@ -70,18 +69,24 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		return this.referenceGraph;
 	}
 
+	/**
+	 * This method will be called only for matched {@link ModuleVersion}'s. But the
+	 * {@link ReferenceGraph} needs to include the {@link ReferencePath}'s leading to
+	 * them. It must also identify those ModuleVersion's which are the roots. This is
+	 * all taken care of by {@link ReferenceGraph#addReferencePath}.
+	 *
+	 * @param reference Reference to the matched ModuleVersion.
+	 * @return Indicates if children must be visited. true is returned.
+	 */
 	@Override
-	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
-		this.referenceGraph.addRootModuleVersion(referenceParent.getModuleVersion());
+	protected boolean visitMatchedModuleVersion(Reference reference) {
+		this.referencePath.add(reference);
 
-		super.visitModuleVersion(referenceParent, byReferenceVersion);
-
-		return false;
-	}
-
-	@Override
-	protected boolean visitMatchedModuleVersion(Reference referenceParent) {
-		this.referenceGraph.addReference(this.referencePath.getLeafModuleVersion(), referenceParent);
+		try {
+			this.referenceGraph.addReferencePath(this.referencePath);
+		} finally {
+			this.referencePath.removeLeafReference();
+		}
 
 		return true;
 	}

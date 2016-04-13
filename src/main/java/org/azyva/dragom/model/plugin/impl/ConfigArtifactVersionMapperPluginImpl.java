@@ -288,7 +288,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 							if (phase == null) {
 								phase = userInteractionCallbackPlugin.getInfo(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, artifactVersion));
 							} else {
-								phase = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, artifactVersion, phase), phase);
+								phase = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT), this.getModule(), version, artifactVersion, phase), phase);
 							}
 
 							runtimePropertiesPlugin.setProperty(null, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PHASE, phase);

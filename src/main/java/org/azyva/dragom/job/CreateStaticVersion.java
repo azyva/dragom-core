@@ -234,7 +234,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 * by the base class as job-specific behavior is required while traversing the
 	 * reference graph.
 	 *
-	 * @param referenceParent Root ModuleVersion passed as a Reference so that the
+	 * @param reference Root ModuleVersion passed as a Reference so that the
 	 *   initial parent element of the ReferencePath can be created.
 	 * @param byReferenceVersion If the method returns true, contains the new Version
 	 *   of the root ModuleVersion.
@@ -243,7 +243,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 *   by the caller.
 	 */
 	@Override
-	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
+	protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		Module module;
@@ -252,7 +252,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		ScmPlugin scmPlugin;
 		boolean indReferencePathAlreadyReverted;
 
-		this.referencePath.add(referenceParent);
+		this.referencePath.add(reference);
 		indReferencePathAlreadyReverted = false;
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -267,11 +267,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		try {
 			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath));
 
-			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
+			module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			if (referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) {
+			if (reference.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) {
 				if (this.referencePathMatcher.matches(this.referencePath)) {
 					// As an optimization we first verify if a new Version was already created or
 					// established for the ModuleVersion during the execution of the job. If so, we
@@ -279,7 +279,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					// would be naturally performed later in visitModuleForCreateStaticVersion. But it
 					// avoids useless processing and more importantly it is less confusing for the
 					// user.
-					if (this.handleAlreadyCreatedStaticVersion(referenceParent.getModuleVersion(), byReferenceVersion)) {
+					if (this.handleAlreadyCreatedStaticVersion(reference.getModuleVersion(), byReferenceVersion)) {
 						return true;
 					}
 
@@ -299,7 +299,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					// We do not process the references of the ModuleVersion in that case since by
 					// definition, all Version's within the reference graph rooted at this
 					// ModuleVersion are now static and are considered has having been processed.
-					if (this.visitModuleForCreateStaticVersion(referenceParent, byReferenceVersion)) {
+					if (this.visitModuleForCreateStaticVersion(reference, byReferenceVersion)) {
 						return true;
 					} else {
 						Util.setAbort();
@@ -318,7 +318,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					// an internal working directory which we will not modify (for now).
 					// ScmPlugin.checkoutSystem does that.
 
-					pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
+					pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
 					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
 						throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
@@ -361,7 +361,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
 
 							if (indUserWorkspaceDir) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), referenceParent.getModuleVersion(), pathModuleWorkspace));
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), reference.getModuleVersion(), pathModuleWorkspace));
 							}
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
@@ -420,7 +420,8 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 * created for the ModuleVersion.
 	 *
 	 * @param referenceParent Reference referring to the ModuleVersion for which a new
-	 *   static Version needs to be created.
+	 *   static Version needs to be created. It is called the parent to more clearly
+	 *   distinguish it from the children.
 	 * @param byReferenceVersion If the method returns true, contains the new static
 	 *   Version of the ModuleVersion.
 	 * @return Indicates if the Version of the ModuleVersion was changed. If

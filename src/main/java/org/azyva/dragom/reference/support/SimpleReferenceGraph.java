@@ -163,11 +163,11 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	}
 
 	@Override
-	public void traverseReferenceGraph(ModuleVersion moduleVersion, boolean isDepthFirst, boolean isAvoidReentry, Visitor visitor) {
+	public void traverseReferenceGraph(ModuleVersion moduleVersion, boolean indDepthFirst, boolean indAvoidReentry, Visitor visitor) {
 		ModuleReentryAvoider moduleReentryAvoider;
 		ReferenceGraphNode referenceGraphNode;
 
-		if (isAvoidReentry) {
+		if (indAvoidReentry) {
 			moduleReentryAvoider = new ModuleReentryAvoider();
 		} else {
 			moduleReentryAvoider = null;
@@ -179,7 +179,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			referencePath = new ReferencePath();
 
 			for (ModuleVersion moduleVersion2: this.listModuleVersionRoot) {
-				this.traverseReferenceGraph(referencePath, new Reference(moduleVersion2), isDepthFirst, moduleReentryAvoider, visitor);
+				this.traverseReferenceGraph(referencePath, new Reference(moduleVersion2), indDepthFirst, moduleReentryAvoider, visitor);
 			}
 		} else {
 			referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
@@ -188,7 +188,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 				throw new RuntimeException("ModuleVersion " + moduleVersion + " not in ReferenceGraph.");
 			}
 
-			this.traverseReferenceGraph(new ReferencePath(), new Reference(referenceGraphNode.moduleVersion), isDepthFirst, moduleReentryAvoider, visitor);
+			this.traverseReferenceGraph(new ReferencePath(), new Reference(referenceGraphNode.moduleVersion), indDepthFirst, moduleReentryAvoider, visitor);
 		}
 	}
 
@@ -198,35 +198,43 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	 * @param referencePath Current {@link ReferencePath}, not including visited
 	 *   {@link Reference}.
 	 * @param reference Visited Reference.
-	 * @param isDepthFirst Indicates that the traversal is depth-first, as opposed to
+	 * @param indDepthFirst Indicates that the traversal is depth-first, as opposed to
 	 *   parent-first.
 	 * @param moduleReentryAvoider ModuleReentryAvoider to be used to avoid reentry.
 	 *   null if reentry is not to be avoided.
 	 * @param visitor Visitor.
 	 */
-	private void traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean isDepthFirst, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
+	private void traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean indDepthFirst, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
+		boolean isAlreadyProcessed;
 		ReferenceGraphNode referenceGraphNode;
 
-		if ((moduleReentryAvoider != null) && !moduleReentryAvoider.processModule(reference.getModuleVersion())) {
-			return;
-		}
+		isAlreadyProcessed = (moduleReentryAvoider != null) && !moduleReentryAvoider.processModule(reference.getModuleVersion());
 
 		try {
+			// This validates that no cycle exists in the ReferencePath.
+			// TODO: But it may be better to validate the absence of cycle when building the ReferenceGraph.
 			referencePath.add(reference);
 
-
-			if (!isDepthFirst) {
-				visitor.visit(referencePath);
+			if (!indDepthFirst) {
+				visitor.visit(referencePath, isAlreadyProcessed ? VisitAction.REPEATED_VISIT : VisitAction.VISIT);
 			}
 
-			referenceGraphNode = this.mapReferenceGraphNode.get(reference.getModuleVersion());
+			if (!isAlreadyProcessed) {
+				referenceGraphNode = this.mapReferenceGraphNode.get(reference.getModuleVersion());
 
-			for (Reference reference2: referenceGraphNode.listReference) {
-				this.traverseReferenceGraph(referencePath, reference2, isDepthFirst, moduleReentryAvoider, visitor);
+				if (referenceGraphNode.listReference != null) {
+					visitor.visit(referencePath, VisitAction.STEP_IN);
+
+					for (Reference reference2: referenceGraphNode.listReference) {
+						this.traverseReferenceGraph(referencePath, reference2, indDepthFirst, moduleReentryAvoider, visitor);
+					}
+
+					visitor.visit(referencePath, VisitAction.STEP_OUT);
+				}
 			}
 
-			if (isDepthFirst) {
-				visitor.visit(referencePath);
+			if (indDepthFirst) {
+				visitor.visit(referencePath, isAlreadyProcessed ? VisitAction.REPEATED_VISIT : VisitAction.VISIT);
 			}
 		} finally {
 			referencePath.removeLeafReference();
@@ -265,7 +273,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			referencePathIncludingParent = new ReferencePath();
 			referencePathIncludingParent.add(new Reference(moduleVersion));
 			referencePathIncludingParent.add(referencePath);
-			visitor.visit(referencePathIncludingParent);
+			visitor.visit(referencePathIncludingParent, VisitAction.VISIT);
 		}
 
 		referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
@@ -291,9 +299,12 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	}
 
 	@Override
+	// TODO: Not sure if should detect cycles here, for each reference insertion (performance).
+	// Cycles are detected during traversal though, which provide higher performance since we have a current path during traversal.
 	public void addReference(ModuleVersion moduleVersionReferrer, Reference reference) {
 		ReferenceGraphNode referenceGraphNodeReferrer;
 		ReferenceGraphNode referenceGraphNodeReference;
+		ReferenceGraph.Referrer referrer;
 
 		// Take care of referrer.
 
@@ -306,6 +317,9 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 		if (referenceGraphNodeReferrer.listReference == null) {
 			referenceGraphNodeReferrer.listReference = new ArrayList<Reference>();
+		}
+
+		if (!referenceGraphNodeReferrer.listReference.contains(reference)) {
 			referenceGraphNodeReferrer.listReference.add(reference);
 		}
 
@@ -320,7 +334,36 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 		if (referenceGraphNodeReference.listReferrer == null) {
 			referenceGraphNodeReference.listReferrer = new ArrayList<ReferenceGraph.Referrer>();
-			referenceGraphNodeReference.listReferrer.add(new ReferenceGraph.Referrer(moduleVersionReferrer, reference));
+		}
+
+		referrer = new ReferenceGraph.Referrer(moduleVersionReferrer, reference);
+
+		if (!referenceGraphNodeReference.listReferrer.contains(referrer)) {
+			referenceGraphNodeReference.listReferrer.add(referrer);
+		}
+	}
+
+	@Override
+	//TODO: Could possibly be optimized by not reusing addReference.
+	public void addReferencePath(ReferencePath referencePath) {
+		ModuleVersion moduleVersionParent;
+
+		moduleVersionParent = null;
+
+		for (int i = 0; i < referencePath.size(); i++) {
+			if (i == 0) {
+				moduleVersionParent = referencePath.get(i).getModuleVersion();
+				this.addRootModuleVersion(moduleVersionParent);
+			} else {
+				Reference reference;
+
+				reference = referencePath.get(i);
+
+				this.addReference(moduleVersionParent, reference);
+
+				// For the next Reference, this one will be the parent.
+				moduleVersionParent = reference.getModuleVersion();
+			}
 		}
 	}
 }

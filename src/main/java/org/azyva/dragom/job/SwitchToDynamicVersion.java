@@ -210,8 +210,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 * by the base class as job-specific behavior is required while traversing the
 	 * reference graph.
 	 *
-	 * @param referenceParent Root ModuleVersion passed as a Reference so that the
-	 *   initial parent element of the ReferencePath can be created.
+	 * @param reference Root ModuleVersion passed as a Reference so that the initial
+	 *   parent element of the ReferencePath can be created.
 	 * @param byReferenceVersion If the method returns true, contains the new Version
 	 *   of the root ModuleVersion.
 	 * @return Indicates if the Version of the root ModuleVersion was changed and this
@@ -219,8 +219,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 *   by the caller.
 	 */
 	@Override
-	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
-		return this.visitModuleForSwitchToDynamicVersion(referenceParent, byReferenceVersion) == VisitModuleActionPerformed.SWITCH;
+	protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
+		return this.visitModuleForSwitchToDynamicVersion(reference, byReferenceVersion) == VisitModuleActionPerformed.SWITCH;
 	}
 
 	/**
@@ -300,9 +300,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	 * original Version) are simply visited at that time.
 	 *
 	 * @param referenceParent Reference referring to the ModuleVersion being visited.
+	 *   It is called the parent to more clearly distinguish it from the children.
 	 * @param byReferenceVersionParent Upon return will contain the new version of the
 	 *   module if true is returned. Can be null if the caller is not interested in
-	 *   that informatin.
+	 *   that information.
 	 * @return VisitModuleActionPerformed.
 	 */
 	private VisitModuleActionPerformed visitModuleForSwitchToDynamicVersion(Reference referenceParent, ByReference<Version> byReferenceVersionParent) {

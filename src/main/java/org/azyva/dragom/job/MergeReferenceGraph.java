@@ -401,14 +401,14 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	 * ModuleVersion it needs to perform setup operations once, after which it
 	 * delegates to {@link #mergeModuleVersion}.
 	 *
-	 * @param referenceParent Reference to the matched ModuleVersion for which a merge
+	 * @param reference Reference to the matched ModuleVersion for which a merge
 	 *   has to be performed.
 	 * @return Indicates if children must be visited. false is always returned since
 	 *   when a merge is performed on some ModuleVersion, the children will
 	 *   necessarily have been recursively merged as well.
 	 */
 	@Override
-	protected boolean visitMatchedModuleVersion(Reference referenceParent) {
+	protected boolean visitMatchedModuleVersion(Reference reference) {
 		boolean indReferencePathAlreadyReverted;
 		ExecContext execContext;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
@@ -427,7 +427,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		Path pathModuleWorkspace;
 		ReferencePath referencePathSrc;
 
-		this.referencePath.add(referenceParent);
+		this.referencePath.add(reference);
 		indReferencePathAlreadyReverted = false;
 
 		execContext = ExecContextHolder.get();
@@ -439,7 +439,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		bracketHandle = null;
 
 		try {
-			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION), this.referencePath));
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION), this.referencePath));
 
 			//********************************************************************************
 			// Determine the source Version corresponding to the root destination
@@ -543,7 +543,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				}
 
 				if (referenceChildSrc == null) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_LOCATING_SRC_MODULE_VERSION), referencePathSrc, referenceDest));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MODULE_VERSION_NOT_FOUND), referencePathSrc, referenceDest));
 					return false;
 				}
 
@@ -565,7 +565,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			bracketHandle.close();
 			bracketHandle = null;
 
-			this.mergeModuleVersion(referencePathSrc, referenceParent);
+			this.mergeModuleVersion(referencePathSrc, reference);
 		} finally {
 			if (!indReferencePathAlreadyReverted) {
 				this.referencePath.removeLeafReference();

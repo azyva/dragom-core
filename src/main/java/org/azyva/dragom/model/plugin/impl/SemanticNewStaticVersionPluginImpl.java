@@ -20,6 +20,7 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.text.MessageFormat;
+import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -32,6 +33,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -200,9 +202,9 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		Module module;
 		ScmPlugin scmPlugin;
+		VersionClassifierPlugin versionClassifierPlugin;
 		String runtimeProperty;
 		List<Version> listVersionStatic;
-		int[] arraySemanticVersionComponentCurrent;
 		int[] arraySemanticVersionComponentMax;
 		Version versionStaticMax;
 		String semanticVersionPrefixNotNull;
@@ -211,36 +213,32 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		module = this.getModule();
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+		versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
 
 		listVersionStatic = scmPlugin.getListVersionStatic();
-		arraySemanticVersionComponentMax = null;
-		versionStaticMax = null;
+		Collections.sort(listVersionStatic, versionClassifierPlugin);
 
-		for (Version versionStatic: listVersionStatic) {
-			arraySemanticVersionComponentCurrent = this.getArraySemanticVersionComponent(versionStatic);
+		SemanticNewStaticVersionPluginImpl.logger.info("Sorted list of available static Version's for Module " + module + ": " + listVersionStatic);
 
-			if (arraySemanticVersionComponentCurrent == null) {
-				continue;
-			}
+		if (listVersionStatic.isEmpty()) {
+			versionStaticMax = null;
+			arraySemanticVersionComponentMax = null;
+		} else {
+			versionStaticMax = listVersionStatic.get(listVersionStatic.size() - 1);
+
+			SemanticNewStaticVersionPluginImpl.logger.info("Largest available static Version for Module " + module + ": " + versionStaticMax);
+
+			// Using VersionClassifierPlugin above is a convenient way to find the largest
+			// static Version. But here we interpret Version's in a numeric semantic way and
+			// there is not guarantee that the largest Version found can be interpreted in
+			// this way. We must therefore validate it.
+
+			arraySemanticVersionComponentMax = this.getArraySemanticVersionComponent(versionStaticMax);
 
 			if (arraySemanticVersionComponentMax == null) {
-				arraySemanticVersionComponentMax = arraySemanticVersionComponentCurrent;
-				versionStaticMax = versionStatic;
-			} else {
-				if (arraySemanticVersionComponentCurrent[0] > arraySemanticVersionComponentMax[0]) {
-					arraySemanticVersionComponentMax = arraySemanticVersionComponentCurrent;
-					versionStaticMax = versionStatic;
-				} else if (arraySemanticVersionComponentCurrent[0] == arraySemanticVersionComponentMax[0]) {
-					if (arraySemanticVersionComponentCurrent[1] > arraySemanticVersionComponentMax[1]) {
-						arraySemanticVersionComponentMax = arraySemanticVersionComponentCurrent;
-						versionStaticMax = versionStatic;
-					} else if (arraySemanticVersionComponentCurrent[1] == arraySemanticVersionComponentMax[1]) {
-						if (arraySemanticVersionComponentCurrent[2] > arraySemanticVersionComponentMax[2]) {
-							arraySemanticVersionComponentMax = arraySemanticVersionComponentCurrent;
-							versionStaticMax = versionStatic;
-						}
-					}
-				}
+				SemanticNewStaticVersionPluginImpl.logger.info("The largest available static Version " + versionStaticMax + " for Module " + module + " cannot be interpreted numerically and semantically. We do not use it.");
+
+				versionStaticMax = null;
 			}
 		}
 
@@ -344,7 +342,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 					}
 				}
 
-				// Here newSemanticVersionType is property set.
+				// Here newSemanticVersionType is properly set.
 
 				switch (newSemanticVersionType) {
 				case MAJOR:

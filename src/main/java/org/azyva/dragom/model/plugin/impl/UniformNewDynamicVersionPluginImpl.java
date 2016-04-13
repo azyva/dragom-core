@@ -159,7 +159,7 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 				yesAlwaysNoUserResponse =
 						Util.getInfoYesNoUserResponse(
 								userInteractionCallbackPlugin,
-								MessageFormat.format(UniformNewDynamicVersionPluginImpl.resourceBundle.getString(UniformNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_DYNAMIC_VERSION_TO_BE_PROCESSED), new ModuleVersion(module.getNodePath(), version)),
+								MessageFormat.format(UniformNewDynamicVersionPluginImpl.resourceBundle.getString(UniformNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_DO_YOU_WANT_TO_PROCESS_DYNAMIC_VERSION), new ModuleVersion(module.getNodePath(), version)),
 								YesAlwaysNoUserResponse.YES);
 
 				alwaysNeverAskUserResponseAlsoProcessDynamicVersion =

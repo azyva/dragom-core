@@ -1929,7 +1929,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				// If the main workspace directory is not valid, we try to find another workspace
 				// directory for the module and elect it as being the main one.
 
-				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, null)));
+				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule)));
 
 				workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)(setWorkspaceDir.iterator().next());
 

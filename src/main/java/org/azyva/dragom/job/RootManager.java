@@ -81,11 +81,6 @@ public class RootManager {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
 	private static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
 
 	/**

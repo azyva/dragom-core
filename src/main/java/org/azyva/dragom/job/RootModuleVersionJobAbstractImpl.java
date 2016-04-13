@@ -451,7 +451,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * This implementation returns false as it does not handle {@link Version}
 	 * changes.
 	 *
-	 * @param referenceParent Root ModuleVersion passed as a Reference so that the
+	 * @param reference Root ModuleVersion passed as a Reference so that the
 	 *   initial parent element of the ReferencePath can be created.
 	 * @param byReferenceVersion If the method returns true, contains the new Version
 	 *   of the root ModuleVersion.
@@ -459,7 +459,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 *   change deserves to be reflected in the List of root ModuleVersion's provided
 	 *   by the caller.
 	 */
-	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
+	protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
 		Module module;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		WorkspacePlugin workspacePlugin;
@@ -468,7 +468,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		boolean indReferencePathAlreadyReverted;
 		boolean indVisitChildren;
 
-		this.referencePath.add(referenceParent);
+		this.referencePath.add(reference);
 		indReferencePathAlreadyReverted = false;
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -484,24 +484,24 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			// show the traversal.
 			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
-			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
+			module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
-				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + referenceParent.getModuleVersion() + " is dynamic and is not to be handled.");
+			if ((reference.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + reference.getModuleVersion() + " is dynamic and is not to be handled.");
 				return false;
 			}
 
-			if ((referenceParent.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
-				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + referenceParent.getModuleVersion() + " is static and is not to be handled.");
+			if ((reference.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + reference.getModuleVersion() + " is static and is not to be handled.");
 				return false;
 			}
 
 			indVisitChildren = true;
 
 			if (this.referencePathMatcher.matches(this.referencePath)) {
-				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
+				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(reference.getModuleVersion())) {
 					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath.getLeafModuleVersion()));
 					return false;
 				} else {
@@ -517,14 +517,14 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 				// Util.isAbort() may be set, but it is not necessary to handle it since we are
 				// done after this call.
-				indVisitChildren = this.visitMatchedModuleVersion(referenceParent);
+				indVisitChildren = this.visitMatchedModuleVersion(reference);
 
 				if (Util.isAbort()) {
 					return false;
 				}
 
 				// We redo the things that were undone before calling visitMatchedModuleVersion.
-				this.referencePath.add(referenceParent);
+				this.referencePath.add(reference);
 				indReferencePathAlreadyReverted = false;
 			}
 
@@ -540,7 +540,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				// an internal working directory which we will not modify (for now).
 				// ScmPlugin.checkoutSystem does that.
 
-				pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
+				pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
 				try {
 					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
@@ -603,10 +603,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
  	 * the subclass overrides visitModuleVersion, it may not be called or need to be
  	 * overridden at all.
  	 *
-	 * @param referenceParent Reference referring to the matched ModuleVersion.
+	 * @param reference Reference to the matched ModuleVersion.
 	 * @return Indicates if children must be visited.
 	 */
-	protected boolean visitMatchedModuleVersion(Reference referenceParent) {
+	protected boolean visitMatchedModuleVersion(Reference reference) {
 		throw new RuntimeException("Must not get here.");
 	}
 

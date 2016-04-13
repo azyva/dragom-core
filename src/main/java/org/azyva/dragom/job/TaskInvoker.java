@@ -128,14 +128,14 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 	 * recursively by this class.
 	 * TODO: Explain why the main loop could not be done within base class.
 	 *
-	 * @param referenceParent Root ModuleVersion passed as a Reference so that the
-	 *   initial parent element of the ReferencePath can be created.
+	 * @param reference Root ModuleVersion passed as a Reference so that the initial
+	 *   parent element of the ReferencePath can be created.
 	 * @param byReferenceVersion Not used.
 	 * @return false. Currently this class does not handle the case where the Version
 	 *   of a root ModuleVersion is changed.
 	 */
 	@Override
-	protected boolean visitModuleVersion(Reference referenceParent, ByReference<Version> byReferenceVersion) {
+	protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		WorkspacePlugin workspacePlugin;
@@ -147,7 +147,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 		Path pathModuleWorkspace = null;
 		List<Reference> listReference;
 
-		this.referencePath.add(referenceParent);
+		this.referencePath.add(reference);
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
@@ -160,7 +160,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 		try {
 			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
-			module = ExecContextHolder.get().getModel().getModule(referenceParent.getModuleVersion().getNodePath());
+			module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 			taskPlugin = module.getNodePlugin(TaskPlugin.class, this.taskPluginId);
@@ -169,16 +169,16 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 
 			if (!taskPlugin.isDepthFirst()) {
 				if (this.referencePathMatcher.matches(this.referencePath)) {
-					if (this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
+					if (this.moduleReentryAvoider.processModule(reference.getModuleVersion())) {
 						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.taskPluginId, this.taskId));
 
-						taskEffects = taskPlugin.performTask(this.taskId, referenceParent.getModuleVersion().getVersion(), this.referencePath);
+						taskEffects = taskPlugin.performTask(this.taskId, reference.getModuleVersion().getVersion(), this.referencePath);
 
 						if (this.handleTaskEffects(taskEffects)) {
 							return false;
 						}
 					} else {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), reference.getModuleVersion()));
 						return false;
 					}
 				}
@@ -191,7 +191,7 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 				// an internal working directory which we will not modify (for now).
 				// ScmPlugin.checkoutSystem does that.
 
-				pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
+				pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
 				try {
 					if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -226,12 +226,12 @@ public class TaskInvoker extends RootModuleVersionJobAbstractImpl {
 
 			if (taskPlugin.isDepthFirst()) {
 				if (this.referencePathMatcher.matches(this.referencePath)) {
-					if (this.moduleReentryAvoider.processModule(referenceParent.getModuleVersion())) {
-						taskEffects = taskPlugin.performTask(this.taskId, referenceParent.getModuleVersion().getVersion(), this.referencePath);
+					if (this.moduleReentryAvoider.processModule(reference.getModuleVersion())) {
+						taskEffects = taskPlugin.performTask(this.taskId, reference.getModuleVersion().getVersion(), this.referencePath);
 
 						this.handleTaskEffects(taskEffects); // No need to test return value since we are done anyways.
 					} else {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), referenceParent.getModuleVersion()));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(TaskInvoker.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), reference.getModuleVersion()));
 					}
 				}
 			}

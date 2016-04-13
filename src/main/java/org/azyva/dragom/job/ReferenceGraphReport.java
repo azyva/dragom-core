@@ -21,32 +21,39 @@ package org.azyva.dragom.job;
 
 import java.io.Writer;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
-import org.azyva.dragom.apiutil.ByReference;
-import org.azyva.dragom.execcontext.plugin.impl.MapWorkspaceDirPathXmlAdapter;
-import org.azyva.dragom.model.ArtifactGroupId;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
+import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
 import org.azyva.dragom.model.support.MapModuleVersionXmlAdapter;
 import org.azyva.dragom.model.support.MapNodePathXmlAdapter;
 import org.azyva.dragom.model.support.MapVersionXmlAdapter;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.ReferenceGraph.VisitAction;
 import org.azyva.dragom.reference.ReferencePath;
-import org.azyva.dragom.reference.support.SimpleReferenceGraph;
 
 
 
-report [--graph] [--module-versions [--reference-graph-paths] [--most-recent-version] [--most-recent-available-version]]
+//report [--graph] [--avoid-redundancy] [--module-versions [--reference-graph-paths] [--most-recent-version] [--most-recent-available-version-scm]]
 
 
 /**
@@ -86,13 +93,17 @@ public class ReferenceGraphReport {
 
 	private Writer writerOutput;
 
+	private boolean indIncludeReferenceGraph;
+
 	private ReferenceGraphMode referenceGraphMode;
 
 	private boolean indIncludeModules;
 
 	private ModuleFilter moduleFilter;
 
-	private boolean indIncludeMostRecentVersionInScm;
+	private boolean indIncludeMostRecentStaticVersionInScm;
+
+	private boolean indIncludeReferencePaths;
 
 	/**
 	 * Constructor.
@@ -120,19 +131,269 @@ public class ReferenceGraphReport {
 		this.writerOutput = writerOutput;
 	}
 
-	public void setReferenceGraphMode(ReferenceGraphReport.ReferenceGraphMode referenceGraphMode) {
+	public void includeReferenceGraph(ReferenceGraphReport.ReferenceGraphMode referenceGraphMode) {
+		this.indIncludeReferenceGraph = true;
 		this.referenceGraphMode = referenceGraphMode;
 	}
 
-	public void includeModules(ReferenceGraphReport.ModuleFilter moduleFilter) {
+	public void includeModules(ReferenceGraphReport.ModuleFilter moduleFilter, boolean indIncludeMostRecentStaticVersionInScm, boolean indIncludeReferencePaths) {
 		this.indIncludeModules = true;
 		this.moduleFilter = moduleFilter;
+		this.indIncludeMostRecentStaticVersionInScm = indIncludeMostRecentStaticVersionInScm;
+		this.indIncludeReferencePaths = indIncludeReferencePaths;
+	}
+
+	/**
+	 * {@link ReferenceGraph.Visitor} used to build the {@link Report}.
+	 * <p>
+	 * Both the reference graph report and the list of {@link Module}'s are build
+	 * simultaneously.
+	 * <p>
+	 * For the list of Module's, all Module's and their Version's are included.
+	 * However the Report is expected to be adjusted after the traversal in order to
+	 * remove unwanted Module's if {@link ReferenceGraphReport#moduleFilter} is such
+	 * that not all Module's need to be included, and generate the list of
+	 * ReferencePath literals.
+	 */
+	private class ReferenceGraphVisitorReport implements ReferenceGraph.Visitor {
+		/**
+		 * {@link Report} being built.
+		 */
+		Report report;
+
+		/**
+		 * Map of the {@link ReportReferenceGraphNode}'s currently in the {@link Report}.
+		 */
+		Map<ModuleVersion, ReportReferenceGraphNode> mapReportReferenceGraphNode;
+
+		/**
+		 * Next bookmark index.
+		 */
+		int nextBookmarkIndex;
+
+		/**
+		 * Map of the {@link ReportModule}'s currently inthe {@link Report}.
+		 */
+		Map<NodePath, ReportModule> mapReportModule;
+
+		/**
+		 * Constructor.
+		 */
+		public ReferenceGraphVisitorReport() {
+			this.report = new Report();
+
+			this.report.listReportReference = new ArrayList<ReportReference>();
+
+			if (ReferenceGraphReport.this.indIncludeModules) {
+				this.report.listReportModule = new ArrayList<ReportModule>();
+			}
+
+			this.mapReportReferenceGraphNode = new HashMap<ModuleVersion, ReportReferenceGraphNode>();
+
+			this.nextBookmarkIndex = 1;
+
+			this.mapReportModule = new HashMap<NodePath, ReportModule>();
+		}
+
+		@Override
+		public void visit(ReferencePath referencePath, VisitAction visitAction) {
+			/* *******************************************************************************
+			 * Reference graph report.
+			 * *******************************************************************************/
+			if (ReferenceGraphReport.this.indIncludeReferenceGraph) {
+				if ((visitAction == ReferenceGraph.VisitAction.VISIT) || (visitAction == ReferenceGraph.VisitAction.REPEATED_VISIT)) {
+					List<ReportReference> listReportReference;
+					String extraInfo;
+					ModuleVersion moduleVersion;
+					ReportReferenceGraphNode reportReferenceGraphNode;
+					ReportReference reportReference;
+
+					/* *******************************************************************************
+					 * Handle the reference grph.
+					 * *******************************************************************************/
+
+					if (referencePath.size() == 1) {
+						listReportReference = this.report.listReportReference;
+						extraInfo = null;
+					} else {
+						Reference referenceParent;
+						ReportReferenceGraphNode reportReferenceGraphNodeParent;
+
+						referenceParent = referencePath.get(referencePath.size() - 2);
+
+						// When the ReferencePath includes more than one element, we only need to take the
+						// last and before-last elements as the previous ones will necessarily already
+						// have been taken care of.
+						reportReferenceGraphNodeParent = this.mapReportReferenceGraphNode.get(referenceParent.getModuleVersion());
+
+						if (reportReferenceGraphNodeParent == null) {
+							throw new RuntimeException("Parent ReportReferenceGraphNode could not be found corresponding to ModuleVersion " + referenceParent.getModuleVersion() + '.');
+						}
+
+						if (reportReferenceGraphNodeParent.listReportReference == null) {
+							reportReferenceGraphNodeParent.listReportReference = new ArrayList<ReportReference>();
+						}
+
+						listReportReference = reportReferenceGraphNodeParent.listReportReference;
+
+						if (referenceParent.getImplData() != null) {
+							extraInfo = referenceParent.getImplData().toString();
+						} else {
+							extraInfo = null;
+						}
+					}
+
+					moduleVersion = referencePath.get(referencePath.size() - 1).getModuleVersion();
+					reportReferenceGraphNode = this.mapReportReferenceGraphNode.get(moduleVersion);
+
+					if (reportReferenceGraphNode == null) {
+						if (visitAction == ReferenceGraph.VisitAction.REPEATED_VISIT) {
+							throw new RuntimeException("ReportReferenceGraphNode could not be found corresponding to ModuleVersion " + moduleVersion + '.');
+						}
+
+						reportReferenceGraphNode = new ReportReferenceGraphNode();
+						this.mapReportReferenceGraphNode.put(moduleVersion, reportReferenceGraphNode);
+					}
+
+					reportReference = new ReportReference();
+
+					if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.FULL_TREE) {
+						reportReference.reportReferenceGraphNode = reportReferenceGraphNode;
+					} else { // if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.TREE_NO_REDUNDANCY)
+						if (reportReferenceGraphNode.bookmark == null) {
+							reportReferenceGraphNode.bookmark = "REF-" + this.nextBookmarkIndex++;
+						}
+
+						reportReference.jumpToReferenceGraphNodeBookmark = reportReferenceGraphNode.bookmark;
+					}
+
+					reportReference.extraInfo = extraInfo;
+
+					listReportReference.add(reportReference);
+				}
+			}
+
+			if (ReferenceGraphReport.this.indIncludeModules) {
+				/* *******************************************************************************
+				 * List of Module's and their Version's.
+				 * *******************************************************************************/
+
+				// For the list of Module's it is not necessary to consider the repeated
+				// ModuleVersion's.
+				if (visitAction == ReferenceGraph.VisitAction.VISIT) {
+					ModuleVersion moduleVersion;
+					ReportModule reportModule;
+					ReportVersion reportVersion;
+
+					moduleVersion = referencePath.getLeafModuleVersion();
+					reportModule = this.mapReportModule.get(moduleVersion.getNodePath());
+
+					if (reportModule == null) {
+						reportModule = new ReportModule();
+
+						reportModule.nodePathModule = moduleVersion.getNodePath();
+
+						reportModule.listReportVersion = new ArrayList<ReportVersion>();
+					}
+
+					// The Version necessarily does not exist yet since reentry is avoided during the
+					// traversal we are only considering ReferenceGraph.VisitAction.VISIT.
+
+					reportVersion = new ReportVersion();
+
+					reportVersion.version = moduleVersion.getVersion();
+
+					reportModule.listReportVersion.add(reportVersion);
+				}
+			}
+		}
 	}
 
 	/**
 	 * Main method for performing the job.
 	 */
 	public void performJob() {
+		ReferenceGraphReport.ReferenceGraphVisitorReport referenceGraphVisitorReport;
+		Iterator<ReportModule> iteratorReportModule;
+
+		referenceGraphVisitorReport = new ReferenceGraphReport.ReferenceGraphVisitorReport();
+
+		// For the reference graph report, we always avoid reentry, regardless of the
+		// value of this.referenceGraphMode. The idea is that even if
+		// this.referenceGraphMode is TREE_NO_REDUNDANCY, existing
+		// ReportReferenceGraphNode are reused. It is just that ReportReferene with
+		// jumpToReferenceGraphNodeBookmark are generated when appropriate.
+		this.referenceGraph.traverseReferenceGraph(null, false, true, referenceGraphVisitorReport);
+
+		iteratorReportModule = referenceGraphVisitorReport.report.listReportModule.iterator();
+
+		while (iteratorReportModule.hasNext()) {
+			ReportModule reportModule;
+			Module module;
+			VersionClassifierPlugin versionClassifierPlugin;
+			ReportVersion reportVersionMax;
+
+			reportModule = iteratorReportModule.next();
+			module = ExecContextHolder.get().getModel().getModule(reportModule.nodePathModule);
+			versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
+
+			if ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MULTIPLE_VERSIONS) && (reportModule.listReportVersion.size() == 1)) {
+				iteratorReportModule.remove();
+			} else {
+				Collections.sort(
+						reportModule.listReportVersion,
+						new Comparator<ReportVersion>() {
+							@Override
+							public int compare(ReportVersion reportVersion1, ReportVersion reportVersion2) {
+								return -versionClassifierPlugin.compare(reportVersion1.version, reportVersion2.version);
+							}
+						});
+			}
+
+			reportVersionMax = reportModule.listReportVersion.get(0);
+			reportVersionMax.indMostRecentInReferenceGraph = true;
+
+			if (this.indIncludeMostRecentStaticVersionInScm) {
+				ScmPlugin scmPlugin;
+				List<Version> listVersionStatic;
+
+				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
+				listVersionStatic = scmPlugin.getListVersionStatic();
+				Collections.sort(listVersionStatic, versionClassifierPlugin);
+
+				if (!listVersionStatic.isEmpty()) {
+					Version versionStaticMaxScm;
+
+					versionStaticMaxScm = listVersionStatic.get(listVersionStatic.size() - 1);
+
+					if (reportVersionMax.version.equals(versionStaticMaxScm)) {
+						reportVersionMax.indMostRecentInScm = true;
+					} else {
+						reportVersionMax = new ReportVersion();
+						reportVersionMax.version = versionStaticMaxScm;
+						reportVersionMax.indMostRecentInScm = true;
+						reportModule.listReportVersion.add(0, reportVersionMax);
+					}
+				}
+			}
+
+			if (this.indIncludeReferencePaths) {
+				for (ReportVersion reportVersion: reportModule.listReportVersion) {
+					reportVersion.listStringReferenceGraphNodeBookmark = new ArrayList<String>();
+
+					this.referenceGraph.visitLeafModuleVersionReferencePaths(
+							new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
+							new ReferenceGraph.Visitor() {
+								@Override
+								public void visit(ReferencePath referencePath, ReferenceGraph.VisitAction visitAction) {
+									reportVersion.listStringReferenceGraphNodeBookmark.add(referencePath.toString());
+								}
+							});
+				}
+			}
+		}
+
 		switch (this.outputFormat) {
 		case XML:
 			break;
@@ -168,7 +429,9 @@ public class ReferenceGraphReport {
  * The reference graph can be either completely unfolded, meaning that it is
  * rendered by traversing it as a tree and {@link ModuleVersions}'s and their
  * references that occur more than once in the graph occur more than once in the
- * report as well.
+ * report as well. Actually, node objects representing the same ModuleVersion's
+ * are reused, but if object identity is ignore, recursize production of the
+ * report produces an unfolded tree.
  * <p>
  * Alternatively, redundancy can be avoided by using bookmarks. When a
  * ModuleVersion occurs more than once, it is bookmarked and where it occurs again
@@ -201,13 +464,23 @@ public class ReferenceGraphReport {
 @XmlRootElement(name="reference-graph-report")
 @XmlAccessorType(XmlAccessType.NONE)
 class Report {
+	/**
+	 * List of root {link ReportReference}'s.
+	 * <p>
+	 * These are ReportReference's and not simple {@link ReferenceGraphNode}'s
+	 * since a root {@link ModuleVersion} can occur elsewhere in the Report
+	 * and a bookmark may need to be used.
+	 * <p>
+	 * For root ReportReference's, extraInfo is never specified since there is no
+	 * actual reference from another node.
+	 */
 	@XmlElementWrapper(name="root-reference-graph-nodes")
 	@XmlElement(name="root-reference-graph-node")
-	public List<ReportReferenceGraphNode> listReferenceGraphNodeRoot;
+	public List<ReportReference> listReportReference;
 
 	@XmlElementWrapper(name="modules")
 	@XmlElement(name="module")
-	public List<ReportModule> listModule;
+	public List<ReportModule> listReportModule;
 
 
 	public void writeTextReport(Writer writer) {
@@ -220,7 +493,7 @@ class Report {
  */
 @XmlAccessorType(XmlAccessType.NONE)
 class ReportReferenceGraphNode {
-	/*
+	/**
 	 * Name given to the node so that it can be referenced from a
 	 * {@link ReportReference} or from a {@link ReportVersion}.
 	 * <p>
@@ -244,7 +517,7 @@ class ReportReferenceGraphNode {
 	 */
 	@XmlElementWrapper(name="references")
 	@XmlElement(name="reference")
-	public List<ReportReference> listReference;
+	public List<ReportReference> listReportReference;
 
 	public void writeTextReport(Writer writer, int level) {
 
@@ -256,7 +529,7 @@ class ReportReferenceGraphNode {
  */
 @XmlAccessorType(XmlAccessType.NONE)
 class ReportReference {
-	/*
+	/**
 	 * Referenced {@link ReportReferenceGraphNode}.
 	 * <p>
 	 * If not null, moduleVersion and jumpToReferenceGraphNodeBookmark are null.
