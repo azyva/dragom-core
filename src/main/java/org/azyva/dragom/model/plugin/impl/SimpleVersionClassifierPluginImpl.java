@@ -23,6 +23,7 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
+import org.azyva.dragom.util.Util;
 
 /**
  * Simple VersionClassifierPlugin that happens to support a wide range of
@@ -159,7 +160,7 @@ public class SimpleVersionClassifierPluginImpl extends ModulePluginAbstractImpl 
 			token1 = arrayVersion1Token[index];
 			token2 = arrayVersion2Token[index];
 
-			if (!SimpleVersionClassifierPluginImpl.isDigits(token1) || !SimpleVersionClassifierPluginImpl.isDigits(token2)) {
+			if (!Util.isDigits(token1) || !Util.isDigits(token2)) {
 				compareResult = token1.compareTo(token2);
 			} else {
 				compareResult = new Integer(token1).compareTo(new Integer(token2));
@@ -208,22 +209,6 @@ public class SimpleVersionClassifierPluginImpl extends ModulePluginAbstractImpl 
 				index++;
 			}
 		}
-	}
-
-	/**
-	 * Verifies if a token contains only ASCII digits.
-	 *
-	 * @param token Token.
-	 * @return true if the token contains only ASCII digits.
-	 */
-	private static boolean isDigits(String token) {
-		for (char c : token.toCharArray()) {
-			if ((c < '0') || (c > '9')) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	@Override

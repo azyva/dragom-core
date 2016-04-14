@@ -19,6 +19,9 @@
 
 package org.azyva.dragom.job;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,6 +32,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -46,15 +52,19 @@ import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
 import org.azyva.dragom.model.support.MapModuleVersionXmlAdapter;
 import org.azyva.dragom.model.support.MapNodePathXmlAdapter;
 import org.azyva.dragom.model.support.MapVersionXmlAdapter;
+import org.azyva.dragom.model.support.ModuleVersionJsonConverter;
+import org.azyva.dragom.model.support.NodePathJsonConverter;
+import org.azyva.dragom.model.support.VersionJsonConverter;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.reference.ReferenceGraph.VisitAction;
 import org.azyva.dragom.reference.ReferencePath;
+import org.azyva.dragom.util.Util;
 
-
-
-//report [--graph] [--avoid-redundancy] [--module-versions [--reference-graph-paths] [--most-recent-version] [--most-recent-available-version-scm]]
-
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Produces a report about a {@link ReferenceGraph}.
@@ -83,26 +93,56 @@ public class ReferenceGraphReport {
 	}
 
 	/**
-	 * ReferenceGraph.
+	 * {@link ReferenceGraph}.
 	 */
 	private ReferenceGraph referenceGraph;
 
+	/**
+	 * {@link ReferenceGraphReport.OutputFormat}.
+	 */
 	private OutputFormat outputFormat;
 
+	/**
+	 * Output file Path.
+	 */
 	private Path pathOutputFile;
 
+	/**
+	 * Output Writer.
+	 */
 	private Writer writerOutput;
 
+	/**
+	 * Indicates to include the reference graph in the report.
+	 */
 	private boolean indIncludeReferenceGraph;
 
+	/**
+	 * {@link ReferenceGraphReport.ReferenceGraphMode}.
+	 */
 	private ReferenceGraphMode referenceGraphMode;
 
+	/**
+	 * Indicates to include the {@link Module}'s and their {@link Version}'s in the
+	 * report.
+	 */
 	private boolean indIncludeModules;
 
+	/**
+	 * {@link ReferenceGraphReport.ModuleFilter}.
+	 */
 	private ModuleFilter moduleFilter;
 
+	/**
+	 * Indicates to the include the most recent static {@link Version} in the SCM for
+	 * each {@link Module}.
+	 */
 	private boolean indIncludeMostRecentStaticVersionInScm;
 
+	/**
+	 * Indicates to include the List of {@link ReferencePath} literals for each
+	 * {@link ModuleVersion}.
+	 */
 	private boolean indIncludeReferencePaths;
 
 	/**
@@ -115,6 +155,13 @@ public class ReferenceGraphReport {
 		this.outputFormat = outputFormat;
 	}
 
+	/**
+	 * Sets the output file Path.
+	 * <p>
+	 * Either the output file Path or the output Writer can be set, but not both.
+	 *
+	 * @param pathOutputFile Output file Path.
+	 */
 	public void setOutputFilePath(Path pathOutputFile) {
 		if (this.writerOutput != null) {
 			throw new RuntimeException("Output Writer already set.");
@@ -123,6 +170,13 @@ public class ReferenceGraphReport {
 		this.pathOutputFile = pathOutputFile;
 	}
 
+	/**
+	 * Sets the output Writer.
+	 * <p>
+	 * Either the output file Path or the output Writer can be set, but not both.
+	 *
+	 * @param writerOutput Output Writer.
+	 */
 	public void setOutputWriter(Writer writerOutput) {
 		if (this.pathOutputFile != null) {
 			throw new RuntimeException("Output file Path already set.");
@@ -131,16 +185,41 @@ public class ReferenceGraphReport {
 		this.writerOutput = writerOutput;
 	}
 
+	/**
+	 * Indicates to include the reference graph in the report.
+	 *
+	 * @param referenceGraphMode ReferenceGraphMode.
+	 */
 	public void includeReferenceGraph(ReferenceGraphReport.ReferenceGraphMode referenceGraphMode) {
 		this.indIncludeReferenceGraph = true;
 		this.referenceGraphMode = referenceGraphMode;
 	}
 
-	public void includeModules(ReferenceGraphReport.ModuleFilter moduleFilter, boolean indIncludeMostRecentStaticVersionInScm, boolean indIncludeReferencePaths) {
+	/**
+	 * Indicates to include the {@link Module}'s and their {@link Version}'s in the
+	 * report.
+	 *
+	 * @param moduleFilter ModuleFilter.
+	 */
+	public void includeModules(ReferenceGraphReport.ModuleFilter moduleFilter) {
 		this.indIncludeModules = true;
 		this.moduleFilter = moduleFilter;
-		this.indIncludeMostRecentStaticVersionInScm = indIncludeMostRecentStaticVersionInScm;
-		this.indIncludeReferencePaths = indIncludeReferencePaths;
+	}
+
+	/**
+	 * Indicates to include the most recent static {@link Version} in the SCM for
+	 * each {@link Module}.
+	 */
+	public void includeMostRecentStaticVersionInScm() {
+		this.indIncludeMostRecentStaticVersionInScm = true;
+	}
+
+	/**
+	 * Indicates to include the {@link ReferencePath} literals for each
+	 * {@link ModuleVersion}.
+	 */
+	public void includeReferencePaths() {
+		this.indIncludeReferencePaths = true;
 	}
 
 	/**
@@ -380,14 +459,14 @@ public class ReferenceGraphReport {
 
 			if (this.indIncludeReferencePaths) {
 				for (ReportVersion reportVersion: reportModule.listReportVersion) {
-					reportVersion.listStringReferenceGraphNodeBookmark = new ArrayList<String>();
+					reportVersion.listReferencePathLiteral = new ArrayList<String>();
 
 					this.referenceGraph.visitLeafModuleVersionReferencePaths(
 							new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
 							new ReferenceGraph.Visitor() {
 								@Override
 								public void visit(ReferencePath referencePath, ReferenceGraph.VisitAction visitAction) {
-									reportVersion.listStringReferenceGraphNodeBookmark.add(referencePath.toString());
+									reportVersion.listReferencePathLiteral.add(referencePath.toString());
 								}
 							});
 				}
@@ -396,12 +475,66 @@ public class ReferenceGraphReport {
 
 		switch (this.outputFormat) {
 		case XML:
+			JAXBContext jaxbContext;
+			Marshaller marshaller;
+
+			try {
+				jaxbContext = JAXBContext.newInstance(Report.class);
+				marshaller = jaxbContext.createMarshaller();
+				marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+
+				if (this.pathOutputFile != null) {
+					marshaller.marshal(referenceGraphVisitorReport.report, this.pathOutputFile.toFile());
+				} else if (this.writerOutput != null) {
+					marshaller.marshal(referenceGraphVisitorReport.report, this.writerOutput);
+				} else {
+					throw new RuntimeException("pathOutputFile and writerOutput have not been set.");
+				}
+			} catch (JAXBException je) {
+				throw new RuntimeException(je);
+			}
+
 			break;
 
 		case JSON:
+			ObjectMapper objectMapper;
+
+			try {
+				objectMapper = new ObjectMapper();
+				if (this.pathOutputFile != null) {
+					objectMapper.writeValue(this.pathOutputFile.toFile(), referenceGraphVisitorReport.report);
+				} else if (this.writerOutput != null) {
+					objectMapper.writeValue(this.writerOutput, referenceGraphVisitorReport.report);
+				} else {
+					throw new RuntimeException("pathOutputFile and writerOutput have not been set.");
+				}
+			} catch (IOException ioe) {
+				throw new RuntimeException(ioe);
+			}
 			break;
 
 		case TEXT:
+			Writer writer;
+
+			try {
+				if (this.pathOutputFile != null) {
+					writer = new BufferedWriter(new FileWriter(this.pathOutputFile.toFile()));
+				} else if (this.writerOutput != null) {
+					writer = this.writerOutput;
+				} else {
+					throw new RuntimeException("pathOutputFile and writerOutput have not been set.");
+				}
+
+				referenceGraphVisitorReport.report.writeTextReport(writer);
+
+				if (this.pathOutputFile != null) {
+					writer.close();
+				}
+			} catch (IOException ioe) {
+				throw new RuntimeException(ioe);
+			}
+
+
 			break;
 
 		default:
@@ -463,6 +596,7 @@ public class ReferenceGraphReport {
  */
 @XmlRootElement(name="reference-graph-report")
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
 class Report {
 	/**
 	 * List of root {link ReportReference}'s.
@@ -476,51 +610,41 @@ class Report {
 	 */
 	@XmlElementWrapper(name="root-reference-graph-nodes")
 	@XmlElement(name="root-reference-graph-node")
+	@JsonProperty("root-reference-graph-nodes")
 	public List<ReportReference> listReportReference;
 
 	@XmlElementWrapper(name="modules")
 	@XmlElement(name="module")
+	@JsonProperty("modules")
 	public List<ReportModule> listReportModule;
 
 
+	/**
+	 * Writes a ReportReference in the text format.
+	 *
+	 * @param writer Writer.
+	 */
 	public void writeTextReport(Writer writer) {
+		try {
+			writer.append("ReferenceGraph\n");
+			writer.append("==============\n");
 
-	}
-}
+			for (ReportReference reportReference: this.listReportReference) {
+				reportReference.writeTextReport(writer, 0);
+			}
 
-/**
- * Represents a node in the first section of a reference graph report.
- */
-@XmlAccessorType(XmlAccessType.NONE)
-class ReportReferenceGraphNode {
-	/**
-	 * Name given to the node so that it can be referenced from a
-	 * {@link ReportReference} or from a {@link ReportVersion}.
-	 * <p>
-	 * Can be null, which indicates that this node is not referenced.
-	 */
-	@XmlElement(name="bookmark")
-	public String bookmark;
+			writer.append('\n');
 
-	/**
-	 * {@link ModuleVersion} represented by the node.
-	 */
-	@XmlElement(name="module-version", type=String.class)
-	@XmlJavaTypeAdapter(MapModuleVersionXmlAdapter.class)
-	public ModuleVersion moduleVersion;
+			writer.append("Modules, Versions\n");
+			writer.append("=================\n");
 
-	/**
-	 * List of {@link ReportReference}'s for the node.
-	 * <p>
-	 * Can be null if node does not contain any references to {@link ModuleVersion}'s
-	 * known to Dragom.
-	 */
-	@XmlElementWrapper(name="references")
-	@XmlElement(name="reference")
-	public List<ReportReference> listReportReference;
+			for (ReportModule reportModule: this.listReportModule) {
+				reportModule.writeTextReport(writer);
+			}
 
-	public void writeTextReport(Writer writer, int level) {
-
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
 	}
 }
 
@@ -528,6 +652,7 @@ class ReportReferenceGraphNode {
  * Represents a reference in the first section of a reference graph report.
  */
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
 class ReportReference {
 	/**
 	 * Referenced {@link ReportReferenceGraphNode}.
@@ -538,7 +663,8 @@ class ReportReference {
 	 * {@link ModuleVersion} has already occurred. In this case moduleVersion and
 	 * jumpToReferenceGraphNodeBookmark are not null.
 	 */
-	@XmlElement(name="root-reference-graph-node")
+	@XmlElement(name="reference-graph-node")
+	@JsonProperty("reference-graph-node")
 	public ReportReferenceGraphNode reportReferenceGraphNode;
 
 	/**
@@ -553,6 +679,8 @@ class ReportReference {
 	 */
 	@XmlElement(name="module-version", type=String.class)
 	@XmlJavaTypeAdapter(MapModuleVersionXmlAdapter.class)
+	@JsonProperty("module-version")
+	@JsonSerialize(converter=ModuleVersionJsonConverter.class)
 	public ModuleVersion moduleVersion;
 
 	/**
@@ -566,6 +694,7 @@ class ReportReference {
 	 * null if reportReferenceGraphNode is not null.
 	 */
 	@XmlElement(name="jump-to-reference-graph-node-bookmark")
+	@JsonProperty("jump-to-reference-graph-node-bookmark")
 	public String jumpToReferenceGraphNodeBookmark;
 
 	/**
@@ -574,19 +703,119 @@ class ReportReference {
 	 * information.
 	 */
 	@XmlElement(name="extra-info")
+	@JsonProperty("extra-info")
 	public String extraInfo;
+
+	/**
+	 * Writes a ReportReference in the text format.
+	 *
+	 * @param writer Writer.
+	 * @param level Current level for indentation.
+	 */
+	public void writeTextReport(Writer writer, int level) {
+		try {
+			if (this.reportReferenceGraphNode != null) {
+				this.reportReferenceGraphNode.writeTextReport(writer, level, this.extraInfo);
+			} else {
+				writer.append(Util.spaces(8 + (level * 2)));
+				writer.append(this.moduleVersion.toString());
+
+				if (this.extraInfo != null) {
+					writer.append(" (").append(this.extraInfo).append(')');
+				}
+
+				writer.append('\n');
+
+				writer.append(Util.spaces(8 + (level * 2) + 2)).append("-> ").append(this.jumpToReferenceGraphNodeBookmark).append('\n');
+			}
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+	}
+}
+
+/**
+ * Represents a node in the first section of a reference graph report.
+ */
+@XmlAccessorType(XmlAccessType.NONE)
+@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
+class ReportReferenceGraphNode {
+	/**
+	 * Name given to the node so that it can be referenced from a
+	 * {@link ReportReference} or from a {@link ReportVersion}.
+	 * <p>
+	 * Can be null, which indicates that this node is not referenced.
+	 */
+	@XmlElement(name="bookmark")
+	@JsonProperty("bookmark")
+	public String bookmark;
+
+	/**
+	 * {@link ModuleVersion} represented by the node.
+	 */
+	@XmlElement(name="module-version", type=String.class)
+	@XmlJavaTypeAdapter(MapModuleVersionXmlAdapter.class)
+	@JsonProperty("module-version")
+	@JsonSerialize(converter=ModuleVersionJsonConverter.class)
+	public ModuleVersion moduleVersion;
+
+	/**
+	 * List of {@link ReportReference}'s for the node.
+	 * <p>
+	 * Can be null if node does not contain any references to {@link ModuleVersion}'s
+	 * known to Dragom.
+	 */
+	@XmlElementWrapper(name="references")
+	@XmlElement(name="reference")
+	@JsonProperty("references")
+	public List<ReportReference> listReportReference;
+
+	/**
+	 * Writes a ReportReferenceGraphNode in the text format.
+	 *
+	 * @param writer Writer.
+	 * @param level Current level for indentation.
+	 * @param extraInfo Extra information related to the {@link ReportReference}
+	 *   referring to this ReportReferenceGraphNode. Can be null.
+	 */
+	public void writeTextReport(Writer writer, int level, String extraInfo) {
+		try {
+			if (this.bookmark != null) {
+				writer.append(String.format("%8s", this.bookmark));
+			} else {
+				writer.append(Util.spaces(8));
+			}
+
+			writer.append(Util.spaces(level * 2)).append(this.moduleVersion.toString());
+
+			if (extraInfo != null) {
+				writer.append(" (").append(extraInfo).append(')');
+			}
+
+			writer.append('\n');
+
+			for (ReportReference reportReference: this.listReportReference) {
+				reportReference.writeTextReport(writer, level + 1);
+			}
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+	}
 }
 
 /**
  * Represents a module in the second part of the reference graph report.
  */
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
 class ReportModule {
 	/**
 	 * {@link NodePath} of the module.
 	 */
 	@XmlElement(name="module-node-path", type=String.class)
 	@XmlJavaTypeAdapter(MapNodePathXmlAdapter.class)
+	@JsonProperty("module-node-path")
+	@JsonSerialize(converter=NodePathJsonConverter.class)
 	public NodePath nodePathModule;
 
 	/**
@@ -595,7 +824,25 @@ class ReportModule {
 	 */
 	@XmlElementWrapper(name="versions")
 	@XmlElement(name="version")
+	@JsonProperty("versions")
 	public List<ReportVersion> listReportVersion;
+
+	/**
+	 * Writes a ReportModule in the text format.
+	 *
+	 * @param writer Writer.
+	 */
+	public void writeTextReport(Writer writer) {
+		try {
+			writer.append("Module: ").append(this.nodePathModule.toString()).append('\n');
+
+			for (ReportVersion reportVersion: this.listReportVersion) {
+				reportVersion.writeTextReport(writer);
+			}
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+	}
 }
 
 /**
@@ -603,12 +850,15 @@ class ReportModule {
  * graph report.
  */
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
 class ReportVersion {
 	/**
 	 * {@link Version}.
 	 */
 	@XmlElement(name="version", type=String.class)
 	@XmlJavaTypeAdapter(MapVersionXmlAdapter.class)
+	@JsonProperty("version")
+	@JsonSerialize(converter=VersionJsonConverter.class)
 	public Version version;
 
 	/**
@@ -616,6 +866,7 @@ class ReportVersion {
 	 * reference graph.
 	 */
 	@XmlElement(name="ind-most-recent-in-reference-graph")
+	@JsonProperty("ind-most-recent-in-reference-graph")
 	public boolean indMostRecentInReferenceGraph;
 
 	/**
@@ -629,16 +880,39 @@ class ReportVersion {
 	 * graph.
 	 */
 	@XmlElement(name="ind-most-recent-in-scm")
+	@JsonProperty("ind-most-recent-in-scm")
 	public boolean indMostRecentInScm;
 
 	/**
-	 * List of {@link ReportReferenceGraphNode} bookmarks where this {@link Version}
-	 * occurs.
+	 * List of {@link ReferencePath} literals where this {@link Version} occurs.
 	 * <p>
 	 * If indMostRecentInScm is true, this may be null if the reference graph does not
 	 * include this Version. In that case, indMostRecentInReferenceGraph is false.
 	 */
-	@XmlElementWrapper(name="reference-graph-node-bookmarks")
-	@XmlElement(name="reference-graph-node-bookmark")
-	public List<String> listStringReferenceGraphNodeBookmark;
+	@XmlElementWrapper(name="reference-paths")
+	@XmlElement(name="reference-path")
+	public List<String> listReferencePathLiteral;
+
+	/**
+	 * Writes a ReportVersion in the text format.
+	 *
+	 * @param writer Writer.
+	 */
+	public void writeTextReport(Writer writer) {
+		try {
+			writer.append("  Version: ").append(this.version.toString()).append('\n');
+			writer.append("    MostRecentInReferenceGraph: ").append(Boolean.toString(this.indMostRecentInReferenceGraph)).append('\n');
+			writer.append("    MostRecentInScm: ").append(Boolean.toString(this.indMostRecentInScm)).append('\n');
+
+			if (this.listReferencePathLiteral != null) {
+				writer.append("    Occurs:\n");
+
+				for (String referencePathLiteral: this.listReferencePathLiteral) {
+					writer.append("      ").append(referencePathLiteral).append('\n');
+				}
+			}
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+	}
 }

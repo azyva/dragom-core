@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
@@ -263,6 +264,17 @@ public final class Util {
 	 * A Boolean is used in order to have 3 states and implement a cache.
 	 */
 	private static Boolean indWindows;
+
+	/**
+	 * Used by {@link #spaces}.
+	 */
+	private static final StringBuilder stringBuilderSpaces = new StringBuilder();
+
+	/**
+	 * ReadWriteLock to protect {@link #stringBuilderSpaces} since StringBuilder's
+	 * are not thread-safe.
+	 */
+	private static final ReentrantReadWriteLock readWriteLockStringBuilderSpaces = new ReentrantReadWriteLock();
 
 	/**
 	 * Infers a groupId segment from a module node path.
@@ -1078,5 +1090,68 @@ public final class Util {
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
 		runtimePropertiesPlugin.setProperty(null, Util.RUNTIME_PROPERTY_IND_ABORT, "true");
+	}
+
+	/**
+	 * Verifies if a token contains only ASCII digits.
+	 *
+	 * @param token Token.
+	 * @return true if the token contains only ASCII digits.
+	 */
+	public static boolean isDigits(String string) {
+		for (char character : string.toCharArray()) {
+			if ((character < '0') || (character > '9')) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Returns a string of length spaces.
+	 * <p>
+	 * Internally manages a single StringBuilder from which substring of the
+	 * requested lengths can be obtained.
+	 * <p>
+	 * A ReadWriteLock is used to protect the non-thread-safe StringBuilder. The code
+	 * used is inpired from the sample shown in
+	 * <a href="https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/locks/ReentrantReadWriteLock.html">ReentrantReadWriteLock</a>.
+	 *
+	 * @param length Number of spaces.
+	 * @return String of length spaces.
+	 */
+	public static String spaces(int length) {
+		int currentLength;
+		String spaces;
+
+		Util.readWriteLockStringBuilderSpaces.readLock().lock();
+
+		currentLength = Util.stringBuilderSpaces.length();
+
+		if (length > currentLength) {
+			Util.readWriteLockStringBuilderSpaces.readLock().unlock();
+			Util.readWriteLockStringBuilderSpaces.writeLock().lock();
+
+			// Current length may have changed between test and lock aquisition.
+			currentLength = Util.stringBuilderSpaces.length();
+
+			if (length > currentLength) {
+				Util.stringBuilderSpaces.setLength(length);
+
+				for (int i = currentLength; i < length; i++) {
+					Util.stringBuilderSpaces.setCharAt(i, ' ');
+				}
+			}
+
+			Util.readWriteLockStringBuilderSpaces.readLock().lock();
+			Util.readWriteLockStringBuilderSpaces.writeLock().unlock();
+		}
+
+		spaces = Util.stringBuilderSpaces.substring(0, length);
+
+		Util.readWriteLockStringBuilderSpaces.readLock().unlock();
+
+		return spaces;
 	}
 }
