@@ -27,10 +27,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -57,7 +60,6 @@ import org.azyva.dragom.model.support.NodePathJsonConverter;
 import org.azyva.dragom.model.support.VersionJsonConverter;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
-import org.azyva.dragom.reference.ReferenceGraph.VisitAction;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.Util;
 
@@ -89,7 +91,13 @@ public class ReferenceGraphReport {
 
 	public enum ModuleFilter {
 		ALL,
-		ONLY_MULTIPLE_VERSIONS
+		ONLY_MULTIPLE_VERSIONS,
+
+		/**
+		 * Indicates to include only the {@link Module}'s for which at least one
+		 * {@link Version} is matched.
+		 */
+		ONLY_MATCHED
 	}
 
 	/**
@@ -251,9 +259,15 @@ public class ReferenceGraphReport {
 		int nextBookmarkIndex;
 
 		/**
-		 * Map of the {@link ReportModule}'s currently inthe {@link Report}.
+		 * Map of the {@link ReportModule}'s currently in the {@link Report}.
 		 */
 		Map<NodePath, ReportModule> mapReportModule;
+
+		/**
+		 * Set of the {@link Module} {@link NodePath} that are matched within the
+		 * {@link ReferenceGraph}.
+		 */
+		Set<NodePath> setNodePathMatched;
 
 		/**
 		 * Constructor.
@@ -261,26 +275,26 @@ public class ReferenceGraphReport {
 		public ReferenceGraphVisitorReport() {
 			this.report = new Report();
 
-			this.report.listReportReference = new ArrayList<ReportReference>();
-
-			if (ReferenceGraphReport.this.indIncludeModules) {
-				this.report.listReportModule = new ArrayList<ReportModule>();
+			if (ReferenceGraphReport.this.indIncludeReferenceGraph) {
+				this.mapReportReferenceGraphNode = new HashMap<ModuleVersion, ReportReferenceGraphNode>();
+				this.nextBookmarkIndex = 1;
+				this.report.listReportReference = new ArrayList<ReportReference>();
 			}
 
-			this.mapReportReferenceGraphNode = new HashMap<ModuleVersion, ReportReferenceGraphNode>();
-
-			this.nextBookmarkIndex = 1;
-
-			this.mapReportModule = new HashMap<NodePath, ReportModule>();
+			if (ReferenceGraphReport.this.indIncludeModules) {
+				this.mapReportModule = new HashMap<NodePath, ReportModule>();
+				this.setNodePathMatched = new HashSet<NodePath>();
+				this.report.listReportModule = new ArrayList<ReportModule>();
+			}
 		}
 
 		@Override
-		public void visit(ReferencePath referencePath, VisitAction visitAction) {
+		public void visit(ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
 			/* *******************************************************************************
 			 * Reference graph report.
 			 * *******************************************************************************/
 			if (ReferenceGraphReport.this.indIncludeReferenceGraph) {
-				if ((visitAction == ReferenceGraph.VisitAction.VISIT) || (visitAction == ReferenceGraph.VisitAction.REPEATED_VISIT)) {
+				if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
 					List<ReportReference> listReportReference;
 					String extraInfo;
 					ModuleVersion moduleVersion;
@@ -288,7 +302,7 @@ public class ReferenceGraphReport {
 					ReportReference reportReference;
 
 					/* *******************************************************************************
-					 * Handle the reference grph.
+					 * Handle the reference graph.
 					 * *******************************************************************************/
 
 					if (referencePath.size() == 1) {
@@ -326,7 +340,7 @@ public class ReferenceGraphReport {
 					reportReferenceGraphNode = this.mapReportReferenceGraphNode.get(moduleVersion);
 
 					if (reportReferenceGraphNode == null) {
-						if (visitAction == ReferenceGraph.VisitAction.REPEATED_VISIT) {
+						if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.REPEATED)) {
 							throw new RuntimeException("ReportReferenceGraphNode could not be found corresponding to ModuleVersion " + moduleVersion + '.');
 						}
 
@@ -354,12 +368,12 @@ public class ReferenceGraphReport {
 
 			if (ReferenceGraphReport.this.indIncludeModules) {
 				/* *******************************************************************************
-				 * List of Module's and their Version's.
+				 * Handle the List of Module's and their Version's.
 				 * *******************************************************************************/
 
 				// For the list of Module's it is not necessary to consider the repeated
 				// ModuleVersion's.
-				if (visitAction == ReferenceGraph.VisitAction.VISIT) {
+				if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
 					ModuleVersion moduleVersion;
 					ReportModule reportModule;
 					ReportVersion reportVersion;
@@ -369,10 +383,14 @@ public class ReferenceGraphReport {
 
 					if (reportModule == null) {
 						reportModule = new ReportModule();
-
 						reportModule.nodePathModule = moduleVersion.getNodePath();
-
 						reportModule.listReportVersion = new ArrayList<ReportVersion>();
+						this.mapReportModule.put(moduleVersion.getNodePath(),  reportModule);
+						this.report.listReportModule.add(reportModule);
+					}
+
+					if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.MATCHED)){
+						this.setNodePathMatched.add(moduleVersion.getNodePath());
 					}
 
 					// The Version necessarily does not exist yet since reentry is avoided during the
@@ -400,75 +418,84 @@ public class ReferenceGraphReport {
 		// For the reference graph report, we always avoid reentry, regardless of the
 		// value of this.referenceGraphMode. The idea is that even if
 		// this.referenceGraphMode is TREE_NO_REDUNDANCY, existing
-		// ReportReferenceGraphNode are reused. It is just that ReportReferene with
+		// ReportReferenceGraphNode are reused. It is just that ReportReference with
 		// jumpToReferenceGraphNodeBookmark are generated when appropriate.
 		this.referenceGraph.traverseReferenceGraph(null, false, true, referenceGraphVisitorReport);
 
-		iteratorReportModule = referenceGraphVisitorReport.report.listReportModule.iterator();
+		// The reference graph report has been created by including all ReportModule's,
+		// regardless of the ModuleFilter since it is not possible to perform the
+		// filtering while traversing the ReferenceGraph. Now is the time to remove those
+		// ReportModule's that are not meant to be included.
 
-		while (iteratorReportModule.hasNext()) {
-			ReportModule reportModule;
-			Module module;
-			VersionClassifierPlugin versionClassifierPlugin;
-			ReportVersion reportVersionMax;
+		if (this.indIncludeModules) {
+			iteratorReportModule = referenceGraphVisitorReport.report.listReportModule.iterator();
 
-			reportModule = iteratorReportModule.next();
-			module = ExecContextHolder.get().getModel().getModule(reportModule.nodePathModule);
-			versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
+			while (iteratorReportModule.hasNext()) {
+				ReportModule reportModule;
+				Module module;
+				VersionClassifierPlugin versionClassifierPlugin;
+				ReportVersion reportVersionMax;
 
-			if ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MULTIPLE_VERSIONS) && (reportModule.listReportVersion.size() == 1)) {
-				iteratorReportModule.remove();
-			} else {
-				Collections.sort(
-						reportModule.listReportVersion,
-						new Comparator<ReportVersion>() {
-							@Override
-							public int compare(ReportVersion reportVersion1, ReportVersion reportVersion2) {
-								return -versionClassifierPlugin.compare(reportVersion1.version, reportVersion2.version);
-							}
-						});
-			}
+				reportModule = iteratorReportModule.next();
+				module = ExecContextHolder.get().getModel().getModule(reportModule.nodePathModule);
+				versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
 
-			reportVersionMax = reportModule.listReportVersion.get(0);
-			reportVersionMax.indMostRecentInReferenceGraph = true;
+				if (   ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MULTIPLE_VERSIONS) && (reportModule.listReportVersion.size() == 1))
+					|| ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MATCHED) && (referenceGraphVisitorReport.setNodePathMatched.contains(reportModule.nodePathModule)))) {
 
-			if (this.indIncludeMostRecentStaticVersionInScm) {
-				ScmPlugin scmPlugin;
-				List<Version> listVersionStatic;
-
-				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-
-				listVersionStatic = scmPlugin.getListVersionStatic();
-				Collections.sort(listVersionStatic, versionClassifierPlugin);
-
-				if (!listVersionStatic.isEmpty()) {
-					Version versionStaticMaxScm;
-
-					versionStaticMaxScm = listVersionStatic.get(listVersionStatic.size() - 1);
-
-					if (reportVersionMax.version.equals(versionStaticMaxScm)) {
-						reportVersionMax.indMostRecentInScm = true;
-					} else {
-						reportVersionMax = new ReportVersion();
-						reportVersionMax.version = versionStaticMaxScm;
-						reportVersionMax.indMostRecentInScm = true;
-						reportModule.listReportVersion.add(0, reportVersionMax);
-					}
-				}
-			}
-
-			if (this.indIncludeReferencePaths) {
-				for (ReportVersion reportVersion: reportModule.listReportVersion) {
-					reportVersion.listReferencePathLiteral = new ArrayList<String>();
-
-					this.referenceGraph.visitLeafModuleVersionReferencePaths(
-							new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
-							new ReferenceGraph.Visitor() {
+					iteratorReportModule.remove();
+				} else {
+					Collections.sort(
+							reportModule.listReportVersion,
+							new Comparator<ReportVersion>() {
 								@Override
-								public void visit(ReferencePath referencePath, ReferenceGraph.VisitAction visitAction) {
-									reportVersion.listReferencePathLiteral.add(referencePath.toString());
+								public int compare(ReportVersion reportVersion1, ReportVersion reportVersion2) {
+									return -versionClassifierPlugin.compare(reportVersion1.version, reportVersion2.version);
 								}
 							});
+				}
+
+				reportVersionMax = reportModule.listReportVersion.get(0);
+				reportVersionMax.indMostRecentInReferenceGraph = true;
+
+				if (this.indIncludeMostRecentStaticVersionInScm) {
+					ScmPlugin scmPlugin;
+					List<Version> listVersionStatic;
+
+					scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
+					listVersionStatic = scmPlugin.getListVersionStatic();
+					Collections.sort(listVersionStatic, versionClassifierPlugin);
+
+					if (!listVersionStatic.isEmpty()) {
+						Version versionStaticMaxScm;
+
+						versionStaticMaxScm = listVersionStatic.get(listVersionStatic.size() - 1);
+
+						if (reportVersionMax.version.equals(versionStaticMaxScm)) {
+							reportVersionMax.indMostRecentInScm = true;
+						} else {
+							reportVersionMax = new ReportVersion();
+							reportVersionMax.version = versionStaticMaxScm;
+							reportVersionMax.indMostRecentInScm = true;
+							reportModule.listReportVersion.add(0, reportVersionMax);
+						}
+					}
+				}
+
+				if (this.indIncludeReferencePaths) {
+					for (ReportVersion reportVersion: reportModule.listReportVersion) {
+						reportVersion.listReferencePathLiteral = new ArrayList<String>();
+
+						this.referenceGraph.visitLeafModuleVersionReferencePaths(
+								new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
+								new ReferenceGraph.Visitor() {
+									@Override
+									public void visit(ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
+										reportVersion.listReferencePathLiteral.add(referencePath.toString());
+									}
+								});
+					}
 				}
 			}
 		}
@@ -626,20 +653,24 @@ class Report {
 	 */
 	public void writeTextReport(Writer writer) {
 		try {
-			writer.append("ReferenceGraph\n");
-			writer.append("==============\n");
+			if (this.listReportReference != null) {
+				writer.append("ReferenceGraph\n");
+				writer.append("==============\n");
 
-			for (ReportReference reportReference: this.listReportReference) {
-				reportReference.writeTextReport(writer, 0);
+				for (ReportReference reportReference: this.listReportReference) {
+					reportReference.writeTextReport(writer, 0);
+				}
+
+				writer.append('\n');
 			}
 
-			writer.append('\n');
+			if (this.listReportModule != null) {
+				writer.append("Modules, Versions\n");
+				writer.append("=================\n");
 
-			writer.append("Modules, Versions\n");
-			writer.append("=================\n");
-
-			for (ReportModule reportModule: this.listReportModule) {
-				reportModule.writeTextReport(writer);
+				for (ReportModule reportModule: this.listReportModule) {
+					reportModule.writeTextReport(writer);
+				}
 			}
 
 		} catch (IOException ioe) {
@@ -794,8 +825,10 @@ class ReportReferenceGraphNode {
 
 			writer.append('\n');
 
-			for (ReportReference reportReference: this.listReportReference) {
-				reportReference.writeTextReport(writer, level + 1);
+			if (this.listReportReference != null) {
+				for (ReportReference reportReference: this.listReportReference) {
+					reportReference.writeTextReport(writer, level + 1);
+				}
 			}
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);

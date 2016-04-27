@@ -22,12 +22,14 @@ package org.azyva.dragom.reference.support;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModuleVersion;
+import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.reference.ReferencePath;
@@ -79,9 +81,14 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	private Map<ModuleVersion, ReferenceGraphNode> mapReferenceGraphNode;
 
 	/**
-	 * List of the root {@link ModuleVersion}'s.
+	 * Set of the root {@link ModuleVersion}'s.
 	 */
-	private List<ModuleVersion> listModuleVersionRoot;
+	private Set<ModuleVersion> setModuleVersionRoot;
+
+	/**
+	 * Set of the matched {@link ModuleVersion}'s.
+	 */
+	private Set<ModuleVersion> setModuleVersionMatched;
 
 	/**
 	 * Constructor.
@@ -90,7 +97,8 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 		// We use a LinkedHashMap to preserve insertion order.
 		this.mapReferenceGraphNode = new LinkedHashMap<ModuleVersion, ReferenceGraphNode>();
 
-		this.listModuleVersionRoot = new ArrayList<ModuleVersion>();
+		this.setModuleVersionRoot = new LinkedHashSet<ModuleVersion>();
+		this.setModuleVersionMatched = new LinkedHashSet<ModuleVersion>();
 	}
 
 	@Override
@@ -100,32 +108,39 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 	@Override
 	public List<ModuleVersion> getListModuleVersionRoot() {
-		return Collections.unmodifiableList(this.listModuleVersionRoot);
+		return new ArrayList<ModuleVersion>(this.setModuleVersionRoot);
 	}
 
 	@Override
 	public boolean isRootModuleVersion(ModuleVersion moduleVersion) {
-		return this.listModuleVersionRoot.contains(moduleVersion);
+		return this.setModuleVersionRoot.contains(moduleVersion);
 	}
 
 	@Override
-	public List<ModuleVersion> getListModuleVersionMatched(ModuleVersion moduleVersion) {
+	public boolean isMatchedModuleVersion(ModuleVersion moduleVersion) {
+		return this.setModuleVersionMatched.contains(moduleVersion);
+	}
+
+	@Override
+	public List<ModuleVersion> getListModuleVersion(NodePath nodePath) {
 		Set<ModuleVersion> setModuleVersion;
-		List<ModuleVersion> listModuleVersionMatched;
+		List<ModuleVersion> listModuleVersion;
 
 		setModuleVersion = this.mapReferenceGraphNode.keySet();
-		listModuleVersionMatched = new ArrayList<ModuleVersion>();
 
-		for (ModuleVersion moduleVersion2: setModuleVersion) {
-			if (moduleVersion2.getNodePath().equals(moduleVersion.getNodePath())) {
-				if (   (moduleVersion.getVersion() == null)
-					|| (moduleVersion2.getVersion().equals(moduleVersion.getVersion()))) {
-						listModuleVersionMatched.add(moduleVersion2);
+		if (nodePath == null) {
+			return new ArrayList<ModuleVersion>(setModuleVersion);
+		} else {
+			listModuleVersion = new ArrayList<ModuleVersion>();
+
+			for (ModuleVersion moduleVersion: setModuleVersion) {
+				if (moduleVersion.getNodePath().equals(nodePath)) {
+						listModuleVersion.add(moduleVersion);
 				}
 			}
-		}
 
-		return listModuleVersionMatched;
+			return listModuleVersion;
+		}
 	}
 
 	@Override
@@ -178,7 +193,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 			referencePath = new ReferencePath();
 
-			for (ModuleVersion moduleVersion2: this.listModuleVersionRoot) {
+			for (ModuleVersion moduleVersion2: this.setModuleVersionRoot) {
 				this.traverseReferenceGraph(referencePath, new Reference(moduleVersion2), indDepthFirst, moduleReentryAvoider, visitor);
 			}
 		} else {
@@ -206,9 +221,11 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	 */
 	private void traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean indDepthFirst, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
 		boolean isAlreadyProcessed;
+		boolean isMatched;
 		ReferenceGraphNode referenceGraphNode;
 
 		isAlreadyProcessed = (moduleReentryAvoider != null) && !moduleReentryAvoider.processModule(reference.getModuleVersion());
+		isMatched = this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion());
 
 		try {
 			// This validates that no cycle exists in the ReferencePath.
@@ -216,25 +233,25 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			referencePath.add(reference);
 
 			if (!indDepthFirst) {
-				visitor.visit(referencePath, isAlreadyProcessed ? VisitAction.REPEATED_VISIT : VisitAction.VISIT);
+				visitor.visit(referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
 			}
 
 			if (!isAlreadyProcessed) {
 				referenceGraphNode = this.mapReferenceGraphNode.get(reference.getModuleVersion());
 
 				if (referenceGraphNode.listReference != null) {
-					visitor.visit(referencePath, VisitAction.STEP_IN);
+					visitor.visit(referencePath, VisitAction.ENUM_SET_STEP_IN);
 
 					for (Reference reference2: referenceGraphNode.listReference) {
 						this.traverseReferenceGraph(referencePath, reference2, indDepthFirst, moduleReentryAvoider, visitor);
 					}
 
-					visitor.visit(referencePath, VisitAction.STEP_OUT);
+					visitor.visit(referencePath, VisitAction.ENUM_SET_STEP_OUT);
 				}
 			}
 
 			if (indDepthFirst) {
-				visitor.visit(referencePath, isAlreadyProcessed ? VisitAction.REPEATED_VISIT : VisitAction.VISIT);
+				visitor.visit(referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
 			}
 		} finally {
 			referencePath.removeLeafReference();
@@ -269,11 +286,11 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 		ReferencePath referencePathIncludingParent;
 		ReferenceGraphNode referenceGraphNode;
 
-		if (this.listModuleVersionRoot.contains(moduleVersion)) {
+		if (this.setModuleVersionRoot.contains(moduleVersion)) {
 			referencePathIncludingParent = new ReferencePath();
 			referencePathIncludingParent.add(new Reference(moduleVersion));
 			referencePathIncludingParent.add(referencePath);
-			visitor.visit(referencePathIncludingParent, VisitAction.VISIT);
+			visitor.visit(referencePathIncludingParent, this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion()) ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT);
 		}
 
 		referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
@@ -293,9 +310,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			this.mapReferenceGraphNode.put(moduleVersionRoot, new ReferenceGraphNode(moduleVersionRoot));
 		}
 
-		if (!this.listModuleVersionRoot.contains(moduleVersionRoot)) {
-			this.listModuleVersionRoot.add(moduleVersionRoot);
-		}
+		this.setModuleVersionRoot.add(moduleVersionRoot);
 	}
 
 	@Override
@@ -345,7 +360,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 	@Override
 	//TODO: Could possibly be optimized by not reusing addReference.
-	public void addReferencePath(ReferencePath referencePath) {
+	public void addMatchedReferencePath(ReferencePath referencePath) {
 		ModuleVersion moduleVersionParent;
 
 		moduleVersionParent = null;
@@ -365,5 +380,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 				moduleVersionParent = reference.getModuleVersion();
 			}
 		}
+
+		this.setModuleVersionMatched.add(referencePath.getLeafModuleVersion());
 	}
 }

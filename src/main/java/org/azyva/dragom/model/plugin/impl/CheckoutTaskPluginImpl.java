@@ -35,6 +35,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.ReferencePath;
+import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 
 /**
  * Factory for TaskPlugin that implements the checkout functionality.
@@ -61,6 +62,20 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+
+	/**
+	 * Runtime property of the type {@link AlwaysNeverAskUserResponse} indicating
+	 * whether to synchronize the workspace directory when unsynced remote changes
+	 * exist.
+	 */
+	private static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
+
+	/**
+	 * Runtime property of the type {@link AlwaysNeverAskUserResponse} indicating to
+	 * switch the {@link Version} of a {@link Module} when a workspace directory
+	 * already exists for another Version of the same Module.
+	 */
+	private static final String RUNTIME_PROPERTY_SWITCH_MODULE_VERSION = "SWITCH_MODULE_VERSION";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -112,12 +127,12 @@ public class CheckoutTaskPluginImpl extends ModulePluginAbstractImpl implements 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 			// We need to call workspacePlugin.getWorkspaceDir simply to obtain the workspace
 			// directory. But we do not need to reserve it.
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 
 			userInteractionCallbackPlugin.provideInfo("Workspace directory " + pathModuleWorkspace + " for " + workspaceDirUserModuleVersion + " already exists. It is assumed to already contain the checked out sources for ModuleVersion " + moduleVersion + ". No action taken.");
 			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
 		} else {
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
 			try {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CheckoutTaskPluginImpl.resourceBundle.getString(CheckoutTaskPluginImpl.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));

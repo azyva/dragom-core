@@ -206,7 +206,7 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 		try {
 			if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 			} else {
 				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);

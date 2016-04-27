@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -266,6 +267,19 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		}
 
 		@Override
+		public Set<String> getSetInitProperty() {
+			Set<String> setInitProperty;
+
+			setInitProperty = new HashSet<String>();
+
+			for (Object key: this.propertiesInit.keySet()) {
+				setInitProperty.add((String)key);
+			}
+
+			return setInitProperty;
+		}
+
+		@Override
 		public String getInitProperty(String name) {
 			return this.propertiesInit.getProperty(name);
 		}
@@ -292,11 +306,14 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 			Iterator<String> iterProperty;
 
 			setProperty = this.properties.stringPropertyNames();
-			iterProperty = setProperty.iterator();
 
-			while (iterProperty.hasNext()) {
-				if (iterProperty.next().startsWith(prefix)) {
-					iterProperty.remove();
+			if (prefix != null) {
+				iterProperty = setProperty.iterator();
+
+				while (iterProperty.hasNext()) {
+					if (iterProperty.next().startsWith(prefix)) {
+						iterProperty.remove();
+					}
 				}
 			}
 

@@ -727,7 +727,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
-			pathModuleWorkspaceRemote = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ);
+			pathModuleWorkspaceRemote = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ);
 		} else {
 			pathModuleWorkspaceRemote = null;
 		}
@@ -765,7 +765,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// If the module is already checked out for the user, the path is reused as is,
 			// without caring to make sure it is up to date. It belongs to the user who is
 			// responsible for this, or the caller acting on behalf of the user.
-			return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+			return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 		}
 
 		// If not, we check if a system workspace directory exists for the module.
@@ -777,7 +777,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// But it may not be up-to-date and may not have the requested version checked
 			// out.
 
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 			this.fetch(pathModuleWorkspace);
 			this.gitCheckout(pathModuleWorkspace, version);
@@ -805,7 +805,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		// If not we know we will create a new system workspace directory.
 
-		pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+		pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
 		// But if there is a main user workspace directory for the Module (whatever the
 		// Version) we want to clone from this directory instead of from the remote
@@ -898,7 +898,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
-			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.PEEK);
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 			this.fetch(pathModuleWorkspace);
 			return pathModuleWorkspace;
 		}
@@ -1934,7 +1934,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)(setWorkspaceDir.iterator().next());
 
 				if (workspaceDirUserModuleVersion != null) {
-					pathMainUserWorkspaceDir = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.GET_EXISTING, WorkspaceDirAccessMode.READ);
+					pathMainUserWorkspaceDir = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ);
 					workspacePlugin.releaseWorkspaceDir(pathMainUserWorkspaceDir);
 				} else {
 					pathMainUserWorkspaceDir = null;
