@@ -39,6 +39,7 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.job.MergeReferenceGraph;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -136,6 +137,14 @@ public final class Util {
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS = "MAY_LOOSE_COMMITS";
 
 	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+	 * that local changes exist in a workspace directory and switching to a new
+	 * {@link Version} is not possible. Continuing here means to continue with the
+	 * other {@link ModuleVersion}.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES = "SWITCH_WITH_UNSYNC_LOCAL_CHANGES";
+
+	/**
 	 * Path to the static Dragom properties resource within the classpath.
 	 */
 	private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
@@ -159,6 +168,21 @@ public final class Util {
 	 * See description in ResourceBundle.
 	 */
 	public static final String MSG_PATTERN_KEY_ASK_RESPONSE = "ASK_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_YES_ASK_RESPONSE = "YES_ASK_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_ASK_RESPONSE = "NO_ASK_RESPONSE";
 
 	/**
 	 * See description in ResourceBundle.
@@ -566,10 +590,10 @@ public final class Util {
 	 * handles storing the user response in a runtime property.
 	 * <p>
 	 * First it gets the value of the runtime property runtimeProperty. If it is
-	 * AlwaysNeverAskUserResponse.ASK it delegates to the
+	 * AlwaysNeverAskUserResponse.ASK (or null) it delegates to the
 	 * getInfoAlwaysNeverAskUserResponse method. If the user does not respond
 	 * AlwaysNeverAskUserResponse.ASK, the response is written back to the runtime
-	 * property.
+	 * property (ASK is the default value for the property).
 	 * <p>
 	 * This is at the limit of being generic. It is very specific to one way of
 	 * handling AlwaysNeverAskUserResponse user input together with a runtime
@@ -581,17 +605,15 @@ public final class Util {
 	 * @param userInteractionCallbackPlugin See corresponding parameter in
 	 *   getInfoAlwaysNeverAskUserResponse.
 	 * @param prompt See corresponding parameter in getInfoAlwaysNeverAskUserResponse.
-	 * @param alwaysNeverAskUserResponseDefaultValue See corresponding parameter in
-	 *   getInfoAlwaysNeverAskUserResponse.
 	 * @return AlwaysNeverAskUserResponse.
 	 */
-	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, AlwaysNeverAskUserResponse alwaysNeverAskUserResponseDefaultValue) {
+	public static AlwaysNeverAskUserResponse getInfoAlwaysNeverAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt) {
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
 		alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(null, runtimeProperty));
 
 		if (alwaysNeverAskUserResponse.isAsk()) {
-			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, prompt, alwaysNeverAskUserResponseDefaultValue);
+			alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, prompt, AlwaysNeverAskUserResponse.ASK);
 
 			if (!alwaysNeverAskUserResponse.isAsk()) {
 				runtimePropertiesPlugin.setProperty(null, runtimeProperty, alwaysNeverAskUserResponse.toString());
@@ -599,6 +621,140 @@ public final class Util {
 		}
 
 		return alwaysNeverAskUserResponse;
+	}
+
+	/**
+	 * Facilitates letting the user input a AlwaysNeverYesNoAskUserResponse.
+	 *
+	 * If info ends with "*" it is replaced with
+	 * " (Y(es always), N(ever), YA (Yes, Ask again), NA (No, Ask again)) [<default>]? " where <default> is
+	 * "Y", "N", "YA" or "NA" depending on alwaysNeverYesNoAskUserResponseDefaultValue.
+	 *
+	 * As a convenience, "1" and "0" can also be entered by the user to mean "Yes
+	 * always" and "Never" respectively.
+	 *
+	 * The user can also enter the string value of the enum constants ("ALWAYS",
+	 * "NEVER", "YES_ASK" and "NO_ASK").
+	 *
+	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
+	 * @param prompt See corresponding parameter in
+	 *   UserInteractionCallbackPlugin.getInfo.
+	 * @param alwaysNeverYesNoAskUserResponseDefaultValue Default user response. It is
+	 *   translated to the defaultValue parameter in
+	 *   UserInteractionCallbackPlugin.getInfo.
+	 * @return AlwaysNeverYesNoAskUserResponse.
+	 */
+	public static AlwaysNeverYesNoAskUserResponse getInfoAlwaysNeverYesNoAskUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponseDefaultValue) {
+		String alwaysNeverYesNoAskResponseChoices;
+		String alwaysResponse;
+		String neverResponse;
+		String yesAskResponse;
+		String noAskResponse;
+		String userResponse;
+		AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
+
+		alwaysNeverYesNoAskResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES);
+		alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
+		neverResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
+		yesAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ASK_RESPONSE);
+		noAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_ASK_RESPONSE);
+
+		if (prompt.endsWith("*")) {
+			String defaultValue = null;
+
+			switch (alwaysNeverYesNoAskUserResponseDefaultValue) {
+			case ALWAYS:
+				defaultValue = alwaysResponse;
+				break;
+
+			case NEVER:
+				defaultValue = neverResponse;
+				break;
+
+			case YES_ASK:
+				defaultValue = yesAskResponse;
+				break;
+
+			case NO_ASK:
+				defaultValue = noAskResponse;
+				break;
+			}
+
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + alwaysNeverYesNoAskResponseChoices + ") [" + defaultValue + "]? ";
+		}
+
+		do {
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, alwaysNeverYesNoAskUserResponseDefaultValue.toString());
+
+			userResponse = userResponse.toUpperCase().trim();
+
+			alwaysNeverYesNoAskUserResponse = null;
+
+			try {
+				alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.valueOf(userResponse);
+			} catch (IllegalArgumentException iae) {
+				if (userResponse.equals(alwaysResponse) || userResponse.equals("1")) {
+					alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.ALWAYS;
+				} else if (userResponse.equals(neverResponse) || userResponse.equals("0")) {
+						alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.NEVER;
+				} else if (userResponse.equals(yesAskResponse)) {
+					alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.YES_ASK;
+				} else if (userResponse.equals(noAskResponse)) {
+					alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.NO_ASK;
+				}
+			}
+
+			if (alwaysNeverYesNoAskUserResponse == null) {
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
+				continue;
+			}
+		} while (false);
+
+		return alwaysNeverYesNoAskUserResponse;
+	}
+
+	/**
+	 * This is an extension to the method getInfoAlwaysNeverYesNoAskUserResponse that
+	 * handles storing the user response in a runtime property.
+	 * <p>
+	 * First it gets the value of the runtime property runtimeProperty. If it is
+	 * AlwaysNeverYesNoAskUserResponse.YES_ASK (or null) or
+	 * AlwaysNeverYesNoAskUserResponse.NO_ASK it delegates to the
+	 * getInfoAlwaysNeverYesNoAskUserResponse method with YES_ASK and NO_ASK
+	 * respectively as the default value. The response is written back to the runtime
+	 * property, unless it is AlwaysNeverYesNoAskUserResponse.YES_ASK and it was null
+	 * to start with (YES_ASK is the default value for the property).
+	 * <p>
+	 * This is at the limit of being generic. It is very specific to one way of
+	 * handling AlwaysNeverYesNoAskUserResponse user input together with a runtime
+	 * property. But this idiom occurs in many places in Dragom and it was deemed
+	 * worth factoring it out.
+	 *
+	 * @param runtimePropertiesPlugin RuntimePropertiesPlugin.
+	 * @param runtimeProperty Runtime property.
+	 * @param userInteractionCallbackPlugin See corresponding parameter in
+	 *   getInfoAlwaysNeverYesNoAskUserResponse.
+	 * @param prompt See corresponding parameter in
+	 *   getInfoAlwaysNeverYesNoAskUserResponse.
+	 * @return AlwaysNeverYesNoAskUserResponse.
+	 */
+	public static AlwaysNeverYesNoAskUserResponse getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(RuntimePropertiesPlugin runtimePropertiesPlugin, String runtimeProperty, UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt) {
+		AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
+
+		alwaysNeverYesNoAskUserResponse = AlwaysNeverYesNoAskUserResponse.valueOfWithYesAskDefault(runtimePropertiesPlugin.getProperty(null, runtimeProperty));
+
+		if (alwaysNeverYesNoAskUserResponse.isAsk()) {
+			AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponseOrg;
+
+			alwaysNeverYesNoAskUserResponseOrg = alwaysNeverYesNoAskUserResponse;
+			alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponse(userInteractionCallbackPlugin, prompt, alwaysNeverYesNoAskUserResponse);
+
+			if (alwaysNeverYesNoAskUserResponse != alwaysNeverYesNoAskUserResponseOrg) {
+				runtimePropertiesPlugin.setProperty(null, runtimeProperty, alwaysNeverYesNoAskUserResponse.toString());
+			}
+		}
+
+		return alwaysNeverYesNoAskUserResponse;
 	}
 
 	/**

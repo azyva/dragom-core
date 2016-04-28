@@ -167,13 +167,13 @@ public class UniformNewStaticVersionPluginImpl extends NewStaticVersionPluginBas
 			runtimePropertiesPlugin.setProperty(null, UniformNewStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_STATIC_VERSION_PREFIX, versionReuseStaticPrefix.toString());
 			versionStaticPrefix = versionReuseStaticPrefix;
 
-			alwaysNeverAskUserResponseCanReuseStaticVersionPrefix =
-					Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-							runtimePropertiesPlugin,
-							UniformNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_STATIC_VERSION_PREFIX,
-							userInteractionCallbackPlugin,
-							MessageFormat.format(UniformNewStaticVersionPluginImpl.resourceBundle.getString(UniformNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX), versionReuseStaticPrefix),
-							AlwaysNeverAskUserResponse.ALWAYS);
+			// The result is not useful. We only want to adjust the runtime property which
+			// will be reused the next time around.
+			Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+					runtimePropertiesPlugin,
+					UniformNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_STATIC_VERSION_PREFIX,
+					userInteractionCallbackPlugin,
+					MessageFormat.format(UniformNewStaticVersionPluginImpl.resourceBundle.getString(UniformNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_STATIC_VERSION_PREFIX), versionReuseStaticPrefix));
 
 			return versionStaticPrefix;
 		}

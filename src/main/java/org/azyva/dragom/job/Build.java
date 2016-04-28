@@ -17,16 +17,16 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.plugin.impl;
+package org.azyva.dragom.job;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
@@ -36,24 +36,35 @@ import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMod
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
-import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.BuilderPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.model.plugin.TaskPlugin;
-import org.azyva.dragom.reference.ReferencePath;
+import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.util.Util;
 
 /**
- * TaskPlugin that implements the build functionality.
+ * Build job.
+ * <p>
+ * The reference graph is traversed depth first and the {@link BuilderPlugin} is
+ * used to build each {@link ModuleVersion}.
  *
  * @author David Raymond
  */
-public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements TaskPlugin {
+public class Build extends RootModuleVersionJobAbstractImpl {
 	/**
-	 * Tool property that specifies the {@link BuildScope}. The default value is
+	 * Runtime property that specifies the {@link BuildScope}. The default value is
 	 * {@link BuildScope#ONLY_USER} if not defined.
+	 * <p>
+	 * A runtime property is used so that it is possible to set a default in a context
+	 * that is more global than the tool invocation. But often this runtime property
+	 * will be provided by the user as a tool initialization property for each tool
+	 * invocation.
+	 * <p>
+	 * It is accessed in the context of each {@link Module} so that its value can be
+	 * different for each Module. But in general it will be defined for the root
+	 * NodePath only.
 	 */
-	public static final String TOOL_PROP_BUILD_SCOPE = "BUILD_SCOPE";
+	public static final String RUNTIME_PROPERTY_BUILD_SCOPE = "BUILD_SCOPE";
 
 	/**
 	 * Runtime property specifying the build context to pass to
@@ -94,14 +105,14 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(BuildTaskPluginImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Build.class.getName() + "ResourceBundle");
 
 	/**
 	 * Defines the build scopes.
 	 * <p>
 	 * Used to parse the BUILD_SCOPE initialization property.
 	 */
-	public enum BuildScope {
+	private enum BuildScope {
 		/**
 		 * Build only {@link ModuleVersion}'s that are in a user workspace directory and
 		 * ignore ModuleVersion's that are not. This is the default value of the
@@ -136,69 +147,57 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 	/**
 	 * Constructor.
 	 *
-	 * @param module Module.
+	 * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
+	 *   the traversal of the reference graphs.
 	 */
-	public BuildTaskPluginImpl(Module module) {
-		super(module);
+	public Build(List<ModuleVersion> listModuleVersionRoot) {
+		super(listModuleVersionRoot);
+
+		this.setIndDepthFirst(true);
 	}
 
 	/**
-	 * Builds must be performed depth first.
+	 * Performs the actual operation on the {@link ModuleVersion}'s.
+	 *
+	 * @param reference Reference.
+	 * @return false. The return value is not used by RootModuleVersionAbstractImpl
+	 *   since the traversal is depth first.
 	 */
 	@Override
-	public boolean isDepthFirst() {
-		return true;
-	}
-
-	@Override
-	public boolean isAvoidReentry() {
-		return true;
-	}
-
-	@Override
-	public TaskPlugin.TaskEffects performTask(String taskId, Version version, ReferencePath referencePath) {
+	protected boolean visitMatchedModuleVersion(Reference reference) {
 		ExecContext execContext;
-		ToolLifeCycleExecContext toolLifeCycleExecContext;
 		String stringBuildScope;
-		BuildTaskPluginImpl.BuildScope buildScope;
+		Build.BuildScope buildScope;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		Module module;
 		String buildContext;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		TaskPlugin.TaskEffects taskEffects;
 		ModuleVersion moduleVersion;
 		WorkspacePlugin workspacePlugin;
 		WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
 		Path pathModuleWorkspace = null;
-		Module module;
 		ScmPlugin scmPlugin;
 		BuilderPlugin builderPlugin;
 
-		if ((taskId != null) && !taskId.equals(BuildTaskPluginImpl.TASK_ID_BUILD)) {
-			throw new RuntimeException("Unsupported task ID " + taskId + '.');
-		}
-
 		execContext = ExecContextHolder.get();
-
-		toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
-
-		// TODO: Why is this an INIT_PROP? Shouldn't it be a RuntimeProperty.?
-		stringBuildScope = toolLifeCycleExecContext.getToolProperty(BuildTaskPluginImpl.TOOL_PROP_BUILD_SCOPE);
-
-		if (stringBuildScope == null) {
-			buildScope = BuildTaskPluginImpl.BuildScope.ONLY_USER;
-		} else {
-			buildScope = BuildTaskPluginImpl.BuildScope.valueOf(stringBuildScope);
-		}
 
 		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-		buildContext = runtimePropertiesPlugin.getProperty(this.getNode(), BuildTaskPluginImpl.RUNTIME_PROPERTY_BUILD_CONTEXT);
+		module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
+
+		stringBuildScope = runtimePropertiesPlugin.getProperty(module, Build.RUNTIME_PROPERTY_BUILD_SCOPE);
+
+		if (stringBuildScope == null) {
+			buildScope = Build.BuildScope.ONLY_USER;
+		} else {
+			buildScope = Build.BuildScope.valueOf(stringBuildScope);
+		}
+
+		buildContext = runtimePropertiesPlugin.getProperty(module, Build.RUNTIME_PROPERTY_BUILD_CONTEXT);
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		taskEffects = new TaskPlugin.TaskEffects();
-
-		moduleVersion = referencePath.getLeafModuleVersion();
+		moduleVersion = this.referencePath.getLeafModuleVersion();
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
@@ -208,17 +207,17 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 			if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 			} else {
-				module = this.getModule();
 				scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
 				switch (buildScope) {
 				case ONLY_USER:
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER), moduleVersion));
-					return taskEffects;
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER), moduleVersion));
+					return false;
 
 				case ONLY_USER_ABORT_IF_SYSTEM:
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM), moduleVersion));
-					return taskEffects.abort();
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_ABORTING_BUILD_ONLY_USER_ABORT_IF_SYSTEM), moduleVersion));
+					Util.setAbort();
+					return false;
 
 				case ALL:
 					pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
@@ -226,8 +225,9 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 
 				case ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT:
 					if (!module.isNodePluginExists(ArtifactInfoPlugin.class, null)) {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT), moduleVersion));
-						return taskEffects.abort();
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_ABORTING_BUILD_ALL_ABORT_IF_SYSTEM_AND_NO_ARTIFACT), moduleVersion));
+						Util.setAbort();
+						return false;
 					}
 
 					pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
@@ -235,17 +235,15 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 				}
 			}
 
-			builderPlugin = this.getModule().getNodePlugin(BuilderPlugin.class,  null);
+			builderPlugin = module.getNodePlugin(BuilderPlugin.class,  null);
 
-			if (taskId.equals(BuildTaskPluginImpl.TASK_ID_BUILD)) {
-				if (builderPlugin.isSomethingToBuild(pathModuleWorkspace)) {
-					try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(BuildTaskPluginImpl.resourceBundle.getString(BuildTaskPluginImpl.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace))) {
-						if (!builderPlugin.build(pathModuleWorkspace, buildContext, writerLog)) {
-							taskEffects.abort();
-						}
-					} catch (IOException ioe) {
-						throw new RuntimeException(ioe);
+			if (builderPlugin.isSomethingToBuild(pathModuleWorkspace)) {
+				try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace))) {
+					if (!builderPlugin.build(pathModuleWorkspace, buildContext, writerLog)) {
+						Util.setAbort();
 					}
+				} catch (IOException ioe) {
+					throw new RuntimeException(ioe);
 				}
 			}
 		} finally {
@@ -254,10 +252,6 @@ public class BuildTaskPluginImpl extends ModulePluginAbstractImpl implements Tas
 			}
 		}
 
-		return taskEffects;
-	}
-
-	public static String getDefaultPluginId() {
-		return BuildTaskPluginImpl.DEFAULT_PLUGIN_ID;
+		return false;
 	}
 }

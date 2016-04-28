@@ -332,13 +332,13 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 						runtimePropertiesPlugin.setProperty(null, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE, newSemanticVersionTypeReuse.toString());
 						newSemanticVersionType = newSemanticVersionTypeReuse;
 
-						alwaysNeverAskUserResponseCanReuseNewSemanticVersionType =
-								Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-										runtimePropertiesPlugin,
-										SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE,
-										userInteractionCallbackPlugin,
-										MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE), newSemanticVersionTypeReuse),
-										AlwaysNeverAskUserResponse.ALWAYS);
+						// The result is not useful. We only want to adjust the runtime property which
+						// will be reused the next time around.
+						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+								runtimePropertiesPlugin,
+								SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE,
+								userInteractionCallbackPlugin,
+								MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE), newSemanticVersionTypeReuse));
 					}
 				}
 

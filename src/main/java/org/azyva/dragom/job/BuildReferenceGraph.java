@@ -83,7 +83,7 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		this.referencePath.add(reference);
 
 		try {
-			this.referenceGraph.addReferencePath(this.referencePath);
+			this.referenceGraph.addMatchedReferencePath(this.referencePath);
 		} finally {
 			this.referencePath.removeLeafReference();
 		}

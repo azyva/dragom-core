@@ -293,13 +293,13 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 							runtimePropertiesPlugin.setProperty(null, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PHASE, phase);
 
-							alwaysNeverAskUserResponseCanReusePhase =
-									Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-											runtimePropertiesPlugin,
-											ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_PHASE,
-											userInteractionCallbackPlugin,
-											MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_REUSE_PHASE), phase),
-											AlwaysNeverAskUserResponse.ALWAYS);
+							// The result is not useful. We only want to adjust the runtime property which
+							// will be reused the next time around.
+							Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+									runtimePropertiesPlugin,
+									ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_PHASE,
+									userInteractionCallbackPlugin,
+									MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_REUSE_PHASE), phase));
 						}
 
 						execContext.setTransientData(ConfigArtifactVersionMapperPluginImpl.class.getName() + '.' + this.getModule() + ".Phase", phase);

@@ -41,7 +41,6 @@ import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
@@ -65,12 +64,6 @@ import org.slf4j.LoggerFactory;
  * This class does not attempt to completely encapsulate its implementation. It
  * has protected instance variables available to subclasses to simplify
  * implementation.
- * <p>
- * This class has similarities with {@link TaskInvoker}, but should not be
- * confused. This ia a base class for implementing jobs that are to be applied to
- * to ModuleVersion's matched by {@link ReferencePathMatcher} while traversing
- * reference graphs rooted at root ModuleVersion's. TaskInvoker is such a job which
- * invokes a {@link TaskPlugin} for each matched ModuleVersion and its children.
  *
  * @author David Raymond
  */
@@ -179,6 +172,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 */
 	protected boolean indAvoidReentry = true;
 
+	/**
+	 * Indicates that traversal must be depth first, as opposed to parent first.
+	 */
+	protected boolean indDepthFirst;
+
 	/*
 	 * {@link ModuleReentryAvoider}.
 	 * <p>
@@ -263,6 +261,14 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 */
 	protected void setIndAvoidReentry(boolean indAvoidReentry) {
 		this.indAvoidReentry = indAvoidReentry;
+	}
+
+	/**
+	 * @param indDepthFirst Specifies to traverse depth first. The default is to
+	 *   traverse parent-first.
+	 */
+	protected void setIndDepthFirst(boolean indDepthFirst) {
+		this.indDepthFirst = indDepthFirst;
 	}
 
 	/**
@@ -443,10 +449,18 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * override it to provide a job-specific behavior at the root ModuleVersion
 	 * level.
 	 * <p>
-	 * This implementation traverses the reference graph rooted at the root
+	 * It could have been called visitRootModuleVersion to make more obvious the
+	 * context in which is it called, but it is expected to often be called
+	 * recursively by itself for the {@link Reference}'s within the reference graph,
+	 * which this implementation actually does.
+	 * <p>
+	 * This implementation does a traversal of the reference graph rooted at the root
 	 * ModuleVersion by recursively invoking itself and for each ModuleVersion
 	 * matching the {@link ReferencePathMatcher} provided to the class using
 	 * {@link #setReferencePathMatcher}, it calls {@link #visitMatchedModuleVersion}.
+	 * <p>
+	 * If {@link #indDepthFirst}, the traversal is depth first. Otherwise it is
+	 * parent first.
 	 * <p>
 	 * This implementation returns false as it does not handle {@link Version}
 	 * changes.
@@ -502,7 +516,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			if (this.referencePathMatcher.matches(this.referencePath)) {
 				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(reference.getModuleVersion())) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath.getLeafModuleVersion()));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), reference.getModuleVersion()));
 					return false;
 				} else {
 					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath.getLeafModuleVersion()));
@@ -515,8 +529,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				this.referencePath.removeLeafReference();;
 				indReferencePathAlreadyReverted = true;
 
-				// Util.isAbort() may be set, but it is not necessary to handle it since we are
-				// done after this call.
 				indVisitChildren = this.visitMatchedModuleVersion(reference);
 
 				if (Util.isAbort()) {
@@ -597,14 +609,16 @@ public abstract class RootModuleVersionJobAbstractImpl {
  	 * method is called, it can signal the caller that children must not be visited by
  	 * returning false. But if the ModuleVersion is not matched, this method is not
  	 * called and children will be visited. In all cases, the ReferencePathMatcher
- 	 * will be applied to children as well.
+ 	 * will be applied to children as well. This applies only if the traversal is
+ 	 * parent first.
  	 * <p>
  	 * This implementation raises an exception. This method is not abstract since if
  	 * the subclass overrides visitModuleVersion, it may not be called or need to be
  	 * overridden at all.
  	 *
 	 * @param reference Reference to the matched ModuleVersion.
-	 * @return Indicates if children must be visited.
+	 * @return Indicates if children must be visited. The return value is ignore if
+	 *   the traversal is depth first.
 	 */
 	protected boolean visitMatchedModuleVersion(Reference reference) {
 		throw new RuntimeException("Must not get here.");
@@ -618,5 +632,4 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 */
 	protected void afterIterateListModuleVersionRoot() {
 	}
-
 }

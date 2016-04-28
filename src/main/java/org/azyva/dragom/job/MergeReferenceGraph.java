@@ -467,13 +467,13 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 				runtimePropertiesPlugin.setProperty(null, MergeReferenceGraph.RUNTIME_PROPERTY_REUSE_SRC_VERSION, versionSrc.toString());
 
-				alwaysNeverAskUserResponseCanReuseSrcVersion =
-						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-								runtimePropertiesPlugin,
-								MergeReferenceGraph.RUNTIME_PROPERTY_CAN_REUSE_SRC_VERSION,
-								userInteractionCallbackPlugin,
-								MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_SRC_VERSION), versionSrc),
-								AlwaysNeverAskUserResponse.ALWAYS);
+				// The result is not useful. We only want to adjust the runtime property which
+				// will be reused the next time around.
+				Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+						runtimePropertiesPlugin,
+						MergeReferenceGraph.RUNTIME_PROPERTY_CAN_REUSE_SRC_VERSION,
+						userInteractionCallbackPlugin,
+						MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_SRC_VERSION), versionSrc));
 			}
 
 			moduleVersionSrc = new ModuleVersion(moduleVersionRootDest.getNodePath(), versionSrc);
@@ -1075,8 +1075,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 				runtimePropertiesPlugin,
 				MergeReferenceGraph.RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS,
 				userInteractionCallbackPlugin,
-				MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION),
-				AlwaysNeverAskUserResponse.ASK);
+				MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION));
 
 		switch (alwaysNeverAskUserResponseContinueOnMergeConflicts) {
 		case ALWAYS:

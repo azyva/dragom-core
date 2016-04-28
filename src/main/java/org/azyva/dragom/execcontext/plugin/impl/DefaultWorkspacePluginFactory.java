@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * TODO: Assumes dragom metadata dir exists, but may not be initialized based on version.
+ * Multiple Versions of the same Module are not supported in user workspace directories.
  * @author David Raymond
  *
  */
@@ -183,6 +184,31 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 		@Override
 		public Path getPathWorkspace() {
 			return this.pathWorkspace;
+		}
+
+		@Override
+		public boolean isSupportMultipleModuleVersion() {
+			return false;
+		}
+
+		@Override
+		public WorkspaceDir getWorkspaceDirConflict(WorkspaceDir workspaceDir) {
+			Path pathWorkspaceDir;
+			WorkspaceDir workspaceDirOther;
+
+			if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
+				pathWorkspaceDir = this.pathWorkspace.resolve(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath().getModuleName());
+			} else {
+				pathWorkspaceDir = this.pathDragomMetadataDir.resolve(((WorkspaceDirSystemModule)workspaceDir).getNodePath().getModuleName());
+			}
+
+			workspaceDirOther = this.mapPathWorkspaceDir.get(pathWorkspaceDir);
+
+			if ((workspaceDirOther != null) && !workspaceDirOther.equals(workspaceDir)) {
+				return workspaceDirOther;
+			} else {
+				return null;
+			}
 		}
 
 		@Override

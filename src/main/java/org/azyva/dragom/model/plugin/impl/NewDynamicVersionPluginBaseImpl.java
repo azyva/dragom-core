@@ -193,13 +193,13 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 			runtimePropertiesPlugin.setProperty(null, NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION, versionNewDynamic.toString());
 
-			alwaysNeverAskUserResponseCanReuseDynamicVersion =
-					Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-							runtimePropertiesPlugin,
-							NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION,
-							userInteractionCallbackPlugin,
-							MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION), versionNewDynamic),
-							AlwaysNeverAskUserResponse.ALWAYS);
+			// The result is not useful. We only want to adjust the runtime property which
+			// will be reused the next time around.
+			Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+					runtimePropertiesPlugin,
+					NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION,
+					userInteractionCallbackPlugin,
+					MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION), versionNewDynamic));
 		}
 
 		// After all this, the new version may be the same as the current version. In this

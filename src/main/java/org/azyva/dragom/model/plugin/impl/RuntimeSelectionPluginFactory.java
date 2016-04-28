@@ -208,13 +208,13 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 
 				runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin, pluginId);
 
-				alwaysNeverAskUserResponseCanReusePluginId =
-						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-								runtimePropertiesPlugin,
-								RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_CAN_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin,
-								userInteractionCallbackPlugin,
-								MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId),
-								AlwaysNeverAskUserResponse.ALWAYS);
+				// The result is not useful. We only want to adjust the runtime property which
+				// will be reused the next time around.
+				Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+						runtimePropertiesPlugin,
+						RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_CAN_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin,
+						userInteractionCallbackPlugin,
+						MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
 			}
 		}
 

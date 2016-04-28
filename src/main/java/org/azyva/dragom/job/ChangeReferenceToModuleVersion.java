@@ -17,7 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.plugin.impl;
+package org.azyva.dragom.job;
 
 import java.nio.file.Path;
 import java.text.MessageFormat;
@@ -39,55 +39,35 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.model.plugin.TaskPlugin;
 import org.azyva.dragom.reference.Reference;
-import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for TaskPlugin that allows changing references to a ModuleVersion.
- *
- * This TaskPlugin operates on dynamic Version only. References within static
- * Version are not modified. But a dynamic Version reference can be changed
- * (within a parent Module dynamic Version).
- *
- * The Version replacements are expected to be provided in the task parameter
- * org.azyva.dragom.model.plugin.impl.TaskChangeReferenceToModuleVersionPluginFactory.MapModuleVersionChange
- * of type Map<ModuleVersion, Version>.
+ * Job to change the {@link Version} of a referenced {@link ModuleVersion} within
+ * a reference graph.
+ * <p>
+ * This jobs operates on references within dynamic Version's only. References
+ * within static Version's are not modified.
  *
  * @author David Raymond
  */
-public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAbstractImpl implements TaskPlugin {
+public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * Logger for the class.
 	 */
-	private static final Logger logger = LoggerFactory.getLogger(ChangeReferenceToModuleVersionTaskPluginImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ChangeReferenceToModuleVersion.class);
 
 	/**
 	 * Prefix for the tool properties which define the {@link ModuleVersion} to
 	 * {@link Version} mappings.
+	 * <p>
+	 * Each property must be suffixed with an index starting at 1. The value of the
+	 * properties are of the form {@code <module-version>-><version>}.
 	 */
 	private static final String TOOL_PROPERTY_PREFIX_MAP_MODULE_VERSION_CHANGE = "MAP_MODULE_VERSION.";
-
-	/**
-	 * The Map of {@link ModuleVersion} to {@link Version} is actually stored as a
-	 * transient data that is initialized from the initialization properties
-	 * MAP_MODULE_VERSION.* if not defined.
-	 */
-	public static final String TRANSIENT_DATA_MAP_MODULE_VERSION_CHANGE = ChangeReferenceToModuleVersionTaskPluginImpl.class.getName() + ".MapModuleVersionChange";
-
-	/**
-	 * ID of the only task supported by this TaskPlugin.
-	 */
-	public static final String TASK_ID = "change-reference-to-module-version";
-
-	/**
-	 * Default ID of this plugin.
-	 */
-	public static final String DEFAULT_PLUGIN_ID = "change-reference-to-module-version";
 
 	/**
 	 * See description in ResourceBundle.
@@ -112,34 +92,36 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ChangeReferenceToModuleVersionTaskPluginImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ChangeReferenceToModuleVersion.class.getName() + "ResourceBundle");
 
-	public ChangeReferenceToModuleVersionTaskPluginImpl(Module module) {
-		super(module);
+	/**
+	 * Map of {@link ModuleVersion}'s to the new {@link Version}'s.
+	 */
+	private Map<ModuleVersion, Version> mapModuleVersionChange;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
+	 *   the traversal of the reference graphs.
+	 */
+	public ChangeReferenceToModuleVersion(List<ModuleVersion> listModuleVersionRoot) {
+		super(listModuleVersionRoot);
+
+		this.initFromInitProperties();
 	}
 
 	/**
-	 * We need to traverse the graph parent first since when a Version is changed we
-	 * want to skip the children.
+	 * Performs the actual operation on the {@link ModuleVersion}'s.
+	 *
+	 * @param reference Reference.
 	 */
 	@Override
-	public boolean isDepthFirst() {
-		return false;
-	}
-
-	@Override
-	public boolean isAvoidReentry() {
-		return true;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public TaskPlugin.TaskEffects performTask(String taskId, Version version, ReferencePath referencePath) {
-		TaskPlugin.TaskEffects taskEffects;
+	protected boolean visitMatchedModuleVersion(Reference reference) {
+		Version version;
 		Module module;
 		ScmPlugin scmPlugin;
 		ExecContext execContext;
-		Map<ModuleVersion, Version> mapModuleVersionChange;
 		ReferenceManagerPlugin referenceManagerPlugin = null;
 		Path pathModuleWorkspace;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
@@ -147,22 +129,15 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 		WorkspacePlugin workspacePlugin;
 		boolean indUserWorkspaceDir;
 
-		if ((taskId != null) && !taskId.equals(ChangeReferenceToModuleVersionTaskPluginImpl.TASK_ID)) {
-			throw new RuntimeException("Unsupported task ID " + taskId + '.');
-		}
-
-		ChangeReferenceToModuleVersionTaskPluginImpl.initFromInitProperties();
-
-		taskEffects = new TaskPlugin.TaskEffects();
+		version = reference.getModuleVersion().getVersion();
 
 		if (version.getVersionType() == VersionType.STATIC) {
-			return taskEffects.skipChildren();
+			return false;
 		}
 
-		module = this.getModule();
+		module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
 
 		execContext = ExecContextHolder.get();
-		mapModuleVersionChange = (Map<ModuleVersion, Version>)execContext.getTransientData(ChangeReferenceToModuleVersionTaskPluginImpl.TRANSIENT_DATA_MAP_MODULE_VERSION_CHANGE);
 
 		// We do not make changes to nor visit a Module whose Version was changed. We
 		// indeed assume that if the caller specified to change a version to another
@@ -173,11 +148,11 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 		// the ModuleVersion was changed to that new Version as it may already be at that
 		// Version. But if it is already at that Version, we assume there is no need to
 		// process the Module.
-		for (Map.Entry<ModuleVersion, Version> mapEntry: mapModuleVersionChange.entrySet()) {
+		for (Map.Entry<ModuleVersion, Version> mapEntry: this.mapModuleVersionChange.entrySet()) {
 			if (   mapEntry.getKey().getNodePath().equals(module.getNodePath())
 				&& mapEntry.getValue().equals(version)) {
 
-				return taskEffects;
+				return false;
 			}
 		}
 
@@ -202,107 +177,94 @@ public class ChangeReferenceToModuleVersionTaskPluginImpl extends ModulePluginAb
 			listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
 		}
 
-		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
 		for (Reference referenceChild: listReference) {
 			Version versionNew;
 
 			if (referenceChild.getModuleVersion() == null) {
-				ChangeReferenceToModuleVersionTaskPluginImpl.logger.info("Reference " + referenceChild + " within ReferencePath " + referencePath + " does not include a source reference known to Dragom. It cannot be processed.");
+				ChangeReferenceToModuleVersion.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It cannot be processed.");
 				continue;
 			}
 
-			versionNew = mapModuleVersionChange.get(referenceChild.getModuleVersion());
+			versionNew = this.mapModuleVersionChange.get(referenceChild.getModuleVersion());
 
 			if (versionNew != null) {
 				String message;
 
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_REFERENCE_WILL_BE_CHANGED), referencePath, referenceChild, versionNew));
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_REFERENCE_WILL_BE_CHANGED), this.referencePath, referenceChild, versionNew));
 
-				workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+				workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
 				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
 
 				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), new ModuleVersion(module.getNodePath(), version), pathModuleWorkspace));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), new ModuleVersion(module.getNodePath(), version), pathModuleWorkspace));
 				}
 
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-					return taskEffects.abort();
+					Util.setAbort();
+					return false;
 				}
 
 				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNew)) {
 					Map<String, String> mapCommitAttr;
-					taskEffects.referenceChanged();
 
-					message = MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), referencePath, referenceChild, versionNew);
+					message = MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNew);
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
 					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
 					userInteractionCallbackPlugin.provideInfo(message);
-					taskEffects.actionPerformed(message);
+					this.listActionsPerformed.add(message);
 
 					if (indUserWorkspaceDir) {
 						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 						userInteractionCallbackPlugin.provideInfo(message);
-						taskEffects.actionPerformed(message);
+						this.listActionsPerformed.add(message);
 					} else {
-						ChangeReferenceToModuleVersionTaskPluginImpl.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
+						ChangeReferenceToModuleVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
 					}
 				} else {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersionTaskPluginImpl.resourceBundle.getString(ChangeReferenceToModuleVersionTaskPluginImpl.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), referencePath, referenceChild, versionNew));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), this.referencePath, referenceChild, versionNew));
 				}
 			}
 		}
 
-		return taskEffects;
+		return true;
 	}
 
-	@SuppressWarnings("unchecked")
-	private static void initFromInitProperties() {
+	private void initFromInitProperties() {
 		ExecContext execContext;
 		ToolLifeCycleExecContext toolLifeCycleExecContext;
-		Map<ModuleVersion, Version> mapModuleVersionChange;
+		int index;
 
 		execContext = ExecContextHolder.get();
 		toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-		mapModuleVersionChange = (Map<ModuleVersion, Version>)execContext.getTransientData(ChangeReferenceToModuleVersionTaskPluginImpl.TRANSIENT_DATA_MAP_MODULE_VERSION_CHANGE);
+		this.mapModuleVersionChange = new HashMap<ModuleVersion, Version>();
 
-		if (mapModuleVersionChange == null) {
-			int index;
+		index = 1;
 
-			mapModuleVersionChange = new HashMap<ModuleVersion, Version>();
+		do {
+			String stringMapModuleVersionChange;
+			int indexSeparatorKeyValue;
+			ModuleVersion moduleVersion;
+			Version version;
 
-			index = 1;
+			// TODO: Should that be a RuntimeProperty?
+			// Should we handle parseexception?
+			stringMapModuleVersionChange = toolLifeCycleExecContext.getToolProperty(ChangeReferenceToModuleVersion.TOOL_PROPERTY_PREFIX_MAP_MODULE_VERSION_CHANGE + index);
 
-			do {
-				String stringMapModuleVersionChange;
-				int indexSeparatorKeyValue;
-				ModuleVersion moduleVersion;
-				Version version;
+			if (stringMapModuleVersionChange == null) {
+				index = 0;
+			}
 
-				// TODO: Should that be a RuntimeProperty?
-				// Should we handle parseexception?
-				stringMapModuleVersionChange = toolLifeCycleExecContext.getToolProperty(ChangeReferenceToModuleVersionTaskPluginImpl.TOOL_PROPERTY_PREFIX_MAP_MODULE_VERSION_CHANGE + index);
+			indexSeparatorKeyValue = stringMapModuleVersionChange.indexOf("->");
 
-				if (stringMapModuleVersionChange == null) {
-					index = 0;
-				}
+			moduleVersion = new ModuleVersion(stringMapModuleVersionChange.substring(0, indexSeparatorKeyValue).trim());
+			version = new Version(stringMapModuleVersionChange.substring(indexSeparatorKeyValue + 2).trim());
 
-				indexSeparatorKeyValue = stringMapModuleVersionChange.indexOf("->");
-
-				moduleVersion = new ModuleVersion(stringMapModuleVersionChange.substring(0, indexSeparatorKeyValue).trim());
-				version = new Version(stringMapModuleVersionChange.substring(indexSeparatorKeyValue + 2).trim());
-
-				mapModuleVersionChange.put(moduleVersion,  version);
-			} while (index++ != 0);
-
-			execContext.setTransientData(ChangeReferenceToModuleVersionTaskPluginImpl.TRANSIENT_DATA_MAP_MODULE_VERSION_CHANGE, mapModuleVersionChange);
-		}
-	}
-
-	public static String getDefaultPluginId() {
-		return CheckoutTaskPluginImpl.DEFAULT_PLUGIN_ID;
+			this.mapModuleVersionChange.put(moduleVersion,  version);
+		} while (index++ != 0);
 	}
 }

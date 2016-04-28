@@ -193,13 +193,13 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 								MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic),
 								YesAlwaysNoUserResponse.YES);
 
-				alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion =
-						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-								runtimePropertiesPlugin,
-								NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION,
-								userInteractionCallbackPlugin,
-								NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION),
-								AlwaysNeverAskUserResponse.ALWAYS);
+				// The result is not useful. We only want to adjust the runtime property which
+				// will be reused the next time around.
+				Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+						runtimePropertiesPlugin,
+						NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION,
+						userInteractionCallbackPlugin,
+						NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION));
 
 				// This is the user response from the first question above, not about
 				// automatically reusing the response.

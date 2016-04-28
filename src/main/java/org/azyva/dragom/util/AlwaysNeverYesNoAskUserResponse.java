@@ -20,9 +20,17 @@
 package org.azyva.dragom.util;
 
 /**
- * Enumerates the possible responses to a Always/Never/Ask type of user input.
+ * Enumerates the possible responses to a Always/Never/Yes/No/Ask type of user
+ * input.
+ * <p>
+ * More precisely, this is a 4-state input:
+ * <p>
+ * <li>Yes, always (do not ask again)</li>
+ * <li>No, never (do not ask again)</li>
+ * <li>Yes (but ask again)</li>
+ * <li>No (but ask again)</li>
  */
-public enum AlwaysNeverAskUserResponse {
+public enum AlwaysNeverYesNoAskUserResponse {
 	/**
 	 * Indicates to silently assume a positive response.
 	 */
@@ -34,9 +42,14 @@ public enum AlwaysNeverAskUserResponse {
 	NEVER,
 
 	/**
-	 * Indicates to ask the user.
+	 * Indicates to ask the user, but with a positive default response.
 	 */
-	ASK;
+	YES_ASK,
+
+	/**
+	 * Indicates to ask the user, but with a negative default response.
+	 */
+	NO_ASK;
 
 	/**
 	 * @return Indicates if ALWAYS.
@@ -53,10 +66,38 @@ public enum AlwaysNeverAskUserResponse {
 	}
 
 	/**
-	 * @return Indicates if ASK.
+	 * @return Indicates if YES_ASK.
+	 */
+	public boolean isYesAsk() {
+		return this == YES_ASK;
+	}
+
+	/**
+	 * @return Indicates if NO_ASK.
+	 */
+	public boolean isNoAsk() {
+		return this == NO_ASK;
+	}
+
+	/**
+	 * @return Indicates if ALWAYS or YES_ASK.
+	 */
+	public boolean isYes() {
+		return (this == ALWAYS) || (this == YES_ASK);
+	}
+
+	/**
+	 * @return Indicates if NEVER or NO_ASK.
+	 */
+	public boolean isNo() {
+		return (this == NEVER) || (this == NO_ASK);
+	}
+
+	/**
+	 * @return Indicates if YES_ASK or NO_ASK.
 	 */
 	public boolean isAsk() {
-		return this == ASK;
+		return (this == YES_ASK) || (this == NO_ASK);
 	}
 
 	/**
@@ -64,13 +105,13 @@ public enum AlwaysNeverAskUserResponse {
 	 * null.
 	 *
 	 * @param value Value. Can be null.
-	 * @return AlwaysNeverAskUserResponse. ASK if value is null.
+	 * @return AlwaysNeverYesNoAskUserResponse. YES_ASK if value is null.
 	 */
-	public static AlwaysNeverAskUserResponse valueOfWithAskDefault(String value) {
+	public static AlwaysNeverYesNoAskUserResponse valueOfWithYesAskDefault(String value) {
 		if (value == null) {
-			return AlwaysNeverAskUserResponse.ASK;
+			return AlwaysNeverYesNoAskUserResponse.YES_ASK;
 		} else {
-			return AlwaysNeverAskUserResponse.valueOf(value);
+			return AlwaysNeverYesNoAskUserResponse.valueOf(value);
 		}
 	}
 };

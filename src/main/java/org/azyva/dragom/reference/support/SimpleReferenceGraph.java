@@ -117,6 +117,11 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	}
 
 	@Override
+	public List<ModuleVersion> getListModuleVersionMatched() {
+		return new ArrayList<ModuleVersion>(this.setModuleVersionMatched);
+	}
+
+	@Override
 	public boolean isMatchedModuleVersion(ModuleVersion moduleVersion) {
 		return this.setModuleVersionMatched.contains(moduleVersion);
 	}

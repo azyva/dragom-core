@@ -49,10 +49,9 @@ import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
-import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
+import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
-import org.azyva.dragom.util.YesAlwaysNoUserResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +94,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 
 	private static final String RUNTIME_PROPERTY_IND_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD = "IND_NO_PRE_CREATE_STATIC_VERSION_VALIDATION_BUILD";
 
+	/**
+	 * Runtime property of type AlwaysNeverYesNoAskUserResponse that indicates if the
+	 * artifact Version must be reverted after the creation of the static Version.
+	 */
 	private static final String RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION = "REVERT_ARTIFACT_VERSION";
 
 	/**
@@ -170,11 +173,6 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT = "DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
 	private static final String MSG_PATTERN_KEY_ARTIFACT_VERSION_REVERTED = "ARTIFACT_VERSION_REVERTED";
 
 	/**
@@ -199,16 +197,6 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 * user may decide to create a different static Version.
 	 */
 	private Map<ModuleVersion, Version> mapModuleVersionStatic;
-
-	/**
-	 * Default response for reverting the ArtifactVersion when the mode is to ask each
-	 * time.
-	 *
-	 * By symmetry with other runtime properties, this information could be stored as
-	 * a runtime property. But since it is only a boolean we simply keep a default
-	 * value for each execution of the job.
-	 */
-	private boolean indRevertArtifactVersionDefault;
 
 	/**
 	 * Constructor.
@@ -607,7 +595,6 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		Module module;
 		ScmPlugin scmPlugin;
 		NewStaticVersionPlugin newStaticVersionPlugin;
-		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
 		WorkspacePlugin workspacePlugin;
 		WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
 		Path pathModuleWorkspace = null;
@@ -757,8 +744,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 			this.listActionsPerformed.add(message);
 
 			if (artifactVersionManagerPlugin != null) {
-				AlwaysNeverAskUserResponse alwaysNeverAskUserResponsRevertArtifactVersion;
-				boolean indRevertArtifactVersion;
+				AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponsRevertArtifactVersion;
 				Map<String, String> mapCommitAttr;
 
 				// Finally handle reverting the ArtifactVersion. Note that is some cases the
@@ -772,69 +758,42 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				// happen in phase development. We therefore handle reverting regardless of
 				// whether or not the ArtifactVersion was adjusted above.
 
-				alwaysNeverAskUserResponsRevertArtifactVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, CreateStaticVersion.RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION));
+				artifactVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(moduleVersion.getVersion());
 
-				if (!alwaysNeverAskUserResponsRevertArtifactVersion.isNever()) {
-					artifactVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(moduleVersion.getVersion());
+				if (!artifactVersion.equals(artifactVersionManagerPlugin.getArtifactVersion(pathModuleWorkspace))) {
+					alwaysNeverYesNoAskUserResponsRevertArtifactVersion = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
+							runtimePropertiesPlugin,
+							CreateStaticVersion.RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION,
+							userInteractionCallbackPlugin,
+							MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION), moduleVersion, artifactVersion, versionStaticNew));
 
-					if (!artifactVersion.equals(artifactVersionManagerPlugin.getArtifactVersion(pathModuleWorkspace))) {
-						// Here we would have liked to reuse the standard idiom related to the
-						// AlwaysNeverAskUserResponse type of user input, but the case is a little bit
-						// different. It is rather à 4-state input like "Yes always", "Never",
-						// "Yes this time, but ask again" and "No this time, but ask again". This is not
-						// easily supported by the Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk
-						// method.
+					if (!alwaysNeverYesNoAskUserResponsRevertArtifactVersion.isYes()) {
+						// Here we do not check if the version was actually changed since we made the
+						// verification above.
+						artifactVersionManagerPlugin.setArtifactVersion(pathModuleWorkspace, artifactVersion);
 
-						alwaysNeverAskUserResponsRevertArtifactVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, CreateStaticVersion.RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION));
+						// The commit we are about to perform needs to have a special marker so that the
+						// dynamic Version is considered equivalent to the static Version that was just
+						// created.
 
-						if (alwaysNeverAskUserResponsRevertArtifactVersion.isAsk()) {
-							yesAlwaysNoUserResponse = Util.getInfoYesNoUserResponse(userInteractionCallbackPlugin, MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION), moduleVersion, artifactVersion, versionStaticNew), this.indRevertArtifactVersionDefault ? YesAlwaysNoUserResponse.YES : YesAlwaysNoUserResponse.NO);
+						message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_ARTIFACT_VERSION_REVERTED), moduleVersion, artifactVersion, versionStaticNew);
+						mapCommitAttr = new HashMap<String, String>();
+						mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION, versionStaticNew.toString());
+						mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE, "true");
+						scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+						userInteractionCallbackPlugin.provideInfo(message);
+						this.listActionsPerformed.add(message);
 
-							indRevertArtifactVersion = yesAlwaysNoUserResponse.isYes();
-							this.indRevertArtifactVersionDefault = indRevertArtifactVersion;
-
-							yesAlwaysNoUserResponse = Util.getInfoYesNoUserResponse(userInteractionCallbackPlugin, CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_DO_YOU_WANT_TO_APPLY_SAME_ANSWER_REVERT), YesAlwaysNoUserResponse.YES);
-
-							if (yesAlwaysNoUserResponse.isYes()) {
-								if (indRevertArtifactVersion) {
-									runtimePropertiesPlugin.setProperty(null, CreateStaticVersion.RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION, AlwaysNeverAskUserResponse.ALWAYS.toString());
-								} else {
-									runtimePropertiesPlugin.setProperty(null, CreateStaticVersion.RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION, AlwaysNeverAskUserResponse.NEVER.toString());
-								}
-							}
-						} else {
-							indRevertArtifactVersion = true;
-						}
-
-
-						if (indRevertArtifactVersion) {
-							// Here we do not check if the version was actually changed since we made the
-							// verification above.
-							artifactVersionManagerPlugin.setArtifactVersion(pathModuleWorkspace, artifactVersion);
-
-							// The commit we are about to perform needs to have a special marker so that the
-							// dynamic Version is considered equivalent to the static Version that was just
-							// created.
-
-							message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_ARTIFACT_VERSION_REVERTED), moduleVersion, artifactVersion, versionStaticNew);
-							mapCommitAttr = new HashMap<String, String>();
-							mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION, versionStaticNew.toString());
-							mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE, "true");
-							scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+						if (indUserWorkspaceDir) {
+							message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
 							userInteractionCallbackPlugin.provideInfo(message);
 							this.listActionsPerformed.add(message);
-
-							if (indUserWorkspaceDir) {
-								message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
-								userInteractionCallbackPlugin.provideInfo(message);
-								this.listActionsPerformed.add(message);
-							} else {
-								CreateStaticVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " and were committed to the SCM.");
-							}
+						} else {
+							CreateStaticVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " and were committed to the SCM.");
 						}
-					} else {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_NO_REVERTED_ARTIFACT_VERSION_CHANGE), moduleVersion, artifactVersion, versionStaticNew));
 					}
+				} else {
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_NO_REVERTED_ARTIFACT_VERSION_CHANGE), moduleVersion, artifactVersion, versionStaticNew));
 				}
 			}
 		} finally {
