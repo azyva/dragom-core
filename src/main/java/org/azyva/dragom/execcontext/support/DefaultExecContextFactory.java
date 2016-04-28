@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -430,6 +431,23 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 			this.mapTransientData.clear();
 
 			this.propertiesTool = null;
+		}
+
+		@Override
+		public Set<String> getSetToolProperty() {
+			if (this.propertiesTool == null) {
+				return Collections.emptySet();
+			} else {
+				Set<String> setToolProperty;
+
+				setToolProperty = new HashSet<String>();
+
+				for (Object key: this.propertiesTool.keySet()) {
+					setToolProperty.add((String)key);
+				}
+
+				return setToolProperty;
+			}
 		}
 
 		@Override
