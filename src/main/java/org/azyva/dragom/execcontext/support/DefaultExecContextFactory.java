@@ -304,16 +304,16 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		@Override
 		public Set<String> getSetProperty(String prefix) {
 			Set<String> setProperty;
-			Iterator<String> iterProperty;
+			Iterator<String> iteratorProperty;
 
 			setProperty = this.properties.stringPropertyNames();
 
 			if (prefix != null) {
-				iterProperty = setProperty.iterator();
+				iteratorProperty = setProperty.iterator();
 
-				while (iterProperty.hasNext()) {
-					if (iterProperty.next().startsWith(prefix)) {
-						iterProperty.remove();
+				while (iteratorProperty.hasNext()) {
+					if (iteratorProperty.next().startsWith(prefix)) {
+						iteratorProperty.remove();
 					}
 				}
 			}

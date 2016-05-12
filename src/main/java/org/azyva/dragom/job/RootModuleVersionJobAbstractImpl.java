@@ -38,7 +38,6 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
-import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
@@ -54,7 +53,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for implementing jobs based on root {@link ModuleVersions}'s and
  * which traverse the reference graph by checking out the {@link ModuleVersion}
- * source code and using {@link NodePlugin}'s to obtain {@link Reference}'s.
+ * source code and using {@link ReferenceManagerPlugin} and other
+ * (@link NodePlugin}'s to obtain {@link Reference}'s.
  * <p>
  * It factors out code that is often encountered in these types of tasks.
  * <p>

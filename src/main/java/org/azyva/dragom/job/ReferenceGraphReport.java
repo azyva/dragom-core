@@ -72,8 +72,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  * Produces a report about a {@link ReferenceGraph}.
  * <p>
  * While most job classes derive from {@link RootModuleVersionJobAbstractImpl},
- * this works with a {@link ReferenceGraph} which was presumably created using
- * {@link BuildReferenceGraph}.
+ * this class works with a {@link ReferenceGraph} which was presumably created
+ * using {@link BuildReferenceGraph}.
  *
  * @author David Raymond
  */

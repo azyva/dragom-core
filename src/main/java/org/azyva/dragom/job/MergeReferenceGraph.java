@@ -74,7 +74,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * There are actually two types of merge operations supported by Dragom. This
  * class implements the most common one. The other one is implemented by
- * {@link MergeBase}.
+ * {@link MergeMain}.
  * <p>
  * The type of merge performed by this class is used, for example, when:
  * <p>
@@ -246,6 +246,16 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST = "SRC_MERGED_INTO_DEST";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
 
 	/**
 	 * See description in ResourceBundle.
@@ -532,9 +542,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			}
 
 			//********************************************************************************
-			// We have the source and destination ModuleVersion's. The source  ReferencePath
-			// in referencePathSrc is complete, and this.referencePath represents
-			// the destination ReferencePath. We are ready to invoke the actual merge process.
+			// We have the source and destination ModuleVersion's. The source ReferencePath in
+			// referencePathSrc is complete, and this.referencePath represents the destination
+			// ReferencePath. We are ready to invoke the actual merge process.
 			//********************************************************************************
 
 			// We are about to delegate to mergeModuleVersion for the rest of the processing.
@@ -591,7 +601,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		Module module;
 		ScmPlugin scmPlugin;
 		List<ScmPlugin.Commit> listCommit;
-		Iterator<ScmPlugin.Commit> iterCommit;
+		Iterator<ScmPlugin.Commit> iteratorCommit;
 		Path pathModuleWorkspaceSrc;
 
 		this.referencePath.add(referenceDest);
@@ -648,15 +658,15 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			MergeReferenceGraph.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
 
 			listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
-			iterCommit = listCommit.iterator();
+			iteratorCommit = listCommit.iterator();
 
-			while (iterCommit.hasNext()) {
+			while (iteratorCommit.hasNext()) {
 				ScmPlugin.Commit commit;
 
-				commit = iterCommit.next();
+				commit = iteratorCommit.next();
 
 				if (!commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE) && !commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE)) {
-					iterCommit.remove();
+					iteratorCommit.remove();
 				}
 			}
 
@@ -672,6 +682,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 			// ScmPlugin.merge ensures that the working directory is synchronized.
 			if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
+				this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
 				// Will have call Util.setAbort in case we must not continue.
@@ -679,6 +691,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 				return true;
 			}
+
+			this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
 			//********************************************************************************
 			// Handle matching child references and recurse.

@@ -46,7 +46,9 @@ import org.azyva.dragom.util.Util;
  * Build job.
  * <p>
  * The reference graph is traversed depth first and the {@link BuilderPlugin} is
- * used to build each {@link ModuleVersion}.
+ * used to build each {@link ModuleVersion} sequentially.
+ * <p>
+ * Currently, parallelism is not supported.
  *
  * @author David Raymond
  */
@@ -73,16 +75,6 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 	private static final String RUNTIME_PROPERTY_BUILD_CONTEXT = "BUILD_CONTEXT";
 
 	/**
-	 * ID of the build task.
-	 */
-	public static final String TASK_ID_BUILD = "build";
-
-	/**
-	 * Default ID of this plugin.
-	 */
-	public static final String DEFAULT_PLUGIN_ID = "build";
-
-	/**
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER = "IGNORING_MODULE_VERSION_ONLY_USER";
@@ -101,6 +93,11 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_INITIATING_BUILD = "INITIATING_BUILD";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_MODULE_VERSION_DOES_NOT_NEED_BUILDING = "MODULE_VERSION_DOES_NOT_NEED_BUILDING";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -245,6 +242,8 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 				} catch (IOException ioe) {
 					throw new RuntimeException(ioe);
 				}
+			} else {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_MODULE_VERSION_DOES_NOT_NEED_BUILDING), moduleVersion, pathModuleWorkspace));
 			}
 		} finally {
 			if (pathModuleWorkspace != null) {
