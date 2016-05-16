@@ -609,8 +609,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 						// The parent ModuleVersion was changed so we must recreate it (it is immutable)
 						// and we must update the ReferencePath that includes the ModuleVersion as its
-						// last element.
-						//TODO: This recreates a simple reference with less information. Don't know if OK.
+						// last element in order for messages that include the ReferencePath to be
+						// correct. Normally we would want to avoid recreating a Reference with less
+						// information. But here, it is difficult to do better since we have not updated
+						// the ModuleVersion which refers to the current one yet. We therefore accept that
+						// during the traversal for switching to a new dynamic Version, the ReferencePath
+						// do not contain all the information.
 						referenceParent = new Reference(new ModuleVersion(referenceParent.getModuleVersion().getNodePath(), byReferenceVersionParent.object));
 						this.referencePath.removeLeafReference();
 						this.referencePath.add(referenceParent);
@@ -703,7 +707,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 									return visitModuleActionPerformed;
 								}
 
-								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic)) {
+								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic, null)) {
 									indReferenceUpdated = true;
 									message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNewDynamic);
 									userInteractionCallbackPlugin.provideInfo(message);
@@ -723,7 +727,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 								return visitModuleActionPerformed;
 							}
 
-							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object)) {
+							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, null)) {
 								indReferenceUpdated = true;
 								message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionChild.object);
 								userInteractionCallbackPlugin.provideInfo(message);

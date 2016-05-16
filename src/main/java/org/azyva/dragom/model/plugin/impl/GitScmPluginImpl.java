@@ -706,6 +706,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 		nodePathModule = this.getModule().getNodePath();
 
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+		}
+
 		// If there is a main user workspace directory for the Module (whatever the
 		// Version) we want to clone from this directory instead of from the remote
 		// repository to avoid network access.
@@ -1048,6 +1052,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public boolean update(Path pathModuleWorkspace) {
+		WorkspacePlugin workspacePlugin;
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+		}
+
 		return this.gitPull(pathModuleWorkspace);
 	}
 
@@ -1428,10 +1440,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before switching to a new version.");
 		}
 
-		this.gitCheckout(pathModuleWorkspace, version);
-
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 		workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
+
+		// This will implicitly be validated by the call to
+		// workspacePlugin.updateWorkspaceDir below. But it is cleaner to validate
+		// explicitly before.
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+		}
+
+		this.gitCheckout(pathModuleWorkspace, version);
 
 		/* If the WorkspaceDir belongs to the user, it is specific to a version and the
 		 * new version must be reflected in the workspace.
@@ -1455,16 +1474,22 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public void createVersion(Path pathModuleWorkspace, Version versionTarget, boolean indSwitch) {
+		WorkspacePlugin workspacePlugin;
 		CommandLine commandLine;
 		Map<String, String> mapCommitAttr;
 		String message;
-		WorkspacePlugin workspacePlugin;
 		WorkspaceDir workspaceDir;
 
 		/* gitFetch will have been called by isSync.
 		 */
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before creating a new version.");
+		}
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
 		// We prepare the prefix commit or tag message specifying the base version since
@@ -1477,8 +1502,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		message = message.replace("\"", "\\\"");
 
 		commandLine = new CommandLine("git");
-
-		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
 		switch (versionTarget.getVersionType()) {
 		case DYNAMIC:
@@ -1560,6 +1583,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
 	public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
 		String branch;
+		WorkspacePlugin workspacePlugin;
 		CommandLine commandLine;
 
 		branch = this.gitGetBranch(pathModuleWorkspace);
@@ -1570,6 +1594,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
+		}
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
 		commandLine = new CommandLine("git");
@@ -1611,6 +1641,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	@Override
 	public boolean merge(Path pathModuleWorkspace, Version versionSrc, String message) {
 		Version versionDest;
+		WorkspacePlugin workspacePlugin;
 		CommandLine commandLine;
 		String mergeMessage;
 
@@ -1623,6 +1654,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// gitFetch will have been called by isSync.
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
+		}
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
 		commandLine = new CommandLine("git");
@@ -1660,6 +1697,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	@Override
 	public boolean merge(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
 		Version versionDest;
+		WorkspacePlugin workspacePlugin;
 		CommandLine commandLine;
 		StringBuilder stringBuilderMergeMessage;
 		List<ScmPlugin.Commit> listCommit;
@@ -1676,6 +1714,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// gitFetch will have been called by isSync.
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
+		}
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
 		try {

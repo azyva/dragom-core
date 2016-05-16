@@ -356,7 +356,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 								return false;
 							}
 
-							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object)) {
+							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, null)) {
 								Map<String, String> mapCommitAttr;
 
 								message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCE_UPDATED), this.referencePath, referenceChild, byReferenceVersionChild.object);
@@ -524,7 +524,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					return false;
 				}
 
-				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionReference.object)) {
+				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionReference.object, null)) {
 					Map<String, String> mapCommitAttr;
 
 					message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCE_UPDATED), this.referencePath, referenceChild, byReferenceVersionReference.object);

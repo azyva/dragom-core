@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.maven.Pom;
 import org.azyva.dragom.maven.PomUtil;
 import org.azyva.dragom.model.ArtifactGroupId;
@@ -238,7 +239,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 	}
 
 	@Override
-	public boolean updateReferenceVersion(Path pathModuleWorkspace, Reference reference, Version version) {
+	public boolean updateReferenceVersion(Path pathModuleWorkspace, Reference reference, Version version, ByReference<Reference> byReferenceReference) {
 		ReferenceImplData referenceImplData;
 		Path pathPom;
 		Pom pom;
@@ -267,11 +268,16 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 		artifactVersionMapperPlugin = this.getModule().getModel().getModule(reference.getModuleVersion().getNodePath()).getNodePlugin(ArtifactVersionMapperPlugin.class, null);
 		artifactVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(version);
 
+		if (byReferenceReference != null) {
+			byReferenceReference.object = new Reference(new ModuleVersion(reference.getModuleVersion().getNodePath(), version), reference.getArtifactGroupId(), artifactVersion, referenceImplData);
+		}
+
 		if (!artifactVersion.toString().equals(reference.getArtifactVersion())) {
 			// We need to recreate a Pom.ReferencedArtifact since we do not keep it around.
 			// That is OK since we have all the required information.
 			pom.setReferencedArtifactVersion(new Pom.ReferencedArtifact(referenceImplData.referencedArtifactType, reference.getArtifactGroupId().getGroupId(), reference.getArtifactGroupId().getArtifactId(), reference.getArtifactVersion().getVersion()), artifactVersion.toString());
 			pom.savePom();
+
 			return true;
 		} else {
 			return false;
@@ -279,7 +285,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 	}
 
 	@Override
-	public boolean updateReferenceArtifactVersion(Path pathModuleWorkspace, Reference reference, ArtifactVersion artifactVersion) {
+	public boolean updateReferenceArtifactVersion(Path pathModuleWorkspace, Reference reference, ArtifactVersion artifactVersion, ByReference<Reference> byReferenceReference) {
 		// TODO To be implemented
 		throw new RuntimeException("Not implemented yet.");
 

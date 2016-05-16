@@ -207,7 +207,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
 					return false;
 				}
 
-				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNew)) {
+				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNew, null)) {
 					Map<String, String> mapCommitAttr;
 
 					message = MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNew);

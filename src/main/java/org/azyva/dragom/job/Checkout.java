@@ -325,6 +325,10 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 					try {
 						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
 
+						// TODO: The code below is not really useful since BuildReferenceGraph that is
+						// used above ensures that the workspace directories are all synchronized when
+						// building the ReferenceGraph. For now we still leave it there, just in case the
+						// logic eventually changes and it becomes useful.
 						if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.REMOTE_CHANGES_ONLY)) {
 							alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
 									runtimePropertiesPlugin,
@@ -366,6 +370,10 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersionConflict, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 				try {
+					// TODO: The code below is not really useful since BuildReferenceGraph that is
+					// used above ensures that the workspace directories are all synchronized when
+					// building the ReferenceGraph. For now we still leave it there, just in case the
+					// logic eventually changes and it becomes useful.
 					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
 						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
 

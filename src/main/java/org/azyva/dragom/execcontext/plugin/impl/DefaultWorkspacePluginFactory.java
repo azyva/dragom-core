@@ -386,6 +386,28 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 		}
 
 		@Override
+		public WorkspaceDirAccessMode getWorkspaceDirAccessMode(Path pathWorkspaceDir) {
+			WorkspaceDir workspaceDir;
+			Integer readCount;
+
+			workspaceDir = this.mapPathWorkspaceDir.get(pathWorkspaceDir);
+
+			if (workspaceDir == null) {
+				throw new RuntimeException("The path " + pathWorkspaceDir + " does not correspond to a workspace directory.");
+			}
+
+			readCount = this.mapWorkspaceDirAccessMode.get(workspaceDir);
+
+			if (readCount == null) {
+				return WorkspaceDirAccessMode.PEEK;
+			} else if (readCount >= 1) {
+				return WorkspaceDirAccessMode.READ;
+			} else {
+				return WorkspaceDirAccessMode.READ_WRITE;
+			}
+		}
+
+		@Override
 		public void updateWorkspaceDir(WorkspaceDir workspaceDir, WorkspaceDir workspaceDirNew) {
 			Integer readCount;
 			Path path;

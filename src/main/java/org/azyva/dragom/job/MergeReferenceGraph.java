@@ -25,10 +25,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
@@ -235,6 +237,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	private static final String MSG_PATTERN_KEY_MERGE_ALREADY_PERFORMED = "MERGE_ALREADY_PERFORMED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
 
 	/**
@@ -363,6 +370,85 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeReferenceGraph.class.getName() + "ResourceBundle");
 
 	/**
+	 * Represents a merge that has been performed.
+	 * <p>
+	 * Used to avoid merging the same {@link ModuleVersion}'s twice.
+	 */
+	private static class ModuleVersionMerge {
+		/**
+		 * Destination {@link ModuleVersion}.
+		 */
+		ModuleVersion moduleVersionDest;
+
+		/**
+		 * Source {@link Version}.
+		 */
+		Version versionSrc;
+
+		/**
+		 * Constructor.
+		 *
+		 * @param moduleVersionDest Destination {@link ModuleVersion}.
+		 * @param versionSrc Source {@link Version).
+		 */
+		public ModuleVersionMerge(ModuleVersion moduleVersionDest, Version versionSrc) {
+			this.moduleVersionDest = moduleVersionDest;
+			this.versionSrc = versionSrc;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result;
+
+			result = 1;
+
+			result = prime * result + this.moduleVersionDest.hashCode();
+			result = prime * result + this.versionSrc.hashCode();
+
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object other) {
+			ModuleVersionMerge moduleVersionMergeOther;
+
+			if (this == other) {
+				return true;
+			}
+
+			if (other == null) {
+				return false;
+			}
+
+			if (!(other instanceof ModuleVersionMerge)) {
+				return false;
+			}
+			moduleVersionMergeOther = (ModuleVersionMerge)other;
+
+			if (!this.moduleVersionDest.equals(moduleVersionMergeOther.moduleVersionDest)) {
+				return false;
+			}
+
+			if (!this.versionSrc.equals(moduleVersionMergeOther.versionSrc)) {
+				return false;
+			}
+
+			return true;
+		}
+
+
+	}
+
+	/**
+	 * Set of {@link ModuleVersionMerge}.
+	 * <p>
+	 * This is essentially the Set of merge operations that have already been
+	 * performed on {@link ModuleVersion}'s.
+	 */
+	private Set<ModuleVersionMerge> setModuleVersionMerge;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param listModuleVersionRoot List of root ModuleVersion's within which new
@@ -372,6 +458,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		super(listModuleVersionRoot);
 
 		this.setIndHandleStaticVersion(false);
+
+		this.setModuleVersionMerge= new HashSet<ModuleVersionMerge>();
 	}
 
 	/**
@@ -620,6 +708,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 			moduleVersionDest = referenceDest.getModuleVersion();
 			moduleVersionSrc = referencePathSrc.getLeafModuleVersion();
 
+			if (!this.setModuleVersionMerge.add(new ModuleVersionMerge(moduleVersionDest, moduleVersionSrc.getVersion()))) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_ALREADY_PERFORMED), moduleVersionDest, moduleVersionSrc.getVersion()));
+				return false;
+			}
+
 			module = model.getModule(moduleVersionDest.getNodePath());
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
@@ -768,7 +861,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 									return true;
 								}
 
-								if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion())) {
+								if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion(), null)) {
 									throw new RuntimeException("Updating the version of reference " + referenceChildDest + " in " + pathModuleWorkspace + " to the ArtifactVersion equivalent to " + referenceChildSrc.getModuleVersion().getVersion() + " did not result in any change. This is unexpected in the context of this job.");
 								}
 
@@ -787,6 +880,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 					} else if (   (referenceChildSrc.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC)
 					           && (referenceChildDest.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC)) {
 
+						ByReference<Reference> byReferenceReference;
 						String message;
 						Map<String, String> mapCommitAttr;
 
@@ -845,7 +939,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 								return true;
 							}
 
-							if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, versionDynamicNew)) {
+							byReferenceReference = new ByReference<Reference>();
+
+							if (!referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChildDest, versionDynamicNew, byReferenceReference)) {
 								throw new RuntimeException("Updating the version of reference " + referenceChildDest + " in " + pathModuleWorkspace + " to the ArtifactVersion equivalent to " + referenceChildSrc.getModuleVersion().getVersion() + " did not result in any change. This is unexpected in the context of this job.");
 							}
 
@@ -862,7 +958,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 							// We change the destination reference to reflect the new switched-to dynamic
 							// Version to fall through to the recursive call.
-							referenceChildDest = new Reference(new ModuleVersion(referenceChildDest.getModuleVersion().getNodePath(), versionDynamicNew));
+							referenceChildDest = byReferenceReference.object;
 						}
 					}
 
