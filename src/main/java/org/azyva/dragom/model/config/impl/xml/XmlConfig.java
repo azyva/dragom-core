@@ -55,11 +55,18 @@ public class XmlConfig implements Config {
 	public static XmlConfig load(URL urlXmlConfig) {
 		JAXBContext jaxbContext;
 		Unmarshaller unmarshaller;
+		XmlConfig xmlConfig;
 
 		try {
 			jaxbContext = JAXBContext.newInstance(XmlConfig.class);
 			unmarshaller = jaxbContext.createUnmarshaller();
-			return (XmlConfig)unmarshaller.unmarshal(urlXmlConfig);
+			xmlConfig = (XmlConfig)unmarshaller.unmarshal(urlXmlConfig);
+
+			if (xmlConfig.getClassificationNodeConfigRoot() == null) {
+				throw new RuntimeException("root-classification-node is not present in " + urlXmlConfig + '.');
+			}
+
+			return xmlConfig;
 		} catch (JAXBException je) {
 			throw new RuntimeException(je);
 		}

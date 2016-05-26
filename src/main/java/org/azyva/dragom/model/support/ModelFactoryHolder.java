@@ -88,7 +88,7 @@ public class ModelFactoryHolder {
 	private static Model model;
 
 	/**
-	 * Simply {@link ModelFactory} returned when a Model is set with
+	 * Simple {@link ModelFactory} returned when a Model is set with
 	 * {@link #setModel}.
 	 */
 	private static ModelFactory modelFactoryForLocalModel = new ModelFactory() {

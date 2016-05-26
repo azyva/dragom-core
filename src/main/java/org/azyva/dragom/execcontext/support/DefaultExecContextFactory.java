@@ -46,6 +46,7 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelFactory;
 import org.azyva.dragom.model.support.ModelFactoryHolder;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
+import org.azyva.dragom.util.Util;
 
 /**
  * {@link Model}.
@@ -91,6 +92,12 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	 * Workspace properties are stored within this file.
 	 */
 	private static final String PROPERTIES_FILE = "exec-context.properties";
+
+	/**
+	 * Initialization property indicating to ignore any cached {@link ExecContext} and
+	 * instantiate a new one.
+	 */
+	private static final String INIT_PROP_IND_IGNORE_CACHED_EXEC_CONTEXT = "org.azyva.dragom.IndIgnoreCachedExecContext";
 
 	/**
 	 * Map of workspace Path to DefaultExecContextImpl.
@@ -312,7 +319,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 				iteratorProperty = setProperty.iterator();
 
 				while (iteratorProperty.hasNext()) {
-					if (iteratorProperty.next().startsWith(prefix)) {
+					if (!(iteratorProperty.next().startsWith(prefix))) {
 						iteratorProperty.remove();
 					}
 				}
@@ -472,6 +479,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	public ExecContext getExecContext(Properties propertiesInit) {
 		String workspaceDir;
 		Path pathWorkspaceDir;
+		boolean indIgnoreCachedExecContext;
 		DefaultExecContextImpl defaultExecContextImpl;
 
 		workspaceDir = propertiesInit.getProperty(DefaultExecContextFactory.WORKSPACE_DIR_INIT_PROP);
@@ -490,6 +498,12 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 			if (fileDragomMetadataDir.exists()) {
 				throw new RuntimeExceptionUserError("Workspace directory " + pathWorkspaceDir + " is itself within a workspace directory (one of its parent contains a .dragom directory or file).");
 			}
+		}
+
+		indIgnoreCachedExecContext = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultExecContextFactory.INIT_PROP_IND_IGNORE_CACHED_EXEC_CONTEXT));
+
+		if (indIgnoreCachedExecContext) {
+			DefaultExecContextFactory.mapPathWorkspaceDirDefaultExecContextImpl.remove(pathWorkspaceDir);
 		}
 
 		defaultExecContextImpl = DefaultExecContextFactory.mapPathWorkspaceDirDefaultExecContextImpl.get(pathWorkspaceDir);

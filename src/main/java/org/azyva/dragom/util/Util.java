@@ -406,7 +406,7 @@ public final class Util {
 
 						key = (String)mapEntry.getKey();
 
-						if (System.getProperty(key) != null) {
+						if (System.getProperty(key) == null) {
 							System.setProperty(key, (String)mapEntry.getValue());
 						}
 					}

@@ -29,6 +29,7 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelFactory;
 import org.azyva.dragom.model.config.impl.xml.XmlConfig;
 import org.azyva.dragom.model.impl.simple.SimpleModel;
+import org.azyva.dragom.util.Util;
 
 /**
  * Default {@link ModelFactory} implementation that loads a {@link Model} from
@@ -58,15 +59,28 @@ public class DefaultModelFactory implements ModelFactory {
 	 */
 	private static Map<URL, Model> mapUrlXmlConfigModel = new HashMap<URL, Model>();
 
+	/**
+	 * Initialization property indicating to ignore any cached Model and instantiate a
+	 * new one, essentially causing a reload of the {@link XmlConfig}.
+	 */
+	private static final String INIT_PROP_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedExecContext";
+
 	@Override
 	public Model getModel(Properties propertiesInit) {
 		String stringUrlXmlConfig;
+		boolean indIgnoreCachedModel;
 		Model model;
 
-		stringUrlXmlConfig = System.getProperty(DefaultModelFactory.URL_MODEL_INIT_PROP);
+		stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.URL_MODEL_INIT_PROP);
 
 		if (stringUrlXmlConfig == null) {
 			throw new RuntimeException("Initialization property " + DefaultModelFactory.URL_MODEL_INIT_PROP + " is not defined.");
+		}
+
+		indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_IND_IGNORE_CACHED_MODEL));
+
+		if (indIgnoreCachedModel) {
+			DefaultModelFactory.mapUrlXmlConfigModel.remove(stringUrlXmlConfig);
 		}
 
 		model = DefaultModelFactory.mapUrlXmlConfigModel.get(stringUrlXmlConfig);
