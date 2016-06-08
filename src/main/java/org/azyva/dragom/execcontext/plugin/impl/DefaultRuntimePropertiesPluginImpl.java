@@ -72,7 +72,7 @@ import org.azyva.dragom.model.NodePath;
  * @author David Raymond
  */
 public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlugin {
-	private DefaultRuntimePropertiesPluginImpl(ExecContext execContext) {
+	public DefaultRuntimePropertiesPluginImpl(ExecContext execContext) {
 	}
 
 	@Override

@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -118,7 +120,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	 * ExecContextPlugin instances so that plugin instances are unique (whithin an
 	 * ExecContext).
 	 */
-	private static class DefaultExecContextImpl implements ExecContext, WorkspaceExecContext, ToolLifeCycleExecContext {
+	private class DefaultExecContextImpl implements ExecContext, WorkspaceExecContext, ToolLifeCycleExecContext {
 		/**
 		 * Path to the workspace directory.
 		 */
@@ -199,7 +201,11 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
 			if (this.pathPropertiesFile.toFile().isFile()) {
 				try {
-					this.properties.load(new FileInputStream(this.pathPropertiesFile.toFile()));
+					InputStream inputStreamProperties;
+
+					inputStreamProperties = new FileInputStream(this.pathPropertiesFile.toFile());
+					this.properties.load(inputStreamProperties);
+					inputStreamProperties.close();
 				} catch (IOException ioe) {
 					throw new RuntimeException(ioe);
 				}
@@ -355,7 +361,11 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		 */
 		private void saveProperties() {
 			try {
-				this.properties.store(new FileOutputStream(this.pathPropertiesFile.toFile()), null);
+				OutputStream outputStreamProperties;
+
+				outputStreamProperties = new FileOutputStream(this.pathPropertiesFile.toFile());
+				this.properties.store(outputStreamProperties, null);
+				outputStreamProperties.close();
 			} catch (IOException ioe) {
 				throw new RuntimeException(ioe);
 			}
@@ -378,6 +388,11 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		@Override
 		public String getName() {
 			return this.pathWorkspaceDir.toString();
+		}
+
+		@Override
+		public void release() {
+			DefaultExecContextFactory.mapPathWorkspaceDirDefaultExecContextImpl.remove(this.pathWorkspaceDir);
 		}
 
 		@Override

@@ -58,7 +58,10 @@ public class XmlConfig implements Config {
 		XmlConfig xmlConfig;
 
 		try {
-			jaxbContext = JAXBContext.newInstance(XmlConfig.class);
+			// We include XmlModuleConfig, but not other classes since XmlModuleConfig is the
+			// only one that is not explicitly referenced (directly or indirectly) by
+			// XmlConfig.
+			jaxbContext = JAXBContext.newInstance(XmlConfig.class, XmlModuleConfig.class);
 			unmarshaller = jaxbContext.createUnmarshaller();
 			xmlConfig = (XmlConfig)unmarshaller.unmarshal(urlXmlConfig);
 

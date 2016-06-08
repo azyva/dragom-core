@@ -26,14 +26,16 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.EventPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
+import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
@@ -164,7 +166,7 @@ public abstract class SimpleNode implements Node {
 	 */
 	protected SimpleNode(NodeConfig nodeConfig, SimpleClassificationNode simpleClassificationNodeParent) {
 		if (simpleClassificationNodeParent == null) {
-			throw new RuntimeException("The of node " + nodeConfig.getName() + " cannot be null unless it is the root classification node.");
+			throw new RuntimeException("The parent of node " + nodeConfig.getName() + " cannot be null unless it is the root classification node.");
 		}
 
 		this.nodeConfig = nodeConfig;
@@ -177,13 +179,13 @@ public abstract class SimpleNode implements Node {
 	 * Sets the parent {@link SimpleClassificationNode}.
 	 * <p>
 	 * This method has package scope since fields of a SimpleNode can only be set
-	 * set while dynamically completing a {@link SimpleModel} using{@code}
+	 * set while dynamically completing a {@link SimpleModel} using
 	 * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
 	 *
 	 * @param simpleClassificationNode See description.
 	 */
 	void setSimpleClassificationNodeParent(SimpleClassificationNode simpleClassificationNodeParent) {
-		if (this.simpleClassificationNodeParent.getModel() != this.getModel()) {
+		if (simpleClassificationNodeParent.getModel() != this.getModel()) {
 			throw new RuntimeException("Parent classification node is not from the same model as the module being built.");
 		}
 
@@ -204,7 +206,7 @@ public abstract class SimpleNode implements Node {
 	}
 
 	/**
-	 * Sets the value of a property value.
+	 * Sets the value of a property.
 	 * <p>
 	 * This method has package scope since fields of a SimpleNode can only be set
 	 * while dynamically completing a {@link SimpleModel} using{@code}
@@ -303,6 +305,10 @@ public abstract class SimpleNode implements Node {
 	}
 
 	/**
+	 * See comment about initialization Properties in {@link SimpleModel}. If the
+	 * property cannot be resolved from initialization properties, it will be
+	 * obtained from the {@link Model} according to below.
+	 * <p>
 	 * SimpleNode inheritance is considered. The value returned is that of the named
 	 * property on the first SimpleNode that defines it while traversing the parent
 	 * hierarchy of SimpleNode's starting with this Node.
@@ -350,46 +356,76 @@ public abstract class SimpleNode implements Node {
 	 */
 	@Override
 	public String getProperty(String name) {
-		SimpleNode simpleNodeCurrent;
+		String[] arrayNodeName;
+		StringBuilder stringBuilder;
+		Properties propertiesInit;
 		String value;
+		SimpleNode simpleNodeCurrent;
 
-		simpleNodeCurrent = this;
-		value = null;
 
-		while ((simpleNodeCurrent != null) && (value == null)) {
-			// A SimpleNode either has properties from the Config from which it was created,
-			// or from properties set using setProperty when dynamically creating it. It is
-			// not possible for a SimpleNode to have both since setProperty can only be called
-			// by SimpleNodeBuilder which has nothing to so with Config.
+		arrayNodeName = this.getNodePath().getArrayNodeName();
+		stringBuilder = new StringBuilder("model-property.");
+		propertiesInit = this.simpleModel.getInitProperties();
+		value = propertiesInit.getProperty(stringBuilder.toString() + name);
 
-			if (simpleNodeCurrent.mapProperty != null) {
-				Property property;
+		for (String nodeName: arrayNodeName) {
+			String value2;
 
-				property = simpleNodeCurrent.mapProperty.get(name);
+			stringBuilder.append(nodeName).append('.');
 
-				if (property != null) {
-					if (property.indOnlyThisNode && (this != simpleNodeCurrent)) {
-						return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
-					}
+			value2 = propertiesInit.getProperty(stringBuilder.toString() + name);
 
-					value = property.value; // The value can be null, which corresponds to the case where the first NodeConfig defines the property as null.
-				}
-			} else {
-				PropertyDefConfig propertyDefConfig;
-
-				propertyDefConfig = simpleNodeCurrent.getNodeConfig().getPropertyDefConfig(name);
-
-				if (propertyDefConfig != null) {
-					if (propertyDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
-						return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
-					}
-
-					value = propertyDefConfig.getValue(); // The value can be null, which corresponds to the case where the first NodeConfig defines the property as null.
-				}
+			if (value2 != null) {
+				value = value2;
 			}
+		}
 
-			simpleNodeCurrent = (SimpleNode)simpleNodeCurrent.getClassificationNodeParent();
-		};
+		// When the property is resolved from real Model properties, the special "@parent"
+		// is handled at the end of this method. But the notion of parent is not supported
+		// when the property is resolved from initialization properties.
+		simpleNodeCurrent = null;
+
+		if (value == null) {
+			simpleNodeCurrent = this;
+			value = null;
+
+			while ((simpleNodeCurrent != null) && (value == null)) {
+				// A SimpleNode either has properties from the Config from which it was created,
+				// or from properties set using setProperty when dynamically creating it. It is
+				// not possible for a SimpleNode to have both since setProperty can only be called
+				// by SimpleNodeBuilder which has nothing to so with Config.
+
+				if (simpleNodeCurrent.mapProperty != null) {
+					Property property;
+
+					property = simpleNodeCurrent.mapProperty.get(name);
+
+					if (property != null) {
+						if (property.indOnlyThisNode && (this != simpleNodeCurrent)) {
+							return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
+						}
+
+						value = property.value; // The value can be null, which corresponds to the case where the first NodeConfig defines the property as null.
+					}
+				} else {
+					PropertyDefConfig propertyDefConfig;
+
+					// getNodeCOnfig cannot return null here since if the SimpleNode was dynamically
+					// created, mapProperty is not null and we do not get here.
+					propertyDefConfig = simpleNodeCurrent.getNodeConfig().getPropertyDefConfig(name);
+
+					if (propertyDefConfig != null) {
+						if (propertyDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
+							return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
+						}
+
+						value = propertyDefConfig.getValue(); // The value can be null, which corresponds to the case where the first NodeConfig defines the property as null.
+					}
+				}
+
+				simpleNodeCurrent = (SimpleNode)simpleNodeCurrent.getClassificationNodeParent();
+			};
+		}
 
 		if (value != null) {
 			int indexParentReference;
@@ -410,7 +446,7 @@ public abstract class SimpleNode implements Node {
 			}
 		}
 
-		return null; // This corresponds to the case where no NodeConfig defines the property.
+		return value; // If value is null, this corresponds to the case where no NodeConfig defines the property. Otherwise we found the property.
 	}
 
 	/**
@@ -447,14 +483,18 @@ public abstract class SimpleNode implements Node {
 		while (simpleNodeCurrent != null) {
 			PluginDefConfig pluginDefConfig;
 
-			pluginDefConfig = simpleNodeCurrent.getNodeConfig().getPluginDefConfig(classNodePlugin, pluginId);
+			// getNodeConfig() can return null if the SimpleNode was dynamically created. In
+			// that case we simply continue the traversal to the parent.
+			if (simpleNodeCurrent.getNodeConfig() != null) {
+				pluginDefConfig = simpleNodeCurrent.getNodeConfig().getPluginDefConfig(classNodePlugin, pluginId);
 
-			if (pluginDefConfig != null) {
-				if (pluginDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
-					return null; // This corresponds to the case where the first NodeConfig has PluginDefConfig.isOnlyThisNode and is not for this Node.
+				if (pluginDefConfig != null) {
+					if (pluginDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
+						return null; // This corresponds to the case where the first NodeConfig has PluginDefConfig.isOnlyThisNode and is not for this Node.
+					}
+
+					return pluginDefConfig; // pluginDefConfig.getPluginClass() can be null, which corresponds to the case where the first NodeConfig defines the PluginDefConfig with getPluginClass() as null.
 				}
-
-				return pluginDefConfig; // pluginDefConfig.getPluginClass() can be null, which corresponds to the case where the first NodeConfig defines the PluginDefConfig with getPluginClass() as null.
 			}
 
 			simpleNodeCurrent = (SimpleNode)simpleNodeCurrent.getClassificationNodeParent();
@@ -536,7 +576,7 @@ public abstract class SimpleNode implements Node {
 				if (nodePlugin == null) {
 					Constructor<? extends NodePlugin> constructorNodePlugin;
 
-					constructorNodePlugin = classPlugin.asSubclass(NodePlugin.class).getConstructor(Node.class);
+					constructorNodePlugin = classPlugin.asSubclass(NodePlugin.class).getConstructor((this.getNodeType() == NodeType.CLASSIFICATION) ? ClassificationNode.class : Module.class);
 					nodePlugin = constructorNodePlugin.newInstance(this);
 					this.mapNodePluginConstructor.put(pluginDefConfig.getPluginClass(), nodePlugin);
 				}
@@ -610,25 +650,29 @@ public abstract class SimpleNode implements Node {
 		while (nodeCurrent != null) {
 			List<PluginDefConfig> listPluginDefConfig;
 
-			listPluginDefConfig = nodeCurrent.getNodeConfig().getListPluginDefConfig();
+			// getNodeConfig() can return null if the SimpleNode was dynamically created. In
+			// that case we simply continue the traversal to the parent.
+			if (nodeCurrent.getNodeConfig() != null) {
+				listPluginDefConfig = nodeCurrent.getNodeConfig().getListPluginDefConfig();
 
-			for (PluginDefConfig pluginDefConfig: listPluginDefConfig) {
-				if (pluginDefConfig.getClassNodePlugin() == classNodePlugin) {
-					String pluginId;
+				for (PluginDefConfig pluginDefConfig: listPluginDefConfig) {
+					if (pluginDefConfig.getClassNodePlugin() == classNodePlugin) {
+						String pluginId;
 
-					pluginId = pluginDefConfig.getPluginId();
+						pluginId = pluginDefConfig.getPluginId();
 
-					if (setPluginIdEncountered.contains(pluginId)) { // Plugin ID can be null (default plugin ID).
-						continue;
-					}
+						if (setPluginIdEncountered.contains(pluginId)) { // Plugin ID can be null (default plugin ID).
+							continue;
+						}
 
-					// Whatever happens below, once we encounter a given plugin ID, we must not
-					// consider other occurrences (it is the first occurrence in the parent hierarchy
-					// that wins).
-					setPluginIdEncountered.add(pluginId);
+						// Whatever happens below, once we encounter a given plugin ID, we must not
+						// consider other occurrences (it is the first occurrence in the parent hierarchy
+						// that wins).
+						setPluginIdEncountered.add(pluginId);
 
-					if ((pluginDefConfig.getPluginClass() != null) && !(pluginDefConfig.isOnlyThisNode() && (nodeCurrent != this))) {
-						listPluginId.add(pluginId);
+						if ((pluginDefConfig.getPluginClass() != null) && !(pluginDefConfig.isOnlyThisNode() && (nodeCurrent != this))) {
+							listPluginId.add(pluginId);
+						}
 					}
 				}
 			}
@@ -699,6 +743,10 @@ public abstract class SimpleNode implements Node {
 	 */
 	@Override
 	public String toString() {
-		return this.getNodePath().toString();
+		if (this.simpleClassificationNodeParent == null) {
+			return "[root]";
+		} else {
+			return this.getNodePath().toString();
+		}
 	}
 }

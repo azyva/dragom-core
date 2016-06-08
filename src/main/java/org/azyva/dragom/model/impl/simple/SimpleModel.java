@@ -1,5 +1,4 @@
 /*
- * Copyright 2015 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -22,7 +21,9 @@ package org.azyva.dragom.model.impl.simple;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.ClassificationNodeBuilder;
@@ -37,68 +38,44 @@ import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
+import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**
- * Represents the runtime model. This class and its members are used during the
- * execution of tools.
+ * Simple implementation of a {@link Model} that is based on {@link Config}.
  * <p>
- * An important member of a Model is the root ClassificationNode of the Model. But
- * Model offers useful methods that are more global than those offered by
- * {@link Node}, {@link ClassificationNode} and {@link Module}.
+ * In addition to Config, initialization Properties can be provided to an instance
+ * of SimpleModel in order to override properties defined within Config. This
+ * allows customizing a Model locally, such as specifying a different base URL for
+ * an SCM repository.
+ * <p>
+ * Initialization Properties that have the "model-property." prefix are
+ * considered first, with inheritance. Only if the property is not found among
+ * initialization Properties will real {@link Model} properties be considered.
+ * Note that properties defined in such a way cannot be defined only for a
+ * specific node, contrary to real Model properties.
+ * <p>
+ * The fact that initialization Properties can be specified does not violate the
+ * general principal that a Model is static since initialization Properties are
+ * not meant to change between tool invocations.
+ * <p>
+ * Note that {@link NodePlugin}'s provided by Model can use runtime properties
+ * provided by {@link RuntimePropertiesPlugin} since the behavior of NodePlugin's
+ * can be tool-invocation-specific.
  *
  * @author David Raymond
  */
-
-/*
-although a Model is created by a ModelFactory which has access to initialization properties
-the Model itself does not have access to such properties as it is generally meant to be static
-* <p>
-* The same initialization Properties strategy as used by
-* DefaultExecContextFactory is used by this class. Note however that the
-* initialization Properties are used only for getting the model URL. The
-* instantiated Model do not have access to the initialization Properties.
-* This is by design as a Model is meant to be static. If ever some level of
-* overridability is needed then that would be implemented at the model Config
-* level.
-*
-* However Model can use RuntimePropertiesPlugin which are provided by a specific
-* ExecContextPlugin.
-*
-
-
-
-
-
-
-
-
-
-Nodes should be created by Model and should be initialized. Model knows that Nodes should be initialized. Not outside world (such as UndefinedDescendents...)
-// A complete tree of Node's was just created. We must honor the contract that the
-// init method must be called on each and every Node.
-DefaultModelFactory.initNodes(model.getClassificationNodeRoot());
-
- **
- * Initializes all the Node's in a Node tree.
- *
- * This is a recursive method.
- *
- * @param node Root Node.
- *
-private static void initNodes(Node node) {
-	node.init();
-
-	if (node instanceof ClassificationNode) {
-		for (Node nodeChild: ((ClassificationNode)node).getListChildNode()) {
-			DefaultModelFactory.initNodes(nodeChild);
-		}
-	}
-}
-*/
-
-
 public class SimpleModel implements Model, ModelNodeBuilderFactory {
-	SimpleClassificationNode simpleClassificationNodeRoot;
+	/**
+	 * Initialization Properties that can override properties specified within the
+	 * {@link Model} {@link Config}.
+	 */
+	private Properties propertiesInit;
+
+	/**
+	 * {@link SimpleClassificationNode} representing the root
+	 * {@link ClassificationNode}.
+	 */
+	private SimpleClassificationNode simpleClassificationNodeRoot;
 
 	/**
 	 * Map of known ArtifactoryGrouipId to Module. This is to avoid having to perform
@@ -295,10 +272,26 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 	 *
 	 * @param config Config.
 	 */
-	public SimpleModel(Config config) {
+	public SimpleModel(Config config, Properties propertiesInit) {
+		this.propertiesInit = propertiesInit;
 		this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
 
 		this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, SimpleModule>();
+	}
+
+	/**
+	 * Returns the initialization properties that were used when creating this
+	 * SimpleModel.
+	 * <p>
+	 * This method is not part of {@link Model} and is therefore intended to be used
+	 * by the other classes that make up the SimpleModel, namely {@link SimpleNode}.
+	 * <p>
+	 * Initialization properties should be considered read-only.
+	 *
+	 * @return Initialization Properties.
+	 */
+	public Properties getInitProperties() {
+		return this.propertiesInit;
 	}
 
 	/**

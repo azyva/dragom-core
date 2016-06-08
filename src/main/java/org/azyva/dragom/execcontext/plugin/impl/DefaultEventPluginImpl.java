@@ -47,7 +47,7 @@ public class DefaultEventPluginImpl implements EventPlugin, ToolLifeCycleExecCon
 	EventManager eventManager;
 	EventManager eventManagerTransient;
 
-	private DefaultEventPluginImpl(ExecContext execContext) {
+	public DefaultEventPluginImpl(ExecContext execContext) {
 	}
 
 	@Override

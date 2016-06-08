@@ -62,7 +62,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		super(simpleModel);
 
 		// This ensures that createChildNodesFromConfig does not attempt to create the
-		// child SimpleNode's from a Config that is not available.
+		// child SimpleNode's when a Config that is not available.
 		this.mapSimpleNodeChild = new LinkedHashMap<String, SimpleNode>();
 	}
 
@@ -159,11 +159,12 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		// child SimpleNodes have not been created from ClassificationNodeConfig.
 		// In the case the SimpleClassificationNode has been dynamically created
 		// mapSimpleNodeChild has been assigned in the constructor and is not null.
+		// Therefore there is no risk of accessing a null Config.
 		if (this.mapSimpleNodeChild == null) {
+			List<NodeConfig> listNodeConfigChild;
+
 			// We used a LinkedHashMap to preserve insertion order.
 			this.mapSimpleNodeChild = new LinkedHashMap<String, SimpleNode>();
-
-			List<NodeConfig> listNodeConfigChild;
 
 			listNodeConfigChild = ((ClassificationNodeConfig)this.getNodeConfig()).getListChildNodeConfig();
 
@@ -172,7 +173,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 				case CLASSIFICATION:
 					SimpleClassificationNode simpleClassificationNode;
 
-					simpleClassificationNode = new SimpleClassificationNode((ClassificationNodeConfig)nodeConfigChild, (SimpleClassificationNode)this.getClassificationNodeParent());
+					simpleClassificationNode = new SimpleClassificationNode((ClassificationNodeConfig)nodeConfigChild, this);
 					this.addNodeChild(simpleClassificationNode);
 					simpleClassificationNode.init();
 					break;
@@ -180,7 +181,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 				case MODULE:
 					SimpleModule simpleModule;
 
-					simpleModule = new SimpleModule((ModuleConfig)nodeConfigChild, (SimpleClassificationNode)this.getClassificationNodeParent());
+					simpleModule = new SimpleModule((ModuleConfig)nodeConfigChild, this);
 					this.addNodeChild(simpleModule);
 					simpleModule.init();
 					break;

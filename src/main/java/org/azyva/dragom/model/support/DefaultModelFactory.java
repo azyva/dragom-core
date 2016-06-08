@@ -63,7 +63,7 @@ public class DefaultModelFactory implements ModelFactory {
 	 * Initialization property indicating to ignore any cached Model and instantiate a
 	 * new one, essentially causing a reload of the {@link XmlConfig}.
 	 */
-	private static final String INIT_PROP_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedExecContext";
+	private static final String INIT_PROP_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
 
 	@Override
 	public Model getModel(Properties propertiesInit) {
@@ -96,7 +96,7 @@ public class DefaultModelFactory implements ModelFactory {
 			}
 
 			xmlConfig = XmlConfig.load(urlXmlConfig);
-			model = new SimpleModel(xmlConfig);
+			model = new SimpleModel(xmlConfig, propertiesInit);
 
 			DefaultModelFactory.mapUrlXmlConfigModel.put(urlXmlConfig, model);
 		}
