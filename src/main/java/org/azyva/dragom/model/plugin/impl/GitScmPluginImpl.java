@@ -446,7 +446,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		commandLine = new CommandLine("git");
 
 		if (pathRemote != null) {
-			reposUrl = "file://" + pathRemote;
+			reposUrl = "file://" + pathRemote.toAbsolutePath();
 		} else {
 			reposUrl = this.gitReposCompleteUrl;
 		}
@@ -553,7 +553,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		commandLine = new CommandLine("git");
 
 		if (pathRemote != null) {
-			reposUrl = "file://" + pathRemote;
+			reposUrl = "file://" + pathRemote.toAbsolutePath();
 		} else {
 			if (!this.mustFetch(pathModuleWorkspace)) {
 				return;

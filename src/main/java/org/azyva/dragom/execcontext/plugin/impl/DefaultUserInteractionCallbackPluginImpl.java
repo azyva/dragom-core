@@ -85,7 +85,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	/**
 	 * String of this.bracketIndent spaces.
 	 */
-	char tabCharBracketIndent[];
+	char arrayCharBracketIndent[];
 
 	/**
 	 * Defines the wrap modes.
@@ -248,8 +248,8 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 			this.bracketIndent = Integer.parseInt(runtimeProperty);
 		}
 
-		this.tabCharBracketIndent = new char[this.bracketIndent];
-		Arrays.fill(this.tabCharBracketIndent, ' ');
+		this.arrayCharBracketIndent = new char[this.bracketIndent];
+		Arrays.fill(this.arrayCharBracketIndent, ' ');
 
 		this.stackBracketHandle = new Stack<BracketHandle>();
 
@@ -390,7 +390,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
 		for (int i = 0; i < arrayLine.length; i++) {
 			for (int j = 0 ; j < this.stackBracketHandle.size(); j++) {
-				System.out.print(this.tabCharBracketIndent);
+				System.out.print(this.arrayCharBracketIndent);
 			}
 
 			System.out.println(arrayLine[i]);

@@ -362,8 +362,12 @@ public abstract class SimpleNode implements Node {
 		String value;
 		SimpleNode simpleNodeCurrent;
 
+		if (this.getNodePath() == null) {
+			arrayNodeName = new String[0];
+		} else {
+			arrayNodeName = this.getNodePath().getArrayNodeName();
+		}
 
-		arrayNodeName = this.getNodePath().getArrayNodeName();
 		stringBuilder = new StringBuilder("model-property.");
 		propertiesInit = this.simpleModel.getInitProperties();
 		value = propertiesInit.getProperty(stringBuilder.toString() + name);

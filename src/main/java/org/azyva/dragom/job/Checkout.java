@@ -172,7 +172,6 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 	public void performJob() {
 		ExecContext execContext;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
 		BuildReferenceGraph buildReferenceGraph;
 		ReferenceGraph referenceGraph;
 		List<ModuleVersion> listModuleVersion;
@@ -191,107 +190,103 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 		 * selection of the single Version for each Module.
 		 * *******************************************************************************/
 
-		bracketHandle = userInteractionCallbackPlugin.startBracket(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION));
+		userInteractionCallbackPlugin.provideInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION));
 
-		try {
-			buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
-			buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
-			buildReferenceGraph.performJob();
+		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
+		buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
+		buildReferenceGraph.performJob();
 
-			referenceGraph = buildReferenceGraph.getReferenceGraph();
+		referenceGraph = buildReferenceGraph.getReferenceGraph();
 
-			// Here, listModuleVersion contains the matched ModuleVersion's.
-			listModuleVersion = referenceGraph.getListModuleVersionMatched();
+		// Here, listModuleVersion contains the matched ModuleVersion's.
+		listModuleVersion = referenceGraph.getListModuleVersionMatched();
 
-			workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-			if (!workspacePlugin.isSupportMultipleModuleVersion()) {
-				Map<NodePath, List<Version>> mapModuleVersion;
+		if (!workspacePlugin.isSupportMultipleModuleVersion()) {
+			Map<NodePath, List<Version>> mapModuleVersion;
 
-				// If the WorkspacePlugin does not support multiple Version's for the same Module,
-				// we transform the List of ModuleVersion's in to a Map from the Module's
-				// NodePath's to the List of Version's for each Module.
+			// If the WorkspacePlugin does not support multiple Version's for the same Module,
+			// we transform the List of ModuleVersion's into a Map from the Module's
+			// NodePath's to the List of Version's for each Module.
 
-				mapModuleVersion = new LinkedHashMap<NodePath, List<Version>>();
+			mapModuleVersion = new LinkedHashMap<NodePath, List<Version>>();
 
-				for (ModuleVersion moduleVersion: listModuleVersion) {
-					List<Version> listVersion;
+			for (ModuleVersion moduleVersion: listModuleVersion) {
+				List<Version> listVersion;
 
-					listVersion = mapModuleVersion.get(moduleVersion.getNodePath());
+				listVersion = mapModuleVersion.get(moduleVersion.getNodePath());
 
-					if (listVersion == null) {
-						listVersion = new ArrayList<Version>();
-						mapModuleVersion.put(moduleVersion.getNodePath(),  listVersion);
-					}
-
-					listVersion.add(moduleVersion.getVersion());
+				if (listVersion == null) {
+					listVersion = new ArrayList<Version>();
+					mapModuleVersion.put(moduleVersion.getNodePath(),  listVersion);
 				}
 
-				// We reuse listModuleVersion for the new List of selected ModuleVersion's that
-				// will be built.
-				listModuleVersion = new ArrayList<ModuleVersion>();
+				listVersion.add(moduleVersion.getVersion());
+			}
 
-				for (Map.Entry<NodePath, List<Version>> mapEntry: mapModuleVersion.entrySet()) {
-					if (mapEntry.getValue().size() > 1) {
-						StringBuilder stringBuilder;
-						int index;
-						String selectedVersion;
-						Version versionSelected;
+			// We reuse listModuleVersion for the new List of selected ModuleVersion's that
+			// will be built.
+			listModuleVersion = new ArrayList<ModuleVersion>();
 
-						// If there is more than one Version, we must interact with the user to let him
-						// select the desired one.
+			for (Map.Entry<NodePath, List<Version>> mapEntry: mapModuleVersion.entrySet()) {
+				if (mapEntry.getValue().size() > 1) {
+					StringBuilder stringBuilder;
+					int index;
+					String selectedVersion;
+					Version versionSelected;
 
-						stringBuilder = new StringBuilder();
-						index = 1;
+					// If there is more than one Version, we must interact with the user to let him
+					// select the desired one.
 
-						for (Version version: mapEntry.getValue()) {
-							if (index != 1) {
-								stringBuilder.append('\n');
-							}
+					stringBuilder = new StringBuilder();
+					index = 1;
 
-							stringBuilder.append(index++).append(" - ").append(version);
+					for (Version version: mapEntry.getValue()) {
+						if (index != 1) {
+							stringBuilder.append('\n');
 						}
 
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS), mapEntry.getKey(), stringBuilder));
-
-						versionSelected = null;
-
-						do {
-							selectedVersion = userInteractionCallbackPlugin.getInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP));
-
-							try {
-								index = Integer.parseInt(selectedVersion);
-
-								if ((index < 1) || (index > mapEntry.getValue().size())) {
-									userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS), selectedVersion, 1, mapEntry.getValue().size()));
-								} else {
-									versionSelected = mapEntry.getValue().get(index - 1);
-								}
-							} catch (NumberFormatException nfe) {
-							}
-
-							if (versionSelected == null) {
-								try {
-									versionSelected = Version.parse(selectedVersion);
-								} catch (ParseException pe) {
-									userInteractionCallbackPlugin.provideInfo(pe.getMessage());
-								}
-							}
-							if (versionSelected == null) {
-								userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_TRY_AGAIN));
-							}
-						} while (versionSelected == null);
-
-
-						listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
-					} else {
-						// If there is only one Version for the Module, we use it.
-						listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), mapEntry.getValue().get(0)));
+						stringBuilder.append(index++).append(" - ").append(version);
 					}
+
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS), mapEntry.getKey(), stringBuilder));
+
+					versionSelected = null;
+
+					do {
+						selectedVersion = userInteractionCallbackPlugin.getInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP));
+
+						try {
+							index = Integer.parseInt(selectedVersion);
+
+							if ((index < 1) || (index > mapEntry.getValue().size())) {
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS), selectedVersion, 1, mapEntry.getValue().size()));
+							} else {
+								versionSelected = mapEntry.getValue().get(index - 1);
+							}
+						} catch (NumberFormatException nfe) {
+						}
+
+						if (versionSelected == null) {
+							try {
+								versionSelected = Version.parse(selectedVersion);
+							} catch (ParseException pe) {
+								userInteractionCallbackPlugin.provideInfo(pe.getMessage());
+							}
+						}
+						if (versionSelected == null) {
+							userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_TRY_AGAIN));
+						}
+					} while (versionSelected == null);
+
+
+					listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
+				} else {
+					// If there is only one Version for the Module, we use it.
+					listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), mapEntry.getValue().get(0)));
 				}
 			}
-		} finally {
-			bracketHandle.close();
 		}
 
 		/* *******************************************************************************
