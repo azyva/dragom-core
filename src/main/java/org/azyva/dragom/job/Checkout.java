@@ -165,8 +165,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 	}
 
 	/**
-	 * We override the main method since we do not really reuse this class'
-	 * functionality. See main description of class.
+	 * We override the main method since we do not really reuse the base class'
+	 * functionality. See main description of this class.
 	 */
 	@Override
 	public void performJob() {
@@ -195,6 +195,10 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
 		buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
 		buildReferenceGraph.performJob();
+
+		if (buildReferenceGraph.isListModuleVersionRootChanged()) {
+			this.setIndListModuleVersionRootChanged();
+		}
 
 		referenceGraph = buildReferenceGraph.getReferenceGraph();
 

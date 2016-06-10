@@ -20,7 +20,6 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -39,8 +38,6 @@ import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FileUtils;
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
@@ -51,6 +48,8 @@ import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.git.Git;
+import org.azyva.dragom.git.Git.AllowExitCode;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
@@ -211,23 +210,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * Enumerates the possible values for the allowExitCode parameter of the
 	 * executeGitCommand method.
 	 */
-	private enum AllowExitCode {
-		/**
-		 * Does not allow any exit code (other than 0).
-		 */
-		NONE,
-
-		/**
-		 * Allows exit code 1 (and 0).
-		 */
-		ONE,
-
-		/**
-		 * Allows all exit codes.
-		 */
-		ALL
-	}
-
 	/**
 	 * Enumerates the possible fetch and push behaviors.
 	 *
@@ -318,85 +300,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 	}
 
-	//TODO Allows exit code 1 if isAllowExitCode1. Useful for commands such as symbolic-ref which returns 1 if HEAD is detached (or something like that)
-	//Returns the exit code.
-	//Logs an error of the output if error (exit code >= 2 or 1 and isAllowExitCode1 is false)
-	/**
-	 * Helper method to execute a Git command.
-	 *
-	 * @param commandLine The Git CommandLine.
-	 * @param allowExitCode Specifies which exit codes are allowed and will not
-	 *   trigger an exception.
-	 * @param isAllowExitCode1 If true, if the command returns an exit code 1, no
-	 *   trace will be written to the log.
-	 * @param pathWorkingDirectory Path to the working directory. The command will be
-	 *   executed with this current working directory.
-	 * @param stringBuilderOutput If not null, any output (stdout) of the command will
-	 *   be copied in this StringBuilder.
-	 * @return The exit code of the command.
-	 */
-	private int executeGitCommand(CommandLine commandLine, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput) {
-		DefaultExecutor defaultExecutor;
-		ByteArrayOutputStream byteArrayOutputStreamOut;
-		ByteArrayOutputStream byteArrayOutputStreamErr;
-		int exitCode;
-
-		GitScmPluginImpl.logger.trace(commandLine.toString());
-
-		defaultExecutor = new DefaultExecutor();
-		byteArrayOutputStreamOut = new ByteArrayOutputStream();
-		byteArrayOutputStreamErr = new ByteArrayOutputStream();
-		defaultExecutor.setStreamHandler(new PumpStreamHandler(byteArrayOutputStreamOut, byteArrayOutputStreamErr));
-		defaultExecutor.setExitValues(null); // To not check for exit values.
-
-		if (pathWorkingDirectory != null) {
-			defaultExecutor.setWorkingDirectory(pathWorkingDirectory.toFile());
-			GitScmPluginImpl.logger.trace("Invoking Git command " + commandLine + " within " + pathWorkingDirectory + '.');
-		} else {
-			GitScmPluginImpl.logger.trace("Invoking Git command " + commandLine + '.');
-		}
-
-		try {
-			exitCode = defaultExecutor.execute(commandLine);
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
-		}
-
-		if (!(   (exitCode == 0)
-		      || ((exitCode == 1) && allowExitCode == AllowExitCode.ONE)
-		      || ((exitCode != 0) && allowExitCode == AllowExitCode.ALL))) {
-
-			GitScmPluginImpl.logger.error("Git command returned " + exitCode + '.');
-			GitScmPluginImpl.logger.error("Output of the command:");
-			GitScmPluginImpl.logger.error(byteArrayOutputStreamOut.toString());
-			GitScmPluginImpl.logger.error("Error output of the command:");
-			GitScmPluginImpl.logger.error(byteArrayOutputStreamErr.toString());
-			throw new RuntimeException("Git command " + commandLine + " failed.");
-		}
-
-		if (stringBuilderOutput != null) {
-			stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
-		}
-
-		return exitCode;
-	}
-
 	@Override
 	public boolean isModuleExists() {
-		CommandLine commandLine;
-		boolean isReposExists;
-
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("ls-remote").addArgument(this.gitReposCompleteUrl).addArgument("dummy");
-		isReposExists = (this.executeGitCommand(commandLine, AllowExitCode.ALL, null, null) == 0);
-
-		if (isReposExists) {
-			GitScmPluginImpl.logger.trace("Git repository " + this.gitReposCompleteUrl + " of module " + this.getModule() + " exists.");
-			return true;
-		} else {
-			GitScmPluginImpl.logger.trace("Git repository " + this.gitReposCompleteUrl + " of module " + this.getModule() + " does not exist.");
-			return false;
-		}
+		return Git.isReposExists(this.gitReposCompleteUrl);
 	}
 
 	@Override
@@ -404,46 +310,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		return GitScmPluginImpl.VERSION_DEFAULT;
 	}
 
-	// Branch or null if detached.
-	private String gitGetBranch(Path pathModuleWorkspace) {
-		CommandLine commandLine;
-		StringBuilder stringBuilder;
-		int exitCode;
-
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("symbolic-ref").addArgument("-q").addArgument("HEAD");
-		stringBuilder = new StringBuilder();
-		exitCode = this.executeGitCommand(commandLine, AllowExitCode.ONE, pathModuleWorkspace, stringBuilder);
-
-		if (exitCode == 0) {
-			String branch;
-
-			branch = stringBuilder.toString();
-
-			if (branch.startsWith("refs/heads/")) {
-				return branch.substring(11);
-			} else {
-				throw new RuntimeException("Unrecognized branch reference " + branch + " returned by git symbolic-ref.");
-			}
-		} else {
-			return null;
-		}
-	}
-
-	private void gitConfig(Path pathModuleWorkspace, String param, String value) {
-		CommandLine commandLine;
-
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("config").addArgument(param).addArgument(value);
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
-	}
-
 	private void gitClone(Version version, Path pathRemote, Path pathModuleWorkspace) {
-		CommandLine commandLine;
 		String reposUrl;
-		boolean isDetachedHead;
-
-		commandLine = new CommandLine("git");
 
 		if (pathRemote != null) {
 			reposUrl = "file://" + pathRemote.toAbsolutePath();
@@ -451,38 +319,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			reposUrl = this.gitReposCompleteUrl;
 		}
 
-		// The -b option takes a branch or tag name, but without the complete reference
-		// prefix such as heads/master or tags/v-1.2.3. This means that it is not
-		// straightforward to distinguish between branches and tags.
-		commandLine.addArgument("clone").addArgument("-b").addArgument(version.getVersion()).addArgument(reposUrl).addArgument(pathModuleWorkspace.toString());
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, null, null);
+		Git.clone(reposUrl, version, pathModuleWorkspace);
 
 		// If the path to a local remote repository was specified, we update that path to
 		// the true URL of the remote repository for consistency. We want to have all of
 		// the repositories to have as their origin remote that true URL and when we want
 		// to use another local remote, we specify it explicitly.
 		if (pathRemote != null) {
-			this.gitConfig(pathModuleWorkspace, "remote.origin.url", this.gitReposCompleteUrl);
-		}
-
-		// We need to verify the type of version checked out by checking whether we are in
-		// a detached head state (tag) or not (branch).
-		isDetachedHead = (this.gitGetBranch(pathModuleWorkspace) == null);
-
-		if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathModuleWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
-		}
-
-		if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathModuleWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is static but checked out version is a branch.");
+			Git.config(pathModuleWorkspace, "remote.origin.url", this.gitReposCompleteUrl);
 		}
 
 		// If pathRemote is null it means we cloned from the remote repository. We can
@@ -548,9 +392,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 */
 	private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec) {
 		String reposUrl;
-		CommandLine commandLine;
-
-		commandLine = new CommandLine("git");
 
 		if (pathRemote != null) {
 			reposUrl = "file://" + pathRemote.toAbsolutePath();
@@ -562,13 +403,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			reposUrl = this.gitReposCompleteUrl;
 		}
 
-		commandLine.addArgument("fetch").addArgument(reposUrl);
-
-		if (refspec != null) {
-			commandLine.addArgument(refspec);
-		}
-
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+		Git.fetch(pathModuleWorkspace,reposUrl, refspec);
 
 		// If pathRemote is null it means we fetched from the remote repository.
 		if (pathRemote == null) {
@@ -578,12 +413,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	private boolean gitPull(Path pathModuleWorkspace) {
 		String branch;
-		CommandLine commandLine;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		Boolean indPullRebase;
-		int exitCode;
 
-		branch = this.gitGetBranch(pathModuleWorkspace);
+		branch = Git.getBranch(pathModuleWorkspace);
 
 		if (branch == null) {
 			throw new RuntimeException("Within " + pathModuleWorkspace + " the HEAD is not a branch.");
@@ -599,26 +432,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		indPullRebase = Boolean.valueOf(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_IND_PULL_REBASE));
 
 		if (indPullRebase) {
-			commandLine = new CommandLine("git");
-
-			// Rebase onto the upstream tracking branch corresponding to the current branch.
-			// This is the default behavior, but specifying @{u} is more symetrical with the
-			// merge mode below.
-			commandLine.addArgument("rebase").addArgument("@{u}");
-			exitCode = this.executeGitCommand(commandLine, AllowExitCode.ONE, pathModuleWorkspace, null);
+			return Git.rebaseSimple(pathModuleWorkspace);
 		} else {
-			commandLine = new CommandLine("git");
-
-			// Merge the upstream tracking branch corresponding to the current branch.
-			commandLine.addArgument("merge").addArgument("@{u}");
-			exitCode = this.executeGitCommand(commandLine, AllowExitCode.ONE, pathModuleWorkspace, null);
+			return Git.mergeSimple(pathModuleWorkspace);
 		}
 
 		// We do not pull new commits that may exist in the same branch in the main
 		// Workspace directory. See comment about same branch in main Workspace directory
 		// in isSync method.
-
-		return exitCode == 1;
 	}
 
 	// TODO: The way push is handed is not symetric with fetch.
@@ -632,7 +453,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		NodePath nodePathModule;
 		Path pathMainUserWorkspaceDir;
 
-		branch = this.gitGetBranch(pathModuleWorkspace);
+		branch = Git.getBranch(pathModuleWorkspace);
 
 		if (branch == null) {
 			throw new RuntimeException("Within " + pathModuleWorkspace + " the HEAD is not a branch.");
@@ -677,22 +498,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	}
 
 	private void gitPush(Path pathModuleWorkspace, String gitRef) {
-		CommandLine commandLine;
-
 		if (!this.getFetchPushBehavior().isPush()) {
 			GitScmPluginImpl.logger.trace("Pushing is disabled for module " + this.getModule() + " within " + pathModuleWorkspace + '.');
 			return;
 		}
 
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("push");
-
-		// We always set the upstream tracking information because because pushes can be
-		// delayed and new branches can be pushed on the call to this method other than
-		// the one immediately after creating the branch.
-		// In the case gitRef is a tag, --set-upstream has no effect.
-		commandLine.addArgument("--set-upstream").addArgument("origin").addArgument(gitRef + ":" + gitRef);
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+		// We always set the upstream tracking information (by passing gitRef) because
+		// pushes can be delayed and new branches can be pushed on the call to this method
+		// other than the one immediately after creating the branch. In the case gitRef is
+		// a tag, --set-upstream used in Git.push has no effect.
+		Git.push(pathModuleWorkspace, gitRef);
 	}
 
 	@Override
@@ -784,7 +599,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 			this.fetch(pathModuleWorkspace);
-			this.gitCheckout(pathModuleWorkspace, version);
+			Git.checkout(pathModuleWorkspace, version);
 
 			// If the version is dynamic (a branch), we might have actually checked out the
 			// local version of it and it may not be up to date.
@@ -820,41 +635,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
 
 		return pathModuleWorkspace;
-	}
-
-	private void gitCheckout(Path pathModuleWorkspace, Version version) {
-		CommandLine commandLine;
-		boolean isDetachedHead;
-
-		commandLine = new CommandLine("git");
-
-		/* The checkout command takes a branch or tag name, but without the complete
-		 * reference prefix such as heads/master or tags/v-1.2.3. This means that it is
-		 * not straightforward to distinguish between branches and tags.
-		 */
-		commandLine.addArgument("checkout").addArgument(version.getVersion());
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
-
-		/* We need to verify the type of version checked out by checking whether we are in
-		 * a detached head state (tag) or not (branch).
-		 */
-		isDetachedHead = (this.gitGetBranch(pathModuleWorkspace) == null);
-
-		if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathModuleWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
-		}
-
-		if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathModuleWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is static but checked out version is a branch.");
-		}
 	}
 
 	/**
@@ -915,9 +695,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public boolean isVersionExists(Version version) {
-		Path pathModuleWorkspace;
-		CommandLine commandLine;
-
 		// GitScmPluginImpl.getPathModuleWorkspace either returns an existing path to the
 		// Module in the Workspace, or call checkoutSystem on the default version
 		// ("master") to get that path. It may seem awkward that we checkout the default
@@ -929,21 +706,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// We could also have used the "ls-remote" command to query the remote repository
 		// directly. But this can cause inconsistencies when pushes to the remote
 		// repository are delayed. It is better to always work locally.
-		pathModuleWorkspace = this.getPathModuleWorkspace();
-
-		commandLine = new CommandLine("git");
-
-		// We add "--" as a last argument since when a ref does no exist, Git complains
-		// about the fact that the command is ambiguous.
-		commandLine.addArgument("rev-parse").addArgument(GitScmPluginImpl.convertToRef(version)).addArgument("--");
-
-		if (this.executeGitCommand(commandLine, AllowExitCode.ALL, pathModuleWorkspace, null) == 0) {
-			GitScmPluginImpl.logger.trace("Version " + version + " of module " + this.getModule() + " exists.");
-			return true;
-		} else {
-			GitScmPluginImpl.logger.trace("Version " + version + " of module " + this.getModule() + " does not exist.");
-			return false;
-		}
+		return Git.isVersionExists(this.getPathModuleWorkspace(), version);
 	}
 
 	@Override
@@ -958,16 +721,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// case where there are unpushed local commits is to simply perform the push and
 	// return that the local repository is synchronized.`
 	public boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag) {
-		String branch;
-		CommandLine commandLine;
-		StringBuilder stringBuilder;
-
-		branch = this.gitGetBranch(pathModuleWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathModuleWorkspace + " the HEAD is not a branch.");
-		}
-
 		// Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
 		// the case that no fetch is actually performed by this call.
 		this.fetch(pathModuleWorkspace);
@@ -981,15 +734,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// branch.
 
 		if (enumSetIsSyncFlag.contains(IsSyncFlag.REMOTE_CHANGES)) {
-			stringBuilder = new StringBuilder();
-			commandLine = new CommandLine("git");
-			commandLine.addArgument("for-each-ref").addArgument("--format=%(upstream:track)").addArgument("refs/heads/" + branch);
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-			if (enumSetIsSyncFlag.contains(IsSyncFlag.REMOTE_CHANGES)) {
-				if (stringBuilder.indexOf("behind") != -1) {
-					return false;
-				}
+			if (Git.isRemoteChanges(pathModuleWorkspace)) {
+				return false;
 			}
 
 			// We could be tempted to also check if the same branch in the main Workspace
@@ -1003,37 +749,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// simplicity.
 		}
 
-		// Verifying if a Git local repository contains changes that are not in the remote
-		// repository involves verifying in the repository specified if there are local
-		// changes that have not been committed. This is done with the "git status"
-		// command.
-
 		if (enumSetIsSyncFlag.contains(IsSyncFlag.LOCAL_CHANGES)) {
 			// See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_INT_PUSH_ALL
 			if (this.isPushAll()) {
-				commandLine = new CommandLine("git");
-				commandLine.addArgument("push");
-
-				// We always set the upstream tracking information because because pushes can be
-				// delayed and new branches can be pushed on the call to this method other than
-				// the one immediately after creating the branch.
-				commandLine.addArgument("--all").addArgument("--set-upstream").addArgument("origin");
-				this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
-
-				commandLine = new CommandLine("git");
-				commandLine.addArgument("push");
-
-				// Unfortunately we cannot specify --all and --tags in the same command.
-				commandLine.addArgument("--tags");
-				this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+				Git.push(pathModuleWorkspace);
 			}
 
-			stringBuilder = new StringBuilder();
-			commandLine = new CommandLine("git");
-			commandLine.addArgument("status").addArgument("-s");
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-			if (stringBuilder.length() != 0) {
+			if (Git.isLocalChanges(pathModuleWorkspace)) {
 				return false;
 			}
 
@@ -1065,35 +787,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public Version getVersion(Path pathModuleWorkspace) {
-		String branch;
-		CommandLine commandLine;
-		StringBuilder stringBuilder;
-
-		branch = this.gitGetBranch(pathModuleWorkspace);
-
-		if (branch != null) {
-			return new Version(VersionType.DYNAMIC, branch);
-		}
-
-		// branch is null it means we are in detached HEAD state and thus probably on a
-		// tag.
-
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("describe").addArgument("--exact-match");
-		stringBuilder = new StringBuilder();
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-		return new Version(VersionType.STATIC, stringBuilder.toString());
+		return Git.getVersion(pathModuleWorkspace);
 	}
 
 	@Override
 	public List<Commit> getListCommit(Version version, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
-		return this.getListCommitInternal(GitScmPluginImpl.convertToRef(version), commitPaging, enumSetGetListCommitFlag);
+		return this.getListCommitInternal(Git.convertToRef(version), commitPaging, enumSetGetListCommitFlag);
 	}
 
 	@Override
 	public List<Commit> getListCommitDiverge(Version versionSrc, Version versionDest, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
-		return this.getListCommitInternal(GitScmPluginImpl.convertToRef(versionDest) + ".." + GitScmPluginImpl.convertToRef(versionSrc), commitPaging, enumSetGetListCommitFlag);
+		return this.getListCommitInternal(Git.convertToRef(versionDest) + ".." + Git.convertToRef(versionSrc), commitPaging, enumSetGetListCommitFlag);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -1133,7 +837,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// about the fact that the command is ambiguous.
 			commandLine.addArgument(revisionRange).addArgument("--");
 
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
+			Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
 
 			bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
 
@@ -1157,7 +861,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				commandLine = new CommandLine("git");
 				commandLine.addArgument("show-ref").addArgument("--tag").addArgument("-d");
 				stringBuilderTags = new StringBuilder();
-				this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderTags);
+				Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderTags);
 
 				bufferedReaderTags = new BufferedReader(new StringReader(stringBuilderTags.toString()));
 				mapTag = new HashMap<String, Object>();
@@ -1301,7 +1005,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			stringBuilderCommits = new StringBuilder();
 			commandLine = new CommandLine("git");
 			commandLine.addArgument("rev-list").addArgument("--pretty=oneline").addArgument(version.getVersion());
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
 
 			bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
 
@@ -1344,7 +1048,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			stringBuilder = new StringBuilder();
 			commandLine = new CommandLine("git");
 			commandLine.addArgument("tag").addArgument("-n").addArgument("-l").addArgument(version.getVersion());
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
 
 			if (stringBuilder.toString().isEmpty()) {
 				throw new RuntimeException("Static version " + version + " does not exist.");
@@ -1369,7 +1073,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			stringBuilder.setLength(0);
 			commandLine = new CommandLine("git");
 			commandLine.addArgument("rev-parse").addArgument(version.getVersion() + "^{}");
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
 
 			if (stringBuilder.toString().isEmpty()) {
 				throw new RuntimeException("Static version " + version + " does not exist.");
@@ -1386,47 +1090,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public List<Version> getListVersionStatic() {
-		Path pathModuleWorkspace;
-		CommandLine commandLine;
-		StringBuilder stringBuilder;
-		BufferedReader bufferedReader;
-		String tagLine;
-		List<Version> listVersionStatic;
-
-		pathModuleWorkspace = this.getPathModuleWorkspace();
-
-		try {
-			commandLine = new CommandLine("git");
-			commandLine.addArgument("show-ref").addArgument("--tag").addArgument("-d");
-			stringBuilder = new StringBuilder();
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-			bufferedReader = new BufferedReader(new StringReader(stringBuilder.toString()));
-			listVersionStatic = new ArrayList<Version>();
-
-			while ((tagLine = bufferedReader.readLine()) != null) {
-				String[] arrayTagLineComponent;
-				String tagRef;
-
-				arrayTagLineComponent = tagLine.split("\\s+");
-
-				tagRef = arrayTagLineComponent[1];
-
-				if (tagRef.endsWith("^{}")) {
-					String tagName;
-
-					// A few magic numbers here, but not worth having constants.
-					// 10 is the length of "refs/tags/" that prefixes each tag name.
-					// 3 is the length of "^{}" that suffixes each tag name.
-					tagName = tagRef.substring(10, tagRef.length() - 3);
-					listVersionStatic.add(new Version(VersionType.STATIC, tagName));
-				}
-			}
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
-		}
-
-		return listVersionStatic;
+		return Git.getListVersionStatic(this.getPathModuleWorkspace());
 	}
 
 	@Override
@@ -1450,7 +1114,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
-		this.gitCheckout(pathModuleWorkspace, version);
+		Git.checkout(pathModuleWorkspace, version);
 
 		/* If the WorkspaceDir belongs to the user, it is specific to a version and the
 		 * new version must be reflected in the workspace.
@@ -1509,7 +1173,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			branch = versionTarget.getVersion();
 			commandLine.addArgument("branch").addArgument(branch);
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
 
 			try {
 				if (indSwitch) {
@@ -1524,7 +1188,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 				commandLine = new CommandLine("git");
 				commandLine.addArgument("commit").addArgument("--allow-empty").addArgument("-m").addArgument(message, false);
-				this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+				Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
 
 				this.push(pathModuleWorkspace, "refs/heads/" + branch);
 
@@ -1547,14 +1211,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			tag = versionTarget.getVersion();
 
 			commandLine.addArgument("tag").addArgument("-m").addArgument(message, false).addArgument(tag);
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
 
 			if (indSwitch) {
 				/* The following essentially performs the same thing as the method switchVersion,
 				 * but switchVersion calls isSync which fails when a new unpushed branch is
 				 * present.
 				 */
-				this.gitCheckout(pathModuleWorkspace, versionTarget);
+				Git.checkout(pathModuleWorkspace, versionTarget);
 
 				workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
 
@@ -1582,15 +1246,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	//TODO Document Push as well...
 	// Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
 	public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
-		String branch;
 		WorkspacePlugin workspacePlugin;
-		CommandLine commandLine;
-
-		branch = this.gitGetBranch(pathModuleWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathModuleWorkspace + " the HEAD is not a branch.");
-		}
 
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
@@ -1602,39 +1258,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
-		commandLine = new CommandLine("git");
-		commandLine.addArgument("add").addArgument("--all");
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
-
-		commandLine = new CommandLine("git");
-
-		// Git does not natively support commit attributes. It does support "notes" which
-		// could be used to keep commit attributes. But it looks like this is not a robust
-		// solution as notes are independent of commits and can easily be modified. And
-		// also not all Git repository managers support Git notes. In particular, Stash
-		// does not seem to have full support for git notes.
-		// For these reasons commit attributes are stored within the commit messages
-		// themselves.
-		if (mapCommitAttr != null) {
-			message = (new JSONObject(mapCommitAttr)).toString() + ' ' + message;
-		}
-
-		// Commons Exec ends up calling Runtime.exec(String[], ...) with the command line
-		// arguments. It looks like along the way double quotes within the arguments get
-		// removed which, apart from being undesirable, causes a bug with the commit
-		// messages that included a JSONObject for the commit attributes. At the very
-		// least it is required to use the addArgument(String, boolean handleQuote) method
-		// to disable quote handling. Otherwise Commons Exec surrounds the argument with
-		// single quotes when it contains double quotes, which we do not want. But we must
-		// also escape double quotes to prevent Runtime.exec from removing them. I did not
-		// find any reference to this behavior, and I am not 100% sure that it is
-		// Runtime.exec's fault. But escaping the double quotes works.
-		message = message.replace("\"", "\\\"");
-
-		commandLine.addArgument("commit").addArgument("-m").addArgument(message, false);
-		this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
-
-		this.push(pathModuleWorkspace, "refs/heads/" + branch);
+		Git.addCommitPush(pathModuleWorkspace, message, mapCommitAttr);
 	}
 
 
@@ -1683,9 +1307,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			mergeMessage = message + '\n' + mergeMessage;
 		}
 
-		commandLine.addArgument("-m").addArgument(mergeMessage, false).addArgument(GitScmPluginImpl.convertToRef(versionSrc));
+		commandLine.addArgument("-m").addArgument(mergeMessage, false).addArgument(Git.convertToRef(versionSrc));
 
-		if (this.executeGitCommand(commandLine, AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
+		if (Git.executeGitCommand(commandLine, Git.AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
 			return false;
 		}
 
@@ -1766,9 +1390,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// Remove the useless trailing newline.
 			stringBuilderMergeMessage.setLength(stringBuilderMergeMessage.length() - 1);
 
-			commandLine.addArgument("-m").addArgument(stringBuilderMergeMessage.toString(), false).addArgument(GitScmPluginImpl.convertToRef(versionSrc));
+			commandLine.addArgument("-m").addArgument(stringBuilderMergeMessage.toString(), false).addArgument(Git.convertToRef(versionSrc));
 
-			this.executeGitCommand(commandLine, AllowExitCode.NONE, pathModuleWorkspace, null);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
 
 			//*********************************************************************************
 			// Step 2: Obtain the list of commits to merge.
@@ -1791,7 +1415,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// Technically, the initial range start is the parent commit of the very first
 			// commit in the list of commits to merge. But since that commit is necessarily
 			// part of the parent hierarchy of the destination Version, it is equivalent.
-			commitIdRangeStart = GitScmPluginImpl.convertToRef(versionDest);
+			commitIdRangeStart = Git.convertToRef(versionDest);
 
 			iteratorCommit = listCommit.iterator();
 
@@ -1832,7 +1456,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					commandLine = new CommandLine("git");
 					commandLine.addArgument("diff").addArgument(commitIdRangeStart + ".." + commitIdRangeEnd);
 					stringBuilderPatch = new StringBuilder();
-					this.executeGitCommand(commandLine, GitScmPluginImpl.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderPatch);
+					Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderPatch);
 
 					patchCount++;
 					String.valueOf(patchCount);
@@ -1872,7 +1496,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					throw new RuntimeException(ioe);
 				}
 
-				if (this.executeGitCommand(commandLine, GitScmPluginImpl.AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
+				if (Git.executeGitCommand(commandLine, Git.AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
 					UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 
 					userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -1907,7 +1531,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			commandLine = new CommandLine("git");
 			commandLine.addArgument("commit").addArgument("--no-edit");
-			this.executeGitCommand(commandLine, GitScmPluginImpl.AllowExitCode.NONE, pathModuleWorkspace, null);
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
 
 			this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
 
@@ -2094,23 +1718,5 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
 		return Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_GIT_IND_PUSH_ALL));
-	}
-
-	/**
-	 * Converts a {@link Version} to a Git reference such as refs/tags/&lt;tag&gt; or
-	 * refs/remotes/origin/&lt;branch&gt;.
-	 * <p>
-	 * In the case of a dynamic Version, the remove branch is used.
-	 *
-	 * @param version Version.
-	 * @return Git reference.
-	 */
-	private static String convertToRef(Version version) {
-		if (version.getVersionType() == VersionType.STATIC) {
-			// "^{tag}" ensures we consider only annotated tags.
-			return "refs/tags/" + version.getVersion() + "^{tag}";
-		} else {
-			return "refs/remotes/origin/" + version.getVersion();
-		}
 	}
 }
