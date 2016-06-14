@@ -221,8 +221,10 @@ public class Git {
 
 	/**
 	 * @param path Path.
-	 * @param reposUrl. Can be null in which case fetch occurs from the remote named
-	 *   "origin" within the configuration of the workspace.
+	 * @param repos. Can be null in which case fetch occurs from the remote named
+	 *   "origin" within the configuration of the workspace. Can be a repository URL
+	 *   in which case refspec should be specified otherwise Git will not know which
+	 *   refs to update.
 	 * @param refspec The Git refspec to pass to git fetch. See the documentation for
 	 *   git fetch for more information. Can be null if no refspec is to be passed to
 	 *   git, letting git essentially use the default
@@ -362,6 +364,7 @@ public class Git {
 
 		// We add "--" as a last argument since when a ref does no exist, Git complains
 		// about the fact that the command is ambiguous.
+		//TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
 		commandLine = (new CommandLine("git")).addArgument("rev-parse").addArgument(Git.convertToRef(version)).addArgument("--");
 
 		if (Git.executeGitCommand(commandLine, AllowExitCode.ALL, pathWorkspace, null) == 0) {
@@ -422,6 +425,7 @@ public class Git {
 		return (stringBuilder.length() != 0);
 	}
 
+	// Kind of pushAll.
 	public static void push(Path pathWorkspace) {
 		CommandLine commandLine;
 
@@ -497,9 +501,26 @@ public class Git {
 		return listVersionStatic;
 	}
 
-	//TODO Document Push as well...
+	public static void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch) {
+		CommandLine commandLine;
+
+		commandLine = new CommandLine("git").addArgument("branch").addArgument(branch);
+		Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+
+		if (indSwitch) {
+			Git.checkout(pathModuleWorkspace, new Version(VersionType.DYNAMIC, branch));
+		}
+	}
+
+	public static void createTag(Path pathModuleWorkspace, String tag, String message) {
+		CommandLine commandLine;
+
+		commandLine = (new CommandLine("git")).addArgument("tag").addArgument("-m").addArgument(message, false).addArgument(tag);
+		Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+	}
+
 	// Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
-	public static void addCommitPush(Path pathWorkspace, String message, Map<String, String> mapCommitAttr) {
+	public static void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush) {
 		String branch;
 		CommandLine commandLine;
 
@@ -540,7 +561,9 @@ public class Git {
 		commandLine.addArgument("commit").addArgument("-m").addArgument(message, false);
 		Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathWorkspace, null);
 
-		Git.push(pathWorkspace, "refs/heads/" + branch);
+		if (indPush) {
+			Git.push(pathWorkspace, "refs/heads/" + branch);
+		}
 	}
 
 	/**

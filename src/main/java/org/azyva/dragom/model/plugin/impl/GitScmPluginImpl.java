@@ -329,8 +329,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			Git.config(pathModuleWorkspace, "remote.origin.url", this.gitReposCompleteUrl);
 		}
 
-		// If pathRemote is null it means we cloned from the remote repository. We can
-		// therefore conclude that we have fetched from the remote.
+		// If pathRemote is null it means we cloned from the real remote repository. We
+		// can therefore conclude that we have fetched from the remote.
 		if (pathRemote == null) {
 			this.hasFetched(pathModuleWorkspace);
 		}
@@ -384,28 +384,38 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 *   fetching is actually required.
 	 * @param pathRemote Path to the main directory for the Module within the
 	 *   Workspace. null when pathModuleWorkspace is the main repository for the
-	 *   module.
+	 *   module and fetch must occur from the real remote repository (assumed to be
+	 *   named "origin").
 	 * @param refspec The Git refspec to pass to git fetch. See the documentation for
 	 *   git fetch for more information. Can be null if no refspec is to be passed to
 	 *   git, letting git essentially use the default
-	 *   refs/heads/*:refs/remotes/origin/heads/* refspec.
+	 *   refs/heads/*:refs/remotes/origin/heads/* refspec. Required if pathRemote is
+	 *   not null since this case is for the internal fetch optimization using a main
+	 *   repository and in such a case the refs to be updated must always be
+	 *   explicitly controlled and specified.
 	 */
 	private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec) {
 		String reposUrl;
 
 		if (pathRemote != null) {
+			if (refspec == null) {
+				throw new RuntimeException("refspec must not be null.");
+			}
+
 			reposUrl = "file://" + pathRemote.toAbsolutePath();
 		} else {
 			if (!this.mustFetch(pathModuleWorkspace)) {
 				return;
 			}
 
-			reposUrl = this.gitReposCompleteUrl;
+			// Causes the remote named "origin" to be used.
+			reposUrl = null;
 		}
 
-		Git.fetch(pathModuleWorkspace,reposUrl, refspec);
+		Git.fetch(pathModuleWorkspace, reposUrl, refspec);
 
-		// If pathRemote is null it means we fetched from the remote repository.
+		// If pathRemote is null it means we cloned from the real remote repository. We
+		// can therefore conclude that we have fetched from the remote.
 		if (pathRemote == null) {
 			this.hasFetched(pathModuleWorkspace);
 		}
@@ -611,7 +621,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					// the main Workspace directory into the current Workspace directory.
 					// This is the special handling of the synchronization between a workspace
 					// directory and the main one mentioned in the isSync method.
-					this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + "*:refs/heads/" + version.getVersion());
+					this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion());
 				}
 
 				if (this.gitPull(pathModuleWorkspace)) {
@@ -1172,13 +1182,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			String branch;
 
 			branch = versionTarget.getVersion();
-			commandLine.addArgument("branch").addArgument(branch);
-			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+
+			Git.createBranch(pathModuleWorkspace, branch, indSwitch);
 
 			try {
-				if (indSwitch) {
-					this.switchVersion(pathModuleWorkspace, versionTarget);
-				} else {
+				if (!indSwitch) {
 					// If the caller did not ask to switch we must not. But we still need access to
 					// the new Version in order to introduce the dummy base-version commit.
 					pathModuleWorkspace = this.checkoutSystem(versionTarget);
@@ -1210,13 +1218,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			tag = versionTarget.getVersion();
 
-			commandLine.addArgument("tag").addArgument("-m").addArgument(message, false).addArgument(tag);
-			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+			Git.createTag(pathModuleWorkspace, tag, message);
 
 			if (indSwitch) {
 				/* The following essentially performs the same thing as the method switchVersion,
 				 * but switchVersion calls isSync which fails when a new unpushed branch is
 				 * present.
+				 * TODO: Irrelevant comment, unless this is true also for tags. Need to test.
 				 */
 				Git.checkout(pathModuleWorkspace, versionTarget);
 
@@ -1258,7 +1266,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
-		Git.addCommitPush(pathModuleWorkspace, message, mapCommitAttr);
+		Git.addCommit(pathModuleWorkspace, message, mapCommitAttr, true);
 	}
 
 
