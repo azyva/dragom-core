@@ -129,7 +129,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	private static final String RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP_PREFIX = "VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP_";
 
 	/**
-	 * Runtime property prefix defining an Version to ArtifactVersion mapping. The
+	 * Runtime property prefix defining a Version to ArtifactVersion mapping. The
 	 * suffix is the mapping key.
 	 * <p>
 	 * A mapping is a regular expression and a replacement separated by ":". The

@@ -202,6 +202,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
 
 	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS = "WARNING_UNPUSHED_COMMITS";
+
+	/**
 	 * ResourceBundle specific to this class.
 	 */
 	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(GitScmPluginImpl.class.getName() + "ResourceBundle");
@@ -729,22 +734,25 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// method in which case there may be nothing to commit (only already performed
 	// local commits to push, which is not the same). So what we do instead in the
 	// case where there are unpushed local commits is to simply perform the push and
-	// return that the local repository is synchronized.`
+	// return that the local repository is synchronized.
 	public boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag) {
+		Git.AheadBehindInfo aheadBehindInfo;
+
+		// If the Version in the workspace directory is not dynamic (a branch), we
+		// immediately conclude that everything is synchronize since we rightfully
+		// assume tags are immutable.
+		if (!Git.isBranch(pathModuleWorkspace)) {
+			return true;
+		}
+
 		// Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
 		// the case that no fetch is actually performed by this call.
 		this.fetch(pathModuleWorkspace);
 
-		// Verifying if the remote repository contains changes that are not in the local
-		// repository involves verifying if there are remote commits that have not been
-		// pulled into the local branch. This is done with the "git for-each-ref" command
-		// which will provide us with "behind" information for the desired branch.
-		// Note that "git status -sb" also provides this information, but only for the
-		// current branch, whereas "git for-each-ref" can provide that information for any
-		// branch.
+		aheadBehindInfo = Git.getAheadBehindInfo(pathModuleWorkspace);
 
 		if (enumSetIsSyncFlag.contains(IsSyncFlag.REMOTE_CHANGES)) {
-			if (Git.isRemoteChanges(pathModuleWorkspace)) {
+			if (aheadBehindInfo.behind != 0) {
 				return false;
 			}
 
@@ -760,8 +768,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 
 		if (enumSetIsSyncFlag.contains(IsSyncFlag.LOCAL_CHANGES)) {
+			boolean indPushAll;
+
 			// See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_INT_PUSH_ALL
-			if (this.isPushAll()) {
+			if (indPushAll = this.isPushAll()) {
 				Git.push(pathModuleWorkspace);
 			}
 
@@ -769,14 +779,26 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				return false;
 			}
 
-			// We could be tempted to also check if there are unpushed commits and if so
-			// conclude that the Workspace directory is not synchronized. But this would be
-			// wrong since Dragom is not aware of the the distributed nature of Git and
-			// indicating that there are unsynchronized local changes would lead the caller to
-			// potentially call commit in order to commit the local changes, but no such
-			// would be performed. The handling of unpushed changes is done under the hood
-			// using runtime properties known only to this plugin and the users who use the
-			// tools developped with Dragom.
+			// If the special push behavior has not been performed, we want to issue a warning
+			// if there are unpushed commits. In such a case we could be tempted to conclude
+			// that the workspace directory is not synchronized. But this would be wrong since
+			// Dragom is not aware of the the distributed nature of Git and indicating that
+			// there are unsynchronized local changes could lead the caller to call commit in
+			// order to commit the local changes, but no such commit would be performed. The
+			// handling of unpushed changes is done under the hood using runtime properties
+			// known only to this plugin and the users who use the tools developped with
+			// Dragom.
+			if (!indPushAll && aheadBehindInfo.ahead != 0) {
+				UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+				userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+				// It is not clear if it is OK for this plugin to use
+				// UserInteractionCallbackPlugin as it would seem this plugin should operate at a
+				// low level. But for now this seems to be the only way to properly inform the
+				// user about what to do with the merge conflicts.
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS), pathModuleWorkspace));
+			}
 		}
 
 		return true;
@@ -1117,6 +1139,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 		workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
 
+		if (!(workspaceDir instanceof WorkspaceDirUserModuleVersion)) {
+			throw new RuntimeException("Workspace directory " + pathModuleWorkspace + " must be a user workspace directory.");
+		}
+
 		// This will implicitly be validated by the call to
 		// workspacePlugin.updateWorkspaceDir below. But it is cleaner to validate
 		// explicitly before.
@@ -1126,6 +1152,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		Git.checkout(pathModuleWorkspace, version);
 
+		// After switching to a new dynamic Version, the workspace may not be synchronized
+		// since the corresponding branch may already be present locally in the workspace
+		// and changes may have been performed outside of the workspace. We therefore
+		// ensure that it is up to date.
+		if ((version.getVersionType() == VersionType.DYNAMIC) && this.gitPull(pathModuleWorkspace)) {
+			throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
+		}
+
 		/* If the WorkspaceDir belongs to the user, it is specific to a version and the
 		 * new version must be reflected in the workspace.
 		 */
@@ -1134,15 +1168,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// What if the new version already exists? We will probably have to delete one of them, but which one.
 			// Have to deal with main repository if ever it is the one deleted.
 			workspacePlugin.updateWorkspaceDir(workspaceDir, new WorkspaceDirUserModuleVersion(new ModuleVersion(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath(), version)));
-		}
-
-		/* After a "git checkout" the workspace should be synchronized. But just in case
-		 * there may be unpushed changes, we still verify this.
-		 * No need to check for synchronisation for tags since we assume tags are
-		 * immutable.
-		 */
-		if ((version.getVersionType() == VersionType.DYNAMIC) && !this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
-			throw new RuntimeException("Working directory " + pathModuleWorkspace + " is not synchronized after checking out a version.");
 		}
 	}
 

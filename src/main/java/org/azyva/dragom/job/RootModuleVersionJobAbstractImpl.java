@@ -29,6 +29,8 @@ import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.azyva.dragom.apiutil.ByReference;
+import org.azyva.dragom.execcontext.ExecContext;
+import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDir;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
@@ -44,6 +46,7 @@ import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.reference.ReferencePathMatcherAll;
+import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
 import org.azyva.dragom.util.ModuleReentryAvoider;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
@@ -76,27 +79,27 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_ROOT_MODULE_VERSION_NOT_KNOWN = "ROOT_MODULE_VERSION_NOT_KNOWN";
+	protected static final String MSG_PATTERN_KEY_ROOT_MODULE_VERSION_NOT_KNOWN = "ROOT_MODULE_VERSION_NOT_KNOWN";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE = "MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE";
+	protected static final String MSG_PATTERN_KEY_MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE = "MULTIPLE_WORKSPACE_DIRECTORIES_FOR_MODULE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION = "UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION";
+	protected static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION = "UPDATE_ROOT_MODULE_VERSION_TO_WORKSPACE_DIRECTORY_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT = "UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT";
+	protected static final String MSG_PATTERN_KEY_UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT = "UPDATE_ROOT_MODULE_VERSION_TO_DEFAULT";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
+	protected static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
 
 	/**
 	 * See description in ResourceBundle.
@@ -106,17 +109,37 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED = "TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED";
+	protected static final String MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED = "TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_UPDATE_CHANGED_ROOT_MODULE_VERSION = "UPDATE_CHANGED_ROOT_MODULE_VERSION";
+	protected static final String MSG_PATTERN_KEY_UPDATE_CHANGED_ROOT_MODULE_VERSION = "UPDATE_CHANGED_ROOT_MODULE_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
 	protected static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	protected static final String MSG_PATTERN_KEY_CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES = "CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	protected static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES = "DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	protected static final String MSG_PATTERN_KEY_UPDATING = "UPDATING";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	protected static final String MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING = "CONFLICTS_WHILE_UPDATING";
 
 	/**
 	 * See description in ResourceBundle.
@@ -130,12 +153,19 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_ACTIONS_PERFORMED = "ACTIONS_PERFORMED";
+	protected static final String MSG_PATTERN_KEY_ACTIONS_PERFORMED = "ACTIONS_PERFORMED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
+	protected static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
+
+	/**
+	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
+	 * whether to synchronize the workspace directory when unsynced remote changes
+	 * exist.
+	 */
+	protected static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -177,7 +207,41 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 */
 	protected boolean indDepthFirst;
 
-	/*
+	/**
+	 * Possible behaviors related to unsynchronized changes in a user working
+	 * directory.
+	 */
+	public static enum UnsyncChangesBehavior {
+		/**
+		 * Do not test or handle unsynchronized changes.
+		 */
+		DO_NOT_HANDLE,
+
+		/**
+		 * Throws {@link RuntimeExceptionUserError} if unsynchronized changes are
+		 * detected.
+		 */
+		USER_ERROR,
+
+		/**
+		 * Interact with the user if unsynchronized changes are detected. In the case of
+		 * local changes, "do you want to continue"-style interaction. In the case of
+		 * remote changes, interaction for updating.
+		 */
+		INTERACT
+	}
+
+	/**
+	 * Specifies the behavior related to unsynchronized local changes.
+	 */
+	protected UnsyncChangesBehavior unsyncChangesBehaviorLocal;
+
+	/**
+	 * Specifies the behavior related to unsynchronized remote changes.
+	 */
+	protected UnsyncChangesBehavior unsyncChangesBehaviorRemote;
+
+	/**
 	 * {@link ModuleReentryAvoider}.
 	 * <p>
 	 * Used by this class when matching {@link ReferenceGraphPath} if
@@ -225,6 +289,9 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		// By default assume all ReferencePath's are to be matched.
 		this.referencePathMatcher = new ReferencePathMatcherAll();
 
+		this.unsyncChangesBehaviorLocal = UnsyncChangesBehavior.DO_NOT_HANDLE;
+		this.unsyncChangesBehaviorRemote = UnsyncChangesBehavior.DO_NOT_HANDLE;
+
 		this.referencePath = new ReferencePath();
 		this.listActionsPerformed = new ArrayList<String>();
 	}
@@ -269,6 +336,22 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 */
 	protected void setIndDepthFirst(boolean indDepthFirst) {
 		this.indDepthFirst = indDepthFirst;
+	}
+
+	/**
+	 * @param unsyncChangesBehaviorLocal Behavior related to unsynchronized local
+	 * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
+	 */
+	public void setUnsyncChangesBehaviorLocal(UnsyncChangesBehavior unsyncChangeBehaviorLocal) {
+		this.unsyncChangesBehaviorLocal = unsyncChangeBehaviorLocal;
+	}
+
+	/**
+	 * @param unsyncChangesBehaviorRemote Behavior related to unsynchronized remote
+	 * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
+	 */
+	public void setUnsyncChangesBehaviorRemote(UnsyncChangesBehavior unsyncChangeBehaviorRemote) {
+		this.unsyncChangesBehaviorRemote = unsyncChangeBehaviorRemote;
 	}
 
 	/**
@@ -474,20 +557,29 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 *   by the caller.
 	 */
 	protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
-		Module module;
+		ExecContext execContext;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		WorkspacePlugin workspacePlugin;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+		ModuleVersion moduleVersion;
+		Module module;
 		ScmPlugin scmPlugin;
+		Path pathModuleWorkspace;
+		boolean indUserWorkspaceDirectory;
+		AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
 		boolean indReferencePathAlreadyReverted;
 		boolean indVisitChildren;
 
 		this.referencePath.add(reference);
 		indReferencePathAlreadyReverted = false;
 
-		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+		execContext = ExecContextHolder.get();
+		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+		workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
+		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
+		pathModuleWorkspace = null;
 		bracketHandle = null;
 
 		// We use a try-finally construct to ensure that the current ModuleVersion always
@@ -496,78 +588,136 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		try {
 			// We bracket even if the ReferencePath will not be matched in order to better
 			// show the traversal.
-			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
+			//TODO: Probably should remove altogether, including message in bundle. Redundant.
+			//bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
-			module = ExecContextHolder.get().getModel().getModule(reference.getModuleVersion().getNodePath());
+			moduleVersion = reference.getModuleVersion();
+			module = execContext.getModel().getModule(moduleVersion.getNodePath());
 
 			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			if ((reference.getModuleVersion().getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
-				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + reference.getModuleVersion() + " is dynamic and is not to be handled.");
+			// The verification for handling or not static Version can be done here since if
+			// static Version's are not to be handled and this is a static Version, there is
+			// no need to traverse the graph since by definition all directly and indirectly
+			// referenced ModuleVersion's are also static.
+			if ((moduleVersion.getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is static and is not to be handled.");
 				return false;
 			}
 
-			if ((reference.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
-				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + reference.getModuleVersion() + " is static and is not to be handled.");
-				return false;
+
+			// We need to have access to the sources of the Module at different places below:
+			// - To verifying for unsynchronized local or remote changes
+			// - To obtain the list of references and iterate over them
+			// There are a few combinations of cases where accessing the sources is not
+			// required at all, but they are few and we prefer simplicity here and to always
+			// obtain the path to the workspace directory.
+			// If the user already has the correct version of the module checked out, we need
+			// to use it. If not, we need an internal working directory.
+			// ScmPlugin.checkoutSystem does just that.
+			pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
+
+			// We need to know if the workspace directory belongs to the user since system
+			// workspace directories are always kept synchronized.
+			indUserWorkspaceDirectory = (workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion);
+
+			if (indUserWorkspaceDirectory && (this.unsyncChangesBehaviorLocal != UnsyncChangesBehavior.DO_NOT_HANDLE)) {
+				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
+					switch (this.unsyncChangesBehaviorLocal) {
+					case USER_ERROR:
+						throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+
+					case INTERACT:
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, moduleVersion));
+
+						if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES)) {
+							return false;
+						}
+						break;
+
+					default:
+						throw new RuntimeException("Must not get here.");
+					}
+				}
+			}
+
+			if (indUserWorkspaceDirectory && (this.unsyncChangesBehaviorRemote != UnsyncChangesBehavior.DO_NOT_HANDLE)) {
+				if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.REMOTE_CHANGES_ONLY)) {
+					switch (this.unsyncChangesBehaviorRemote) {
+					case USER_ERROR:
+						throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+
+					case INTERACT:
+						alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
+								runtimePropertiesPlugin,
+								RootModuleVersionJobAbstractImpl.RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR,
+								userInteractionCallbackPlugin,
+								MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES), pathModuleWorkspace, moduleVersion));
+
+						if (alwaysNeverYesNoAskUserResponse.isYes()) {
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATING), pathModuleWorkspace, moduleVersion));
+
+							if (scmPlugin.update(pathModuleWorkspace)) {
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, moduleVersion));
+							}
+						}
+						break;
+
+					default:
+						throw new RuntimeException("Must not get here.");
+					}
+				}
 			}
 
 			indVisitChildren = true;
 
-			if (this.referencePathMatcher.matches(this.referencePath)) {
-				if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(reference.getModuleVersion())) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), reference.getModuleVersion()));
-					return false;
-				} else {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath.getLeafModuleVersion()));
+			if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
+				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
+			} else {
+				if (!this.indDepthFirst) {
+					if (this.referencePathMatcher.matches(this.referencePath)) {
+						if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
+							return false;
+						} else {
+							bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+						}
+
+						// We are about to delegate to visitMatchedModuleVersion for the rest of the
+						// processing. This method starts working on the same current module and also
+						// manages the ReferencePath. We must therefore reset it now. And we must prevent
+						// the finally block from resetting it.
+						this.referencePath.removeLeafReference();;
+						indReferencePathAlreadyReverted = true;
+
+						indVisitChildren = this.visitMatchedModuleVersion(reference);
+
+						if (Util.isAbort()) {
+							return false;
+						}
+
+						// We redo the things that were undone before calling visitMatchedModuleVersion.
+						this.referencePath.add(reference);
+						indReferencePathAlreadyReverted = false;
+					}
 				}
-
-				// We are about to delegate to visitMatchedModuleVersion for the rest of the
-				// processing. This method starts working on the same current module and also
-				// manages the ReferencePath. We must therefore reset it now. And we must prevent
-				// the finally block from resetting it.
-				this.referencePath.removeLeafReference();;
-				indReferencePathAlreadyReverted = true;
-
-				indVisitChildren = this.visitMatchedModuleVersion(reference);
-
-				if (Util.isAbort()) {
-					return false;
-				}
-
-				// We redo the things that were undone before calling visitMatchedModuleVersion.
-				this.referencePath.add(reference);
-				indReferencePathAlreadyReverted = false;
 			}
 
 			if (indVisitChildren && this.referencePathMatcher.canMatchChildren(this.referencePath)) {
-				Path pathModuleWorkspace;
-
 				ReferenceManagerPlugin referenceManagerPlugin = null;
 				List<Reference> listReference;
 
-				// Here we need to have access to the sources of the module so that we can obtain
-				// the list of references and iterate over them. If the user already has the
-				// correct version of the module checked out, we need to use it. If not, we need
-				// an internal working directory which we will not modify (for now).
-				// ScmPlugin.checkoutSystem does that.
-
-				pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
-
-				try {
-					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
-						throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
-					}
-
-					if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
-						listReference = Collections.emptyList();
-					} else {
-						referenceManagerPlugin = module.getNodePlugin(ReferenceManagerPlugin.class, null);
-						listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
-					}
-				} finally {
-					workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+				if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
+					listReference = Collections.emptyList();
+				} else {
+					referenceManagerPlugin = module.getNodePlugin(ReferenceManagerPlugin.class, null);
+					listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
 				}
+
+				// We need to release before iterating through the references since the workspace
+				// directory may need to be accessed again.
+				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+				pathModuleWorkspace = null;
 
 				for (Reference referenceChild: listReference) {
 					if (referenceChild.getModuleVersion() == null) {
@@ -586,6 +736,45 @@ public abstract class RootModuleVersionJobAbstractImpl {
 						return false;
 					}
 				}
+
+				if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
+					RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
+				} else {
+					if (this.indDepthFirst) {
+						if (this.referencePathMatcher.matches(this.referencePath)) {
+							if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
+								return false;
+							} else {
+								// This is not required since bracketHandle can only be null here, but the
+								// compiler does not know. This avoids a warning.
+								if (bracketHandle != null) {
+									bracketHandle.close();
+								}
+
+								bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+							}
+
+							// We are about to delegate to visitMatchedModuleVersion for the rest of the
+							// processing. This method starts working on the same current module and also
+							// manages the ReferencePath. We must therefore reset it now. And we must prevent
+							// the finally block from resetting it.
+							this.referencePath.removeLeafReference();;
+							indReferencePathAlreadyReverted = true;
+
+							// Return value is useless when the traversal is depth first.
+							this.visitMatchedModuleVersion(reference);
+
+							if (Util.isAbort()) {
+								return false;
+							}
+
+							// We redo the things that were undone before calling visitMatchedModuleVersion.
+							this.referencePath.add(reference);
+							indReferencePathAlreadyReverted = false;
+						}
+					}
+				}
 			}
 		} finally {
 			if (!indReferencePathAlreadyReverted) {
@@ -594,6 +783,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			if (bracketHandle != null) {
 				bracketHandle.close();
+			}
+
+			if (pathModuleWorkspace != null) {
+				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 			}
 		}
 

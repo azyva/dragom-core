@@ -78,6 +78,14 @@ public class Git {
 	}
 
 	/**
+	 * Ahead/behind information returned by {@link #getAheadBehindInfo}.
+	 */
+	public static class AheadBehindInfo {
+		public int ahead;
+		public int behind;
+	}
+
+	/**
 	 * Helper method to execute a Git command.
 	 * <p>
 	 * Mostly used internally, but can be used by callers in order to submit a Git
@@ -376,10 +384,14 @@ public class Git {
 		}
 	}
 
-	public static boolean isRemoteChanges(Path pathWorkspace) {
+	// Can be used to determine if remote repository contains changes that are not in the local repository (behind)
+	// and/or if the local repository contains changes that are not in the remote repository.
+	public static Git.AheadBehindInfo getAheadBehindInfo(Path pathWorkspace) {
 		String branch;
 		CommandLine commandLine;
 		StringBuilder stringBuilder;
+		AheadBehindInfo aheadBehindInfo;
+		int index;
 
 		branch = Git.getBranch(pathWorkspace);
 
@@ -387,9 +399,7 @@ public class Git {
 			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
 		}
 
-		// Verifying if the remote repository contains changes that are not in the local
-		// repository involves verifying if there are remote commits that have not been
-		// pulled into the local branch. This is done with the "git for-each-ref" command
+		// Getting ahead/behind information is done with the "git for-each-ref" command
 		// which will provide us with "behind" information for the desired branch.
 		// Note that "git status -sb" also provides this information, but only for the
 		// current branch, whereas "git for-each-ref" can provide that information for any
@@ -399,7 +409,34 @@ public class Git {
 		commandLine = (new CommandLine("git")).addArgument("for-each-ref").addArgument("--format=%(upstream:track)").addArgument("refs/heads/" + branch);
 		Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathWorkspace, stringBuilder);
 
-		return (stringBuilder.indexOf("behind") != -1);
+		aheadBehindInfo = new Git.AheadBehindInfo();
+
+		// The result in stringBuilder is either empty (if local and remote repositories
+		// are synchronized) or one of:
+		// - [ahead #]
+		// - [behind #]
+		// - [ahead #, behind #]
+		// where # is an integer specifying how far ahead or behind. The following parses
+		// this information in a relatively efficient manner. Using Pattern to extract the
+		// required information may have been more elegant, but certainly not as efficient.
+
+		if ((index = stringBuilder.indexOf("ahead")) != -1) {
+			int index2;
+
+			index2 = stringBuilder.indexOf(",", index + 6);
+
+			if (index2 == -1) {
+				index2 = stringBuilder.indexOf("]", index + 6);
+			}
+
+			aheadBehindInfo.ahead = Integer.parseInt(stringBuilder.substring(index + 6, index2));
+		}
+
+		if ((index = stringBuilder.indexOf("behind")) != -1) {
+			aheadBehindInfo.behind = Integer.parseInt(stringBuilder.substring(index + 7, stringBuilder.indexOf("]", index + 7)));
+		}
+
+		return aheadBehindInfo;
 	}
 
 	public static boolean isLocalChanges(Path pathWorkspace) {
@@ -438,6 +475,10 @@ public class Git {
 		// Unfortunately we cannot specify --all and --tags in the same command.
 		commandLine = (new CommandLine("git")).addArgument("push").addArgument("--tags");
 		Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathWorkspace, null);
+	}
+
+	public static boolean isBranch(Path pathWorkspace) {
+		return Git.getBranch(pathWorkspace) != null;
 	}
 
 	public static Version getVersion(Path pathWorkspace) {

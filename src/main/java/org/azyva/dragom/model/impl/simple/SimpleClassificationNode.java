@@ -62,7 +62,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		super(simpleModel);
 
 		// This ensures that createChildNodesFromConfig does not attempt to create the
-		// child SimpleNode's when a Config that is not available.
+		// child SimpleNode's since a Config is not available.
 		this.mapSimpleNodeChild = new LinkedHashMap<String, SimpleNode>();
 	}
 
@@ -193,6 +193,8 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	@Override
 	public boolean traverseNodeHierarchyDepthFirst(NodeType nodeTypeFilter, NodeVisitor nodeVisitor) {
 		Set<Map.Entry<String, SimpleNode>> setMapEntry;
+
+		this.createChildNodesFromConfig();
 
 		setMapEntry = this.mapSimpleNodeChild.entrySet();
 

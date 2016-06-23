@@ -378,13 +378,17 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 			break;
 
 		case WRAP_WITH_INDENT:
-			string = WordUtils.wrap(string, this.wrapWidth - (this.stackBracketHandle.size() * this.bracketIndent));
+			string = WordUtils.wrap(string, this.wrapWidth - (this.stackBracketHandle.size() * this.bracketIndent), "\n", false);
 			break;
 
 		case WRAP_WITHOUT_INDENT:
-			string = WordUtils.wrap(string, this.wrapWidth);
+			string = WordUtils.wrap(string, this.wrapWidth, "\n", false);
 			break;
 		}
+
+		// For the calls to WordUtils.warp above, if we don't specify the newline string,
+		// the platform newline separator is used. Forcing the single character "\n" makes
+		// it easier to make to portable.
 
 		arrayLine = string.split("\n");
 

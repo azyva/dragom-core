@@ -368,7 +368,7 @@ public abstract class SimpleNode implements Node {
 			arrayNodeName = this.getNodePath().getArrayNodeName();
 		}
 
-		stringBuilder = new StringBuilder("model-property.");
+		stringBuilder = new StringBuilder("org.azyva.dragom.model-property.");
 		propertiesInit = this.simpleModel.getInitProperties();
 		value = propertiesInit.getProperty(stringBuilder.toString() + name);
 

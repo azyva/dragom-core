@@ -113,34 +113,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES = "DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_UPDATING = "UPDATING";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING = "CONFLICTS_WHILE_UPDATING";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES = "CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
 	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION = "DO_YOU_WANT_TO_SWITCH_MODULE_VERSION";
-
-	/**
-	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
-	 * whether to synchronize the workspace directory when unsynced remote changes
-	 * exist.
-	 */
-	private static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
 
 	/**
 	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
@@ -194,6 +167,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 
 		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
 		buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
+		buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
+		buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
 		buildReferenceGraph.performJob();
 
 		if (buildReferenceGraph.isListModuleVersionRootChanged()) {
@@ -323,26 +298,6 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 
 					try {
 						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
-
-						// TODO: The code below is not really useful since BuildReferenceGraph that is
-						// used above ensures that the workspace directories are all synchronized when
-						// building the ReferenceGraph. For now we still leave it there, just in case the
-						// logic eventually changes and it becomes useful.
-						if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.REMOTE_CHANGES_ONLY)) {
-							alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
-									runtimePropertiesPlugin,
-									Checkout.RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR,
-									userInteractionCallbackPlugin,
-									MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES), pathModuleWorkspace, moduleVersion));
-
-							if (alwaysNeverYesNoAskUserResponse.isYes()) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_UPDATING), pathModuleWorkspace, moduleVersion));
-
-								if (scmPlugin.update(pathModuleWorkspace)) {
-									userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, moduleVersion));
-								}
-							}
-						}
 					} finally {
 						if (pathModuleWorkspace != null) {
 							workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
@@ -369,26 +324,24 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersionConflict, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 				try {
-					// TODO: The code below is not really useful since BuildReferenceGraph that is
-					// used above ensures that the workspace directories are all synchronized when
-					// building the ReferenceGraph. For now we still leave it there, just in case the
-					// logic eventually changes and it becomes useful.
-					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+					alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
+							runtimePropertiesPlugin,
+							Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
+							userInteractionCallbackPlugin,
+							MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
 
-						if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES)) {
-							return;
-						}
-					} else {
-						alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
-								runtimePropertiesPlugin,
-								Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
-								userInteractionCallbackPlugin,
-								MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+					if (alwaysNeverYesNoAskUserResponse.isYes()) {
+						scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
 
-						if (alwaysNeverYesNoAskUserResponse.isYes()) {
-							scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
-						}
+						// We could be tempted to handle updating the list of root ModuleVersion's since
+						// when switching the Version of a ModuleVersion, it may be a root. But the list
+						// of ModuleVersion's to checkout is derived from such a list of root
+						// ModuleVersion's so that they are by definition already correct. This job does
+						// handle switching the Version of a ModuleVersion, but not in the sense of
+						// switching the Version of an existing ModuleVersion as SwitchToDynamicVersion
+						// does. It simply handles the case where when performing a fully specified
+						// checkout operation along with root ModuleVerion's, some ModuleVersion's may
+						// already be present in the workspace.
 					}
 				} finally {
 					if (pathModuleWorkspace != null) {

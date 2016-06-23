@@ -48,7 +48,7 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * allows customizing a Model locally, such as specifying a different base URL for
  * an SCM repository.
  * <p>
- * Initialization Properties that have the "model-property." prefix are
+ * Initialization Properties that have the "org.azyva.dragom.model-property." prefix are
  * considered first, with inheritance. Only if the property is not found among
  * initialization Properties will real {@link Model} properties be considered.
  * Note that properties defined in such a way cannot be defined only for a
