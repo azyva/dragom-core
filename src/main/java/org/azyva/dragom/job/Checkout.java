@@ -43,6 +43,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 
 /**
@@ -113,7 +114,17 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	private static final String MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES = "CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION = "DO_YOU_WANT_TO_SWITCH_MODULE_VERSION";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION = "SWITCHING_MODULE_VERSION";
 
 	/**
 	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
@@ -303,6 +314,9 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 							workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 						}
 					}
+
+					// We do not handle workspace directory synchronization here since this has
+					// implicitly been handled when building the ReferenceGraph.
 				} else {
 					pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
@@ -324,6 +338,19 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersionConflict, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
 				try {
+					// TODO: The code below is not really useful since BuildReferenceGraph that is
+					// used above ensures that the workspace directories are all synchronized when
+					// building the ReferenceGraph. For now we still leave it there, just in case the
+					// logic eventually changes and it becomes useful.
+
+					// Workspace directory synchronization was implicitly handled when building the
+					// ReferenceGraph. But in the case a ModuleVersion must be switched, the Version
+					// in the user workspace directory is not the one that was used when building the
+					// ReferenceGraph so synchronization has not been handled.
+					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
+						throw new RuntimeExceptionUserError(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+					}
+
 					alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
 							runtimePropertiesPlugin,
 							Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
@@ -331,6 +358,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 							MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
 
 					if (alwaysNeverYesNoAskUserResponse.isYes()) {
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION), workspaceDirUserModuleVersionConflict.getModuleVersion(), pathModuleWorkspace, moduleVersion.getVersion()));
+
 						scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
 
 						// We could be tempted to handle updating the list of root ModuleVersion's since

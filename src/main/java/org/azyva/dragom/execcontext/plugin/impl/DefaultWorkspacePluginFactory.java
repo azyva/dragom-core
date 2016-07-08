@@ -483,6 +483,8 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				this.mapPathWorkspaceDir.remove(path);
 
 				this.save();
+
+				this.mapWorkspaceDirAccessMode.put(workspaceDir, null);
 			}
 		}
 

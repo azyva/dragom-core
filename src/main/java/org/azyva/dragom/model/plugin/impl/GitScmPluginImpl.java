@@ -353,7 +353,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// fetch within the main Workspace directory.
 			// Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
 			// the case that no fetch is actually performed by this call.
-			this.gitFetch(pathMainUserWorkspaceDir, null, null);
+			this.gitFetch(pathMainUserWorkspaceDir, null, null, false);
 
 			// Then we perform a local fetch from the main to the current Workspace directory
 			// directory. For this special fetch, we need to update the remote tracking
@@ -365,12 +365,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// avoided because of the GIT_FETCH_PUSH_BEHAVIOR runtime property. But there
 			// could be cases where the remote tracking branches are not up to date in the
 			// current Workspace directory and we want to ensure they are updated.
-			this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*");
+			this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false);
 		} else {
 			// If the Workspace directory is the main one, we perform a regular fetch.
 			// Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
 			// the case that no fetch is actually performed by this call.
-			this.gitFetch(pathModuleWorkspace, null, null);
+			this.gitFetch(pathModuleWorkspace, null, null, false);
 		}
 	}
 
@@ -398,9 +398,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 *   not null since this case is for the internal fetch optimization using a main
 	 *   repository and in such a case the refs to be updated must always be
 	 *   explicitly controlled and specified.
+	 * @param indFetchingIntoCurrentBranch This is to handle the special case where
+	 *   the caller knows what is fetched into is the current branch, meaning that
+	 *   refspec is specifed and ends with ":refs/heads/...". In such a case this
+	 *   method specifies the --update-head-ok option to "git fetch" (otherwise git
+	 *   complains that fetching into the current local branch is not allowed), and
+	 *   performs "git reset --hard HEAD" to ensure the working copy (and index)
+	 *   represent the potentially changed HEAD.
 	 */
-	private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec) {
+	private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec, boolean indFetchingIntoCurrentBranch) {
 		String reposUrl;
+		CommandLine commandLine;
 
 		if (pathRemote != null) {
 			if (refspec == null) {
@@ -417,7 +425,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			reposUrl = null;
 		}
 
-		Git.fetch(pathModuleWorkspace, reposUrl, refspec);
+		Git.fetch(pathModuleWorkspace, reposUrl, refspec, indFetchingIntoCurrentBranch);
+
+		if (indFetchingIntoCurrentBranch) {
+			commandLine = (new CommandLine("git")).addArgument("reset").addArgument("--hard").addArgument("HEAD");
+			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+		}
 
 		// If pathRemote is null it means we cloned from the real remote repository. We
 		// can therefore conclude that we have fetched from the remote.
@@ -484,7 +497,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// to update only the current branch (nothing to do with the remote tracking
 			// branches yet). This current branch in the main Workspace directory is not
 			// supposed to be the current one so there is not danger of disturbing it.
-			this.gitFetch(pathMainUserWorkspaceDir, pathModuleWorkspace, "refs/heads/" + branch + ":refs/heads/" + branch);
+			this.gitFetch(pathMainUserWorkspaceDir, pathModuleWorkspace, "refs/heads/" + branch + ":refs/heads/" + branch, false);
 
 			// Then we perform a regular push within the main Workspace directory, but for the
 			// current branch.
@@ -503,7 +516,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// cases where the remote tracking branches are not up to date in the current
 			// Workspace directory and we want to ensure they are updated, even if this is not
 			// strictly related to the push.
-			this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*");
+			this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false);
 		} else {
 			// If the Workspace directory is the main one, we perform a regular push.
 			// Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
@@ -622,13 +635,23 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 				if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
-					// If the Workspace directory is not the main one, we fetch the same branch from
-					// the main Workspace directory into the current Workspace directory.
-					// This is the special handling of the synchronization between a workspace
-					// directory and the main one mentioned in the isSync method.
-					this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion());
+					CommandLine commandLine;
+
+					// We add "--" as a last argument since when a ref does no exist, Git complains
+					// about the fact that the command is ambiguous.
+					commandLine = (new CommandLine("git")).addArgument("rev-parse").addArgument("refs/heads/" + version.getVersion()).addArgument("--");
+
+					if (Git.executeGitCommand(commandLine, AllowExitCode.ALL, pathMainUserWorkspaceDir, null) == 0) {
+						// If the Workspace directory is not the main one, we fetch the same branch from
+						// the main Workspace directory into the current Workspace directory.
+						// This is the special handling of the synchronization between a workspace
+						// directory and the main one mentioned in the isSync method.
+						this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+					}
 				}
 
+				// And in all cases, we pull changes from the corresponding remote tracking
+				// branch.
 				if (this.gitPull(pathModuleWorkspace)) {
 					throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
 				}
@@ -724,7 +747,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		return Git.isVersionExists(this.getPathModuleWorkspace(), version);
 	}
 
-	@Override
 	// TODO: Comments to review.
 	// Handling the fact that the user may or may not want to push changes to the
 	// remote repository during commits is not obvious. In the case where the user
@@ -735,7 +757,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// local commits to push, which is not the same). So what we do instead in the
 	// case where there are unpushed local commits is to simply perform the push and
 	// return that the local repository is synchronized.
-	public boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag) {
+	// indExternal: To indicate the call comes from outside and issue the special warning.
+	private boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag, boolean indExternal) {
 		Git.AheadBehindInfo aheadBehindInfo;
 
 		// If the Version in the workspace directory is not dynamic (a branch), we
@@ -788,7 +811,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// handling of unpushed changes is done under the hood using runtime properties
 			// known only to this plugin and the users who use the tools developped with
 			// Dragom.
-			if (!indPushAll && aheadBehindInfo.ahead != 0) {
+			if (indExternal && !indPushAll && aheadBehindInfo.ahead != 0) {
 				UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 
 				userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -802,6 +825,21 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 
 		return true;
+	}
+
+	@Override
+	// TODO: Comments to review.
+	// Handling the fact that the user may or may not want to push changes to the
+	// remote repository during commits is not obvious. In the case where the user
+	// does want to push changes we may be tempted here to verify if there are
+	// unpushed local commits and return false if so. But the problem is that in
+	// in response to this the caller (on behalf of the user) may call the commit
+	// method in which case there may be nothing to commit (only already performed
+	// local commits to push, which is not the same). So what we do instead in the
+	// case where there are unpushed local commits is to simply perform the push and
+	// return that the local repository is synchronized.
+	public boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag) {
+		return this.isSync(pathModuleWorkspace, enumSetIsSyncFlag, true);
 	}
 
 	@Override
@@ -1132,7 +1170,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		/* gitFetch will have been called by isSync.
 		 */
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
+		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before switching to a new version.");
 		}
 
@@ -1181,7 +1219,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		/* gitFetch will have been called by isSync.
 		 */
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
+		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before creating a new version.");
 		}
 
@@ -1281,7 +1319,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
 		WorkspacePlugin workspacePlugin;
 
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY)) {
+		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
 		}
 
@@ -1309,7 +1347,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 
 		// gitFetch will have been called by isSync.
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
+		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
 		}
 
@@ -1369,7 +1407,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 
 		// gitFetch will have been called by isSync.
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES)) {
+		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
 			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
 		}
 
@@ -1632,9 +1670,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 				setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule)));
 
-				workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)(setWorkspaceDir.iterator().next());
-
-				if (workspaceDirUserModuleVersion != null) {
+				if (!setWorkspaceDir.isEmpty()) {
+					workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)(setWorkspaceDir.iterator().next());
 					pathMainUserWorkspaceDir = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ);
 					workspacePlugin.releaseWorkspaceDir(pathMainUserWorkspaceDir);
 				} else {

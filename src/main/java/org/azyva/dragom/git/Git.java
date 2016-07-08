@@ -237,11 +237,20 @@ public class Git {
 	 *   git fetch for more information. Can be null if no refspec is to be passed to
 	 *   git, letting git essentially use the default
 	 *   refs/heads/*:refs/remotes/origin/heads/* refspec.
+	 * @param indFetchingIntoCurrentBranch This is to handle the special case where
+	 *   the caller knows what is fetched into is the current branch, meaning that
+	 *   refspec is specifed and ends with ":refs/heads/...". In such a case this
+	 *   method specifies the --update-head-ok option to "git fetch" (otherwise git
+	 *   complains that fetching into the current local branch is not allowed).
 	 */
-	public static void fetch(Path path, String reposUrl, String refspec) {
+	public static void fetch(Path path, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch) {
 		CommandLine commandLine;
 
 		commandLine = (new CommandLine("git")).addArgument("fetch");
+
+		if (indFetchingIntoCurrentBranch) {
+			commandLine.addArgument("--update-head-ok");
+		}
 
 		if (reposUrl != null) {
 			commandLine.addArgument(reposUrl);

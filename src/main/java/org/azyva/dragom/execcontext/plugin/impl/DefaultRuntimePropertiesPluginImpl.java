@@ -211,7 +211,7 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
 			arrayNodeName = nodePath.getArrayNodeName();
 		}
 
-		stringBuilder = new StringBuilder("org.azyva.dragom.runtime-property.");
+		stringBuilder = new StringBuilder("runtime-property.");
 
 		for (String nodeName: arrayNodeName) {
 			stringBuilder.append(nodeName).append('.');

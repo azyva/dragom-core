@@ -658,7 +658,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATING), pathModuleWorkspace, moduleVersion));
 
 							if (scmPlugin.update(pathModuleWorkspace)) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, moduleVersion));
+								// We thought about allowing processing to continue when update fails, so that the
+								// other ModuleVersion get processed. But this does not always work since if it is
+								// the pom.xml that has conflicts, it may actually not be valid XML anymore
+								// because of the conflict markers.
+								throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, moduleVersion));
 							}
 						}
 						break;
