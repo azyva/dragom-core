@@ -203,7 +203,6 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
 				}
 
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-					Util.setAbort();
 					return false;
 				}
 

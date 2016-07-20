@@ -319,24 +319,35 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		String reposUrl;
 
 		if (pathRemote != null) {
+			this.gitFetch(pathRemote, null, null, false);
+
 			reposUrl = "file://" + pathRemote.toAbsolutePath();
+
+			// If the Path to a local remote repository was specified, we cannot checkout a
+			// Version since only local branches of the local remote repository are considered
+			// (as remotes of the cloned repository) and the branch corresponding to the
+			// requested Version may not have been checked out and thus may not be available
+			// as a remote, although it does exist in the true remote.
+			Git.clone(reposUrl, null, pathModuleWorkspace);
+
+			// If the Path to a local remote repository was specified, we update that path to
+			// the true URL of the remote repository for consistency. We want to have all of
+			// the repositories to have as their origin remote that true URL and when we want
+			// to use another local remote, we specify it explicitly.
+			Git.config(pathModuleWorkspace, "remote.origin.url", this.gitReposCompleteUrl);
+
+			// Since we updated the remote repository above, we need to update all references
+			// in order to obtain the true remote references.
+			Git.fetch(pathModuleWorkspace, reposUrl, "refs/remotes/origin/*:refs/remotes/origin/*", false);
+
+			Git.checkout(pathModuleWorkspace, version);
 		} else {
 			reposUrl = this.gitReposCompleteUrl;
-		}
 
-		Git.clone(reposUrl, version, pathModuleWorkspace);
+			Git.clone(reposUrl, version, pathModuleWorkspace);
 
-		// If the path to a local remote repository was specified, we update that path to
-		// the true URL of the remote repository for consistency. We want to have all of
-		// the repositories to have as their origin remote that true URL and when we want
-		// to use another local remote, we specify it explicitly.
-		if (pathRemote != null) {
-			Git.config(pathModuleWorkspace, "remote.origin.url", this.gitReposCompleteUrl);
-		}
-
-		// If pathRemote is null it means we cloned from the real remote repository. We
-		// can therefore conclude that we have fetched from the remote.
-		if (pathRemote == null) {
+			// If pathRemote is null it means we cloned from the real remote repository. We
+			// can therefore conclude that we have fetched from the remote.
 			this.hasFetched(pathModuleWorkspace);
 		}
 	}

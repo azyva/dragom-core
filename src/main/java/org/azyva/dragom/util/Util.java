@@ -207,6 +207,16 @@ public final class Util {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	public static final String MSG_PATTERN_KEY_YES_ALWAYS_NO_ABORT_RESPONSE_CHOICES = "YES_ALWAYS_NO_ABORT_RESPONSE_CHOICES";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	public static final String MSG_PATTERN_KEY_NO_ABORT_RESPONSE = "NO_ABORT_RESPONSE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	public static final String MSG_PATTERN_KEY_YES_NO_RESPONSE_CHOICES = "YES_NO_RESPONSE_CHOICES";
 
 	/**
@@ -806,6 +816,9 @@ public final class Util {
 			case NO:
 				defaultValue = noResponse;
 				break;
+
+			case NO_ABORT:
+				throw new RuntimeException("NO_ABORT is not supported by this method.");
 			}
 
 			prompt = prompt.substring(0, prompt.length() - 1) + " (" + yesAlwaysNoResponseChoices + ") [" + defaultValue + "]? ";
@@ -827,6 +840,99 @@ public final class Util {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES_ALWAYS;
 				} else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
 					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
+				}
+			}
+
+			if (yesAlwaysNoUserResponse == null) {
+				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
+				continue;
+			}
+
+			break;
+		} while (true);
+
+		return yesAlwaysNoUserResponse;
+	}
+
+	/**
+	 * Facilitates letting the user input a YesAlwaysNoUserResponse with support for
+	 * "no" and "abort" responses.
+	 *
+	 * If info ends with "*" it is replaced with
+	 * " (Y(es), A(ways), N(o), B(aBort)) [<default>]? " where <default> is
+	 * "Y", "A", "N" or "B" depending on yesAlwaysNoUserResponseDefaultValue.
+	 *
+	 * As a convenience, "1" and "0" can also be entered by the user to mean "Yes"
+	 * and "No" respectively.
+	 *
+	 * The user can also enter the string value of the enum constants ("YES",
+	 * "YES_ALWAYS", "NO" and "NO_ABORT").
+	 *
+	 * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
+	 * @param prompt See corresponding parameter in
+	 *   UserInteractionCallbackPlugin.getInfo.
+	 * @param yesAlwaysNoUserResponseDefaultValue Default user response. It is
+	 *   translated to the defaultValue parameter in
+	 *   UserInteractionCallbackPlugin.getInfo.
+	 * @return YesAlwaysNoUserResponse.
+	 */
+	public static YesAlwaysNoUserResponse getInfoYesAlwaysNoAbortUserResponse(UserInteractionCallbackPlugin userInteractionCallbackPlugin, String prompt, YesAlwaysNoUserResponse yesAlwaysNoUserResponseDefaultValue) {
+		String yesAlwaysNoAbortResponseChoices;
+		String yesResponse;
+		String yesAlwaysResponse;
+		String noResponse;
+		String noAbortResponse;
+		String userResponse;
+		YesAlwaysNoUserResponse yesAlwaysNoUserResponse;
+
+		yesAlwaysNoAbortResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_NO_ABORT_RESPONSE_CHOICES);
+		yesResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+		yesAlwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
+		noResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
+		noAbortResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_ABORT_RESPONSE);
+
+		if (prompt.endsWith("*")) {
+			String defaultValue = null;
+
+			switch (yesAlwaysNoUserResponseDefaultValue) {
+			case YES:
+				defaultValue = yesResponse;
+				break;
+
+			case YES_ALWAYS:
+				defaultValue = yesAlwaysResponse;
+				break;
+
+			case NO:
+				defaultValue = noResponse;
+				break;
+
+			case NO_ABORT:
+				defaultValue = noAbortResponse;
+				break;
+			}
+
+			prompt = prompt.substring(0, prompt.length() - 1) + " (" + yesAlwaysNoAbortResponseChoices + ") [" + defaultValue + "]? ";
+		}
+
+		do {
+			userResponse = userInteractionCallbackPlugin.getInfoWithDefault(prompt, yesAlwaysNoUserResponseDefaultValue.toString());
+
+			userResponse = userResponse.toUpperCase().trim();
+
+			yesAlwaysNoUserResponse = null;
+
+			try {
+				yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.valueOf(userResponse);
+			} catch (IllegalArgumentException iae) {
+				if (userResponse.equals(yesResponse) || userResponse.equals("1")) {
+					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES;
+				} else if (userResponse.equals(yesAlwaysResponse)) {
+					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES_ALWAYS;
+				} else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
+					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
+				} else if (userResponse.equals(noAbortResponse)) {
+					yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO_ABORT;
 				}
 			}
 
@@ -880,6 +986,9 @@ public final class Util {
 			case NO:
 				defaultValue = noResponse;
 				break;
+
+			case NO_ABORT:
+				throw new RuntimeException("NO_ABORT is not supported by this method.");
 			}
 
 			prompt = prompt.substring(0, prompt.length() - 1) + " (" + yesNoResponseChoices + ") [" + defaultValue + "]? ";
@@ -1215,6 +1324,51 @@ public final class Util {
 		switch (Util.getInfoYesAlwaysNoUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
 		case NO:
 			Util.setAbort();
+			return false;
+		case YES_ALWAYS:
+			runtimePropertiesPlugin.setProperty(null,  Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context, "true");
+		case YES:
+			return true;
+		default:
+			throw new RuntimeException("Must not get here.");
+		}
+	}
+
+	/**
+	 * Helper method that handles generically the typical question
+	 * "Do you want to continue?".
+	 * <p>
+	 * Its behavior is similar to that of {@link #handleDoYouWantToContinue} except
+	 * that it handle the "no" response to mean "no for this iteration" (and simply
+	 * return false), and provides a separate "abort" response to mean "no and abort"
+	 * (and return false and set the IND_ABORT runtime property to true).
+	 *
+	 * @param context Context.
+	 * @return true if continue, false if not.
+	 */
+	public static boolean handleDoYouWantToContinueWithIndividualNo(String context) {
+		ExecContext execContext;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+		if (context == null) {
+			throw new RuntimeException("context must not be null.");
+		}
+
+		execContext = ExecContextHolder.get();
+		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+		if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM))) {
+			return true;
+		} else if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context))) {
+			return true;
+		}
+
+		switch (Util.getInfoYesAlwaysNoAbortUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
+		case NO_ABORT:
+			Util.setAbort();
+		case NO:
 			return false;
 		case YES_ALWAYS:
 			runtimePropertiesPlugin.setProperty(null,  Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context, "true");

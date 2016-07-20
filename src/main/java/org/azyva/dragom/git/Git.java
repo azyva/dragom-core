@@ -195,35 +195,49 @@ public class Git {
 		Git.executeGitCommand(commandLine, AllowExitCode.NONE, pathWorkspace, null);
 	}
 
+	// version can be null which is not equivalent to a git clone w/o a version: no checkout at all instead of checkout master
 	public static void clone(String reposUrl, Version version, Path pathWorkspace) {
 		CommandLine commandLine;
 		boolean isDetachedHead;
 
-		// The -b option takes a branch or tag name, but without the complete reference
-		// prefix such as heads/master or tags/v-1.2.3. This means that it is not
-		// straightforward to distinguish between branches and tags.
-		commandLine = (new CommandLine("git")).addArgument("clone").addArgument("-b").addArgument(version.getVersion()).addArgument(reposUrl).addArgument(pathWorkspace.toString());
+		// We always specify --no-local in order to prevent Git from implementing its
+		// optimizations when the remote is a file-based repository (or a simple path).
+		// This is necessary in the context of Dragom since repositories within a
+		// workspace can be used as remotes of each other for improving the performance of
+		// some operations, but can come and go as the workspace evolves.
+		commandLine = (new CommandLine("git")).addArgument("clone").addArgument("--no-local");
+
+		if (version == null) {
+			commandLine.addArgument("--no-checkout").addArgument(reposUrl).addArgument(pathWorkspace.toString());
+		} else {
+			// The -b option takes a branch or tag name, but without the complete reference
+			// prefix such as heads/master or tags/v-1.2.3. This means that it is not
+			// straightforward to distinguish between branches and tags.
+			commandLine.addArgument("-b").addArgument(version.getVersion()).addArgument(reposUrl).addArgument(pathWorkspace.toString());
+		}
 
 		Git.executeGitCommand(commandLine, AllowExitCode.NONE, null, null);
 
-		// We need to verify the type of version checked out by checking whether we are in
-		// a detached head state (tag) or not (branch).
-		isDetachedHead = (Git.getBranch(pathWorkspace) == null);
+		if (version != null) {
+			// We need to verify the type of version checked out by checking whether we are in
+			// a detached head state (tag) or not (branch).
+			isDetachedHead = (Git.getBranch(pathWorkspace) == null);
 
-		if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathWorkspace.toFile());
-			} catch (IOException ioe) {}
+			if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
+				try {
+					FileUtils.deleteDirectory(pathWorkspace.toFile());
+				} catch (IOException ioe) {}
 
-			throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
-		}
+				throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
+			}
 
-		if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathWorkspace.toFile());
-			} catch (IOException ioe) {}
+			if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
+				try {
+					FileUtils.deleteDirectory(pathWorkspace.toFile());
+				} catch (IOException ioe) {}
 
-			throw new RuntimeException("Requested version is static but checked out version is a branch.");
+				throw new RuntimeException("Requested version is static but checked out version is a branch.");
+			}
 		}
 	}
 
