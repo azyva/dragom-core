@@ -194,11 +194,13 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		moduleVersion = this.referencePath.getLeafModuleVersion();
+		moduleVersion = reference.getModuleVersion();
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
 		workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);
+
+		this.referencePath.add(reference);
 
 		try {
 			if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
@@ -249,6 +251,8 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 			if (pathModuleWorkspace != null) {
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 			}
+
+			this.referencePath.removeLeafReference();
 		}
 
 		return false;

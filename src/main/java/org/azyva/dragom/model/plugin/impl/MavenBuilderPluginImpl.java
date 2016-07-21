@@ -37,14 +37,16 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.WorkspaceExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.BuilderPlugin;
 import org.azyva.dragom.util.Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link BuilderPlugin} that supports Maven.
@@ -71,6 +73,11 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements BuilderPlugin {
+	/**
+	 * Logger for the class.
+	 */
+	private static final Logger logger = LoggerFactory.getLogger(MavenBuilderPluginImpl.class);
+
 	/**
 	 * Properties source file within a {@link Module}.
 	 */
@@ -139,6 +146,8 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	 * special treatment is done to the value of this property and it is simply
 	 * included at the end of the command line. Multiple targets must therefore be
 	 * separated by spaces.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_TARGETS = "MAVEN_TARGETS";
 
@@ -151,6 +160,8 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	/**
 	 * Runtime property specifying the Maven properties to include on the command
 	 * line. Multiple properties must be separated by ",".
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 * <p>
 	 * Only the names of the properties must be included. Their values are defined
 	 * with the MAVEN_PROPERTY runtime property.
@@ -171,9 +182,11 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	 * Runtime property specifying the value of a Maven property to include on the
 	 * command line. See {@link #RUNTIME_PROPERTY_PROPERTIES}.
 	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
+	 * <p>
 	 * It is acceptable for a Maven property identified by
 	 * RUNTIME_PROPERTY_PROPERTIES to not be defined with MAVEN_PROPERTY since
-	 * Maven allows to simply define a property withouth a value, as in
+	 * Maven allows to simply define a property without a value, as in
 	 * "--define skipTests".
 	 */
 	private static final String RUNTIME_PROPERTY_PROPERTY_PREFIX = "MAVEN_PROPERTY.";
@@ -181,6 +194,8 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	/**
 	 * Runtime property specifying the Maven profiles to activate on the command line.
 	 * Multiple profiles must be separated by ",".
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 * <p>
 	 * When evaluating this property it is possible that multiple occurrences of the
 	 * same profile be specified, especially if the $parent$ token is used in the value
@@ -202,38 +217,50 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	/**
 	 * Runtime property that indicates to include the --update-snapshots (-U) option
 	 * on the command line.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_IND_UPDATE_SNAPSHOTS = "MAVEN_IND_UPDATE_SNAPSHOTS";
 
 	/**
 	 * Runtime property that indicates to include the --fail-fast (-ff) option on the
 	 * command line.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_IND_FAIL_FAST = "MAVEN_IND_FAIL_FAST";
 
 	/**
 	 * Runtime property to specify a POM file on the command line with the --file (-f)
 	 * option.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_POM_FILE = "MAVEN_POM_FILE";
 
 	/**
 	 * Runtime property that indicates to include the --offline (-o) option on the
 	 * command line.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_IND_OFFLINE = "MAVEN_IND_OFFLINE";
 
 	/**
 	 * Runtime property that indicates to include the --show-version (-V) option on the
 	 * command line.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_IND_SHOW_VERSION = "MAVEN_IND_SHOW_VERSION";
 
 	/**
 	 * Runtime property to specify extra Maven options on the command line.  No
 	 * special treatment is done to the value of this property and it is simply
-	 * included at the end of the command line (before. Multiple options must
-	 * therefore be separated by spaces.
+	 * included at the end of the command line (before the targets). Multiple options
+	 * must therefore be separated by spaces.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 * <p>
 	 * Currently options containing spaces (enclosed within double-quotes on the
 	 * command line) are not supported.
@@ -243,12 +270,16 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	/**
 	 * Runtime property that indicates to write the log of the build process to a
 	 * file, in addition to writing it to the Writer if provided by the caller.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_IND_WRITE_LOG_TO_FILE = "MAVEN_IND_WRITE_LOG_TO_FILE";
 
 	/**
 	 * File to write the log of the build process to when the
 	 * MAVEN_IND_WRITE_LOG_TO_FILE runtime property is true.
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 * <p>
 	 * The file path can be absolute or relative. If it is relative it is evaluated
 	 * based either on the root workspace directory or the Module workspace directory,
@@ -266,12 +297,14 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	 * <p>
 	 * <li>WORKSPACE: Represents the root workspace directory. This is the default;</li>
 	 * <li>MODULE: Represents the module workspace directory.</li>
+	 * <p>
+	 * Can also be overridden in the dragom.properties source file of a {@link Module}.
 	 */
 	private static final String RUNTIME_PROPERTY_RELATIVE_LOG_FILE_BASE = "MAVEN_RELATIVE_LOG_FILE_BASE";
 
 	/**
 	 * Size of the buffer for transferring the output of a build process to the
-	 * Writer. 8192 is simply a nice adquate binary number.
+	 * Writer. 8192 is simply a nice adequate binary number.
 	 */
 	private static final int READER_BUFFER_SIZE = 8192;
 
@@ -290,7 +323,13 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 		/**
 		 * Represents the module workspace directory.
 		 */
-		MODULE
+		MODULE,
+
+		/**
+		 * Same as {@link #MODULE}, except that if the log file already exists, it is
+		 * replaced.
+		 */
+		MODULE_REPLACE
 	}
 
 	/**
@@ -419,16 +458,36 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 		}
 
 		if (mavenHomeDir == null) {
+			mavenHomeDir = System.getenv("MAVEN_HOME");
+
+			if (mavenHomeDir != null) {
+				MavenBuilderPluginImpl.logger.info("Maven home directory taken from MAVEN_HOME environment variable.");
+			}
+		}
+
+		if (mavenHomeDir == null) {
 			throw new RuntimeException("Maven home directory not set for module " + this.getModule() + '.');
 		}
+
+		MavenBuilderPluginImpl.logger.info("Maven home directory: " + mavenHomeDir);
 
 		if (jdkHomeDir == null) {
 			jdkHomeDir = runtimePropertiesPlugin.getProperty(this.getModule(), MavenBuilderPluginImpl.RUNTIME_PROPERTY_JDK_HOME_DIR);
 		}
 
 		if (jdkHomeDir == null) {
+			jdkHomeDir = System.getenv("JAVA_HOME");
+
+			if (jdkHomeDir != null) {
+				MavenBuilderPluginImpl.logger.info("JDK home directory taken from JAVA_HOME environment variable.");
+			}
+		}
+
+		if (jdkHomeDir == null) {
 			throw new RuntimeException("JDK home directory not set for module " + this.getModule() + '.');
 		}
+
+		MavenBuilderPluginImpl.logger.info("JDK home directory: " + jdkHomeDir);
 
 		if (localRepoDir == null) {
 			localRepoDir = runtimePropertiesPlugin.getProperty(this.getModule(), MavenBuilderPluginImpl.RUNTIME_PROPERTY_LOCAL_REPO_DIR);
@@ -481,18 +540,20 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 			listCommandLine.add(mavenHomeDir + "/bin/mvn");
 		}
 
+		listCommandLine.add("--batch-mode");
+
 		if (localRepoDir != null) {
 			listCommandLine.add("--define");
 			listCommandLine.add("maven.repo.local=" + localRepoDir);
 		}
 
 		if (settingsFilePath != null) {
-			listCommandLine.add("--settings ");
+			listCommandLine.add("--settings");
 			listCommandLine.add(this.convertWorkspaceRelativeToAbsolute(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), settingsFilePath));
 		}
 
 		if (globalSettingsFilePath != null) {
-			listCommandLine.add("--global-settings ");
+			listCommandLine.add("--global-settings");
 			listCommandLine.add(this.convertWorkspaceRelativeToAbsolute(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), globalSettingsFilePath));
 		}
 
@@ -507,7 +568,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 			for (String property: tabProperty) {
 				if (property.length() != 0) {
 					if (property.charAt(0) == '-') {
-						setProperty.remove(property);
+						setProperty.remove(property.substring(1));
 					} else {
 						setProperty.add(property);
 
@@ -549,7 +610,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 			for (String profile: tabProfile) {
 				if (profile.length() != 0) {
 					if (profile.charAt(0) == '-') {
-						setProfile.remove(profile);
+						setProfile.remove(profile.substring(1));
 					} else {
 						setProfile.add(profile);
 
@@ -570,7 +631,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 		}
 
 		if (pomFile != null) {
-			listCommandLine.add("--file ");
+			listCommandLine.add("--file");
 			listCommandLine.add(pomFile);
 
 		}
@@ -584,7 +645,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 		}
 
 		if (extraOptions != null) {
-			listCommandLine.addAll(Arrays.asList(extraOptions.trim().split("\\s*")));
+			listCommandLine.addAll(Arrays.asList(extraOptions.trim().split("\\s+")));
 		}
 
 		if (indCleanOnly) {
@@ -599,7 +660,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 			}
 		}
 
-		listCommandLine.addAll(Arrays.asList(targets.trim().split("\\s*")));
+		listCommandLine.addAll(Arrays.asList(targets.trim().split("\\s+")));
 
 		processBuilder = new ProcessBuilder(listCommandLine);
 		processBuilder.environment().put("JAVA_HOME", jdkHomeDir);
@@ -614,14 +675,16 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 					logFilePath = this.convertWorkspaceRelativeToAbsolute(pathModuleWorkspace, logFilePath);
 				}
 
-				bufferedWriterLogFile = new BufferedWriter(new FileWriter(logFilePath, true));
+				// Generally, we want to append to the log file. But we replace it if the
+				// RelativeLogFileBase is MODULE_REPLACE.
+				bufferedWriterLogFile = new BufferedWriter(new FileWriter(logFilePath, (relativeLogFileBase == null) || (relativeLogFileBase != RelativeLogFileBase.MODULE_REPLACE)));
 			} else {
 				bufferedWriterLogFile = null;
 			}
 
 			process = processBuilder.start();
 
-			// It seems like closing the OutputStream to a process avoid the process hanging
+			// It seems like closing the OutputStream to a process avoids the process hanging
 			// if it ever waits for user input, which is not supported by this implementation.
 			process.getOutputStream().close();
 

@@ -27,7 +27,6 @@ import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
-import org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 
 
@@ -76,7 +75,7 @@ public class ExecContextHolder {
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultWorkspacePluginFactory.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ExecContextHolder.class.getName() + "ResourceBundle");
 
 	/**
 	 * Thread-local holder variable for the ExecContext.

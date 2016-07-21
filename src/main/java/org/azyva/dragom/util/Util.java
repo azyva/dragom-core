@@ -117,6 +117,12 @@ public final class Util {
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT = "COMMIT";
 
 	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents having
+	 * unsynchronized remote changes while committing.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_UNSYNC_REMOTE_CHANGES_WHILE_COMMIT = "UNSYNC_REMOTE_CHANGES_WHILE_COMMIT";
+
+	/**
 	 * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
 	 * a workspace directory containing un synchronized changes.
 	 */

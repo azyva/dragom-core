@@ -323,6 +323,10 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 			throw new RuntimeException(ioe);
 		}
 
+		if (info == null) {
+			throw new RuntimeException("Unexpected end of stream reading from stdin.");
+		}
+
 		System.out.println();
 
 		DefaultUserInteractionCallbackPluginImpl.logger.info("Information returned by user: " + info);
@@ -351,6 +355,10 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 			info = this.bufferedReaderStdin.readLine();
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
+		}
+
+		if (info == null) {
+			throw new RuntimeException("Unexpected end of stream reading from stdin.");
 		}
 
 		System.out.println();

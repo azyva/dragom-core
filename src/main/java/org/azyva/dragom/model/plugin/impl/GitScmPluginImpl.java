@@ -167,8 +167,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * changes may accumulate in the repositories of the workspace. Furthermore these
 	 * changes can be in multiple branches of the local repositories. In order to help
 	 * the user perform these multiples pushes later, if this property is true, the
-	 * isSync method when enumSetIsSyncFlag contains IsSyncFlag.LOCAL_CHANGES,
-	 * it pushes all unpushed commits on all branches.
+	 * isSync method when enumSetIsSyncFlag contains IsSyncFlag.LOCAL_CHANGES pushes
+	 * all unpushed commits on all branches.
 	 * This property is intended to be used with the status command of
 	 * WorkspaceManagerTool.
 	 * The reason for not having an explicit method to perform such pushes is that
@@ -200,6 +200,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS = "PUSHING_UNPUSHED_COMMITS";
 
 	/**
 	 * See description in ResourceBundle.
@@ -802,10 +807,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		}
 
 		if (enumSetIsSyncFlag.contains(IsSyncFlag.LOCAL_CHANGES)) {
+			UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 			boolean indPushAll;
 
-			// See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_INT_PUSH_ALL
+			userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+			// See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_IND_PUSH_ALL
 			if (indPushAll = this.isPushAll()) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS), pathModuleWorkspace));
 				Git.push(pathModuleWorkspace);
 			}
 
@@ -823,10 +832,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// known only to this plugin and the users who use the tools developped with
 			// Dragom.
 			if (indExternal && !indPushAll && aheadBehindInfo.ahead != 0) {
-				UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-
-				userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
 				// It is not clear if it is OK for this plugin to use
 				// UserInteractionCallbackPlugin as it would seem this plugin should operate at a
 				// low level. But for now this seems to be the only way to properly inform the
