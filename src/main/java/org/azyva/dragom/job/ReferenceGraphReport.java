@@ -64,6 +64,8 @@ import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.Util;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -142,8 +144,14 @@ public class ReferenceGraphReport {
 	private ModuleFilter moduleFilter;
 
 	/**
-	 * Indicates to the include the most recent static {@link Version} in the SCM for
+	 * Indicates to include the most recent {@link Version} in the reference graph for
 	 * each {@link Module}.
+	 */
+	private boolean indIncludeMostRecentVersionInReferenceGraph;
+
+	/**
+	 * Indicates to include the most recent static {@link Version} in the SCM for each
+	 * {@link Module}.
 	 */
 	private boolean indIncludeMostRecentStaticVersionInScm;
 
@@ -215,11 +223,23 @@ public class ReferenceGraphReport {
 	}
 
 	/**
+	 * Indicates to include the most recent {@link Version} in the reference graph for
+	 * each {@link Module}.
+	 */
+	public void includeMostRecentVersionInReferenceGraph() {
+		this.indIncludeMostRecentVersionInReferenceGraph = true;
+	}
+
+	/**
 	 * Indicates to include the most recent static {@link Version} in the SCM for
 	 * each {@link Module}.
+	 * <p>
+	 * Also implies including most recent Version in the reference graph for each
+	 * Module (see {@link #includeMostRecentVersionInReferenceGraph}.
 	 */
 	public void includeMostRecentStaticVersionInScm() {
 		this.indIncludeMostRecentStaticVersionInScm = true;
+		this.indIncludeMostRecentVersionInReferenceGraph = true;
 	}
 
 	/**
@@ -299,6 +319,7 @@ public class ReferenceGraphReport {
 					String extraInfo;
 					ModuleVersion moduleVersion;
 					ReportReferenceGraphNode reportReferenceGraphNode;
+					boolean indReportReferenceGraphNodeAlreadyExists;
 					ReportReference reportReference;
 
 					/* *******************************************************************************
@@ -311,6 +332,7 @@ public class ReferenceGraphReport {
 					} else {
 						Reference referenceParent;
 						ReportReferenceGraphNode reportReferenceGraphNodeParent;
+						Reference referenceLeaf;
 						Object objectImplData;
 
 						referenceParent = referencePath.get(referencePath.size() - 2);
@@ -330,9 +352,19 @@ public class ReferenceGraphReport {
 
 						listReportReference = reportReferenceGraphNodeParent.listReportReference;
 
-						objectImplData = referencePath.getLeafReference().getImplData();
+						referenceLeaf = referencePath.getLeafReference();
+
+						objectImplData = referenceLeaf.getImplData();
 
 						extraInfo = (objectImplData == null) ? null : objectImplData.toString();
+
+						if (referenceLeaf.getArtifactGroupId() != null) {
+							if (extraInfo == null) {
+								extraInfo = referenceLeaf.getArtifactGroupId().toString() + ':' + referenceLeaf.getArtifactVersion().toString();
+							} else {
+								extraInfo += ", " + referenceLeaf.getArtifactGroupId().toString() + ':' + referenceLeaf.getArtifactVersion().toString();
+							}
+						}
 					}
 
 					moduleVersion = referencePath.getLeafModuleVersion();
@@ -346,13 +378,17 @@ public class ReferenceGraphReport {
 						reportReferenceGraphNode = new ReportReferenceGraphNode();
 						reportReferenceGraphNode.moduleVersion = moduleVersion;
 						this.mapReportReferenceGraphNode.put(moduleVersion, reportReferenceGraphNode);
+
+						indReportReferenceGraphNodeAlreadyExists = false;
+					} else {
+						indReportReferenceGraphNodeAlreadyExists = true;
 					}
 
 					reportReference = new ReportReference();
 
-					if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.FULL_TREE) {
+					if (!indReportReferenceGraphNodeAlreadyExists || (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.FULL_TREE)) {
 						reportReference.reportReferenceGraphNode = reportReferenceGraphNode;
-					} else { // if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.TREE_NO_REDUNDANCY)
+					} else { // if (indReportReferenceGraphNodeAlreadyExists && (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.TREE_NO_REDUNDANCY))
 						reportReference.moduleVersion = moduleVersion;
 
 						if (reportReferenceGraphNode.bookmark == null) {
@@ -368,13 +404,17 @@ public class ReferenceGraphReport {
 				}
 
 				if (ReferenceGraphReport.this.indIncludeModules) {
+					ModuleVersion moduleVersion;
+					ReportModule reportModule;
+					ReportVersion reportVersion;
+
 					/* *******************************************************************************
 					 * Handle the List of Module's and their Version's.
 					 * *******************************************************************************/
 
-					ModuleVersion moduleVersion;
-					ReportModule reportModule;
-					ReportVersion reportVersion;
+					if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.REPEATED)) {
+						return;
+					}
 
 					moduleVersion = referencePath.getLeafModuleVersion();
 					reportModule = this.mapReportModule.get(moduleVersion.getNodePath());
@@ -422,7 +462,7 @@ public class ReferenceGraphReport {
 
 		// The reference graph report has been created by including all ReportModule's,
 		// regardless of the ModuleFilter since it is not possible to perform the
-		// filtering while traversing the ReferenceGraph. Now is the time to remove those
+		// filtering while traversing the ReferenceGraph. Now is time to remove those
 		// ReportModule's that are not meant to be included.
 
 		if (this.indIncludeModules) {
@@ -436,13 +476,17 @@ public class ReferenceGraphReport {
 
 				reportModule = iteratorReportModule.next();
 				module = ExecContextHolder.get().getModel().getModule(reportModule.nodePathModule);
-				versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
 
 				if (   ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MULTIPLE_VERSIONS) && (reportModule.listReportVersion.size() == 1))
-					|| ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MATCHED) && (referenceGraphVisitorReport.setNodePathMatched.contains(reportModule.nodePathModule)))) {
+					|| ((this.moduleFilter == ReferenceGraphReport.ModuleFilter.ONLY_MATCHED) && !referenceGraphVisitorReport.setNodePathMatched.contains(reportModule.nodePathModule))) {
 
 					iteratorReportModule.remove();
-				} else {
+					continue;
+				}
+
+				if (this.indIncludeMostRecentVersionInReferenceGraph || this.indIncludeMostRecentStaticVersionInScm) {
+					versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
+
 					Collections.sort(
 							reportModule.listReportVersion,
 							new Comparator<ReportVersion>() {
@@ -451,10 +495,16 @@ public class ReferenceGraphReport {
 									return -versionClassifierPlugin.compare(reportVersion1.version, reportVersion2.version);
 								}
 							});
+
+					reportVersionMax = reportModule.listReportVersion.get(0);
+				} else {
+					versionClassifierPlugin = null;
+					reportVersionMax = null;
 				}
 
-				reportVersionMax = reportModule.listReportVersion.get(0);
-				reportVersionMax.indMostRecentInReferenceGraph = true;
+				if (this.indIncludeMostRecentVersionInReferenceGraph) {
+					reportVersionMax.indMostRecentInReferenceGraph = true;
+				}
 
 				if (this.indIncludeMostRecentStaticVersionInScm) {
 					ScmPlugin scmPlugin;
@@ -483,6 +533,13 @@ public class ReferenceGraphReport {
 
 				if (this.indIncludeReferencePaths) {
 					for (ReportVersion reportVersion: reportModule.listReportVersion) {
+						// If the ReportVersion is the most recent in the SCM, but not in the reference
+						// graph, it means it does not occur in the reference graph. It therefore does not
+						// have any reference paths.
+						if (((reportVersion.indMostRecentInScm != null) && reportVersion.indMostRecentInScm) && !((reportVersion.indMostRecentInReferenceGraph != null) && reportVersion.indMostRecentInReferenceGraph)) {
+							continue;
+						}
+
 						reportVersion.listReferencePathLiteral = new ArrayList<String>();
 
 						this.referenceGraph.visitLeafModuleVersionReferencePaths(
@@ -622,6 +679,7 @@ public class ReferenceGraphReport {
 @XmlRootElement(name="reference-graph-report")
 @XmlAccessorType(XmlAccessType.NONE)
 @JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
+@JsonInclude(Include.NON_NULL)
 class Report {
 	/**
 	 * List of root {link ReportReference}'s.
@@ -633,15 +691,16 @@ class Report {
 	 * For root ReportReference's, extraInfo is never specified since there is no
 	 * actual reference from another node.
 	 */
-	@XmlElementWrapper(name="root-reference-graph-nodes")
-	@XmlElement(name="root-reference-graph-node")
-	@JsonProperty("root-reference-graph-nodes")
+	@XmlElementWrapper(name="root-references")
+	@XmlElement(name="root-reference")
+	@JsonProperty("root-references")
 	public List<ReportReference> listReportReference;
 
 	@XmlElementWrapper(name="modules")
 	@XmlElement(name="module")
 	@JsonProperty("modules")
 	public List<ReportModule> listReportModule;
+
 
 	/**
 	 * Writes a ReportReference in the text format.
@@ -681,6 +740,7 @@ class Report {
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
+@JsonInclude(Include.NON_NULL)
 class ReportReference {
 	/**
 	 * Referenced {@link ReportReferenceGraphNode}.
@@ -728,7 +788,7 @@ class ReportReference {
 	/**
 	 * Extra information related to the reference obtained from
 	 * {@link Reference#getImplData}, such as implementation-specific Maven reference
-	 * information.
+	 * information (including Maven artifact coordinates).
 	 */
 	@XmlElement(name="extra-info")
 	@JsonProperty("extra-info")
@@ -767,6 +827,7 @@ class ReportReference {
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
+@JsonInclude(Include.NON_NULL)
 class ReportReferenceGraphNode {
 	/**
 	 * Name given to the node so that it can be referenced from a
@@ -809,7 +870,7 @@ class ReportReferenceGraphNode {
 	public void writeTextReport(Writer writer, int level, String extraInfo) {
 		try {
 			if (this.bookmark != null) {
-				writer.append(String.format("%8s", this.bookmark));
+				writer.append(String.format("%-8s", this.bookmark));
 			} else {
 				writer.append(Util.spaces(8));
 			}
@@ -881,6 +942,7 @@ class ReportModule {
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @JsonAutoDetect(fieldVisibility=JsonAutoDetect.Visibility.NONE, getterVisibility=JsonAutoDetect.Visibility.NONE, isGetterVisibility=JsonAutoDetect.Visibility.NONE)
+@JsonInclude(Include.NON_NULL)
 class ReportVersion {
 	/**
 	 * {@link Version}.
@@ -894,10 +956,12 @@ class ReportVersion {
 	/**
 	 * Indicates that the {@link Version} is the most recent for the module within the
 	 * reference graph.
+	 * <p>
+	 * Boolean is used to allow using null to exclude from report.
 	 */
 	@XmlElement(name="ind-most-recent-in-reference-graph")
 	@JsonProperty("ind-most-recent-in-reference-graph")
-	public boolean indMostRecentInReferenceGraph;
+	public Boolean indMostRecentInReferenceGraph;
 
 	/**
 	 * Indicates that the {@link Version} is the most recent for the module in the
@@ -908,10 +972,12 @@ class ReportVersion {
 	 * indMostRecentInReferenceGraph is necessarily also true. Conversely, if true and
 	 * indMostRecentInReferenceGraph is true, than Version occurs within the reference
 	 * graph.
+	 * <p>
+	 * Boolean is used to allow using null to exclude from report.
 	 */
 	@XmlElement(name="ind-most-recent-in-scm")
 	@JsonProperty("ind-most-recent-in-scm")
-	public boolean indMostRecentInScm;
+	public Boolean indMostRecentInScm;
 
 	/**
 	 * List of {@link ReferencePath} literals where this {@link Version} occurs.
@@ -921,6 +987,7 @@ class ReportVersion {
 	 */
 	@XmlElementWrapper(name="reference-paths")
 	@XmlElement(name="reference-path")
+	@JsonProperty("reference-paths")
 	public List<String> listReferencePathLiteral;
 
 	/**
@@ -931,11 +998,16 @@ class ReportVersion {
 	public void writeTextReport(Writer writer) {
 		try {
 			writer.append("  Version: ").append(this.version.toString()).append('\n');
-			writer.append("    MostRecentInReferenceGraph: ").append(Boolean.toString(this.indMostRecentInReferenceGraph)).append('\n');
-			writer.append("    MostRecentInScm: ").append(Boolean.toString(this.indMostRecentInScm)).append('\n');
+			if (this.indMostRecentInReferenceGraph != null) {
+				writer.append("    MostRecentInReferenceGraph: ").append(Boolean.toString(this.indMostRecentInReferenceGraph)).append('\n');
+			}
+
+			if (this.indMostRecentInScm != null) {
+				writer.append("    MostRecentInScm: ").append(Boolean.toString(this.indMostRecentInScm)).append('\n');
+			}
 
 			if (this.listReferencePathLiteral != null) {
-				writer.append("    Occurs:\n");
+				writer.append("    ReferencePaths:\n");
 
 				for (String referencePathLiteral: this.listReferencePathLiteral) {
 					writer.append("      ").append(referencePathLiteral).append('\n');

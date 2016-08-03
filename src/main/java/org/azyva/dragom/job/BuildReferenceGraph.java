@@ -60,6 +60,8 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
 		if (referenceGraph == null) {
 			this.referenceGraph = new SimpleReferenceGraph();
 		}
+
+		this.setIndAvoidReentry(false);
 	}
 
 	/**

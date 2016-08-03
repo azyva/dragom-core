@@ -296,17 +296,19 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			referencePathIncludingParent = new ReferencePath();
 			referencePathIncludingParent.add(new Reference(moduleVersion));
 			referencePathIncludingParent.add(referencePath);
-			visitor.visit(referencePathIncludingParent, this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion()) ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT);
+			visitor.visit(referencePathIncludingParent, this.setModuleVersionMatched.contains(referencePathIncludingParent.getLeafModuleVersion()) ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT);
 		}
 
 		referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
 
-		for (ReferenceGraph.Referrer referrer: referenceGraphNode.listReferrer) {
-			referencePathIncludingParent = new ReferencePath();
-			referencePathIncludingParent.add(referrer.getReference());
-			referencePathIncludingParent.add(referencePath);
+		if (referenceGraphNode.listReferrer != null) {
+			for (ReferenceGraph.Referrer referrer: referenceGraphNode.listReferrer) {
+				referencePathIncludingParent = new ReferencePath();
+				referencePathIncludingParent.add(referrer.getReference());
+				referencePathIncludingParent.add(referencePath);
 
-			this.traverseReferenceGraphForLeafModuleVersionReferencePaths(referencePath, referrer.getModuleVersion(), visitor);
+				this.traverseReferenceGraphForLeafModuleVersionReferencePaths(referencePathIncludingParent, referrer.getModuleVersion(), visitor);
+			}
 		}
 	}
 
