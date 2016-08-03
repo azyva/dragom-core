@@ -127,7 +127,7 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
 	 * @param setArtifactGroupIdAggregator Set of ArtifactGroupId within the aggregation.
 	 *   This set must be built before invoking the method. Used to validate the version
 	 *   of the dependencies within the aggregation, which must match the version of the
-	 *   mainaggregator module.
+	 *   main aggregator module.
 	 * @param priorVersion Version that submodules should have before the change. Used
 	 *   for validation.
 	 * @param pathSubmoduleWorkspace Path to the submodule within the workspace. This
@@ -196,8 +196,8 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
 		listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.DEPENDENCY, Pom.ReferencedArtifactType.DEPENDENCY_MANAGEMENT), null, null, null);
 
 		for (Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
-			if (referencedArtifactParent.getGroupId().contains("${") || referencedArtifactParent.getArtifactId().contains("${")) {
-				throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifactParent + " in the POM " + pathPom + ".");
+			if (referencedArtifact.getGroupId().contains("${") || referencedArtifact.getArtifactId().contains("${")) {
+				throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ".");
 			}
 
 			artifactGroupId = new ArtifactGroupId(referencedArtifact.getGroupId(), referencedArtifact.getArtifactId());

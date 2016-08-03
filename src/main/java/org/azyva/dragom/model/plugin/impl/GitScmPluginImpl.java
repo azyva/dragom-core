@@ -1271,7 +1271,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 					pathModuleWorkspace = this.checkoutSystem(versionTarget);
 				}
 
-				message += " Dummy commit introduced to record the base version of the newly created version.";
+				message += " Dummy commit introduced to record the base version of the newly created version " + versionTarget + '.';
 
 				commandLine = new CommandLine("git");
 				commandLine.addArgument("commit").addArgument("--allow-empty").addArgument("-m").addArgument(message, false);

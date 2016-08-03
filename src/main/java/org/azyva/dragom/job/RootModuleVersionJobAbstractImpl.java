@@ -510,7 +510,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				this.setIndListModuleVersionRootChanged();
 			}
 
-			if (Util.isAbort() && true) {
+			if (Util.isAbort()) {
 				userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_ABORTED_BY_USER));
 				break;
 			}

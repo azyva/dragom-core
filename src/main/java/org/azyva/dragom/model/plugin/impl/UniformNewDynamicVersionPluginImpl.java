@@ -43,6 +43,14 @@ import org.azyva.dragom.util.Util;
  * <p>
  * This is appropriate when dynamic Version's are related to a development effort,
  * a project. Often a project code or number is used as or within the Version.
+ * <p>
+ * A reuse mechanism is also implemented for the base Version when new dynamic
+ * Version's need to be created. If a reuse base Version is not available, the
+ * default Version for the {@link Module} is used. This may not be optimal for
+ * Module's with multiple main development branches, such as Web services for
+ * which multiple versions can be deployed and maintained simultaneously. Another
+ * NewDynamicVersionPlugin may be better suited in such cases.
+ * TODO: Another NewDynamicVersionPlugin suited for multiple main development branches.
  *
  * @author David Raymond
  */
@@ -132,6 +140,16 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 		module = this.getModule();
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
+		// We start by checking if a specific new dynamic Version is specified. If do and
+		// and it is the same as the current one, we return it immediately without checking
+		// if dynamic Version's must be processed.
+
+		versionNewDynamic = this.handleSpecificDynamicVersion(version);
+
+		if ((versionNewDynamic != null) && versionNewDynamic.equals(version)) {
+			return version;
+		}
+
 		// The main algorithm is after this "if". This "if" is for taking care of the case
 		// where the Version of the module is dynamic in which case it is possible that no
 		// switch is required. But if a switch is required, the algorithm after this "if"
@@ -163,20 +181,15 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 		}
 
 		// Here we know a new version is required (even if the current Version is
-		// dynamic).
+		// dynamic). versionNewDynamic will have been initialized above, but may be null.
 
-		versionNewDynamic = this.handleSpecificDynamicVersion(version);
+		if (versionNewDynamic == null) {
+			// null cannot be returned here.
+			versionNewDynamic = this.handleReuseDynamicVersion(version);
+		}
 
 		// If the new dynamic Version is equal to the current one, the user will have
 		// been informed by this.handleSpecificDynamicVersion.
-		if (versionNewDynamic.equals(version)) {
-			return version;
-		}
-
-		versionNewDynamic = this.handleReuseDynamicVersion(version);
-
-		// If the new dynamic Version is equal to the current one, the user will have
-		// been informed by this.handleReuseDynamicVersion.
 		if (versionNewDynamic.equals(version)) {
 			return version;
 		}
@@ -218,7 +231,7 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 									scmPlugin,
 									userInteractionCallbackPlugin,
 									MessageFormat.format(UniformNewDynamicVersionPluginImpl.resourceBundle.getString(UniformNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_BASE_VERSION), new ModuleVersion(module.getNodePath(), version), versionNewDynamic),
-									version);
+									scmPlugin.getDefaultVersion());
 				}
 			} else {
 				versionBase =
@@ -227,7 +240,7 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 								scmPlugin,
 								userInteractionCallbackPlugin,
 								MessageFormat.format(UniformNewDynamicVersionPluginImpl.resourceBundle.getString(UniformNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_BASE_VERSION), new ModuleVersion(module.getNodePath(), version), versionNewDynamic),
-								(versionReuseBase != null) ? versionReuseBase : version);
+								(versionReuseBase != null) ? versionReuseBase : scmPlugin.getDefaultVersion());
 
 				runtimePropertiesPlugin.setProperty(null, UniformNewDynamicVersionPluginImpl.RUNTIME_PROPERTY_REUSE_BASE_VERSION, versionBase.toString());
 

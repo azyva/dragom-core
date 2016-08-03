@@ -337,7 +337,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 		// gets removed for the current ReferencePath, and that the
 		// UserInteractionCallback BracketHandle gets closed.
 		try {
-			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath));
+			bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, referenceParent.getModuleVersion()));
 
 			mapReferenceVisitModuleActionPerformed = new HashMap<Reference, VisitModuleActionPerformed>();
 
@@ -454,7 +454,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 					visitModuleActionPerformed = VisitModuleActionPerformed.SWITCH;
 
-					bracketHandleReferenceDifferences = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION), referenceParent.getModuleVersion(), byReferenceVersionParent.object));
+					bracketHandleReferenceDifferences = userInteractionCallbackPlugin.startBracket(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION), referenceParent.getModuleVersion(), byReferenceVersionParent.object));
 
 					try {
 						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
@@ -656,7 +656,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 			// As an optimization, we verify if the ReferencePathMatcher can potentially match
 			// children of the new ReferencePath (the version of the current ModuleVersion may
-			// have been switched). If no references were processed during the first passs and
+			// have been switched). If no references were processed during the first pass and
 			// no child can be matched, it is useless to perform the iteration through the
 			// references. If references were processed, we do need to perform the iteration
 			// as this is where they are actually updated. But for those references whose
@@ -880,7 +880,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				}
 			}
 
-			indCreateNewVersion = !scmPlugin.isVersionExists(versionNewDynamic);
+			indCreateNewVersion = !indSameVersion && !scmPlugin.isVersionExists(versionNewDynamic);
 
 			if (indCreateNewVersion) {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST), moduleVersion, versionNewDynamic, byReferenceVersionBase.object));
@@ -970,15 +970,15 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					Map<String, String> mapCommitAttr;
 
 					// We are about to introduce a commit that adjusts the ArtifactVersion according
-					// to the new dynamic Version. For an already existing dynamic Version this should
-					// already have been done when the Version was created. But following the creation
-					// of a static Version, Dragom needs to know that if no new commit was introduced
-					// the dynamic Version is equivalent to the static Version just created. It does
-					// that either by looking at the static Version (tag) created on the last commit of
-					// the dynamic Version (branch), or if a new reverting commit was introduced, by
-					// looking at an attribute of this commit that specifies the equivalent static
-					// Version. If we introduce that new reverting commit here, we must then specify
-					// that commit attribute.
+					// to the new dynamic Version. For an already existing dynamic Version this may
+					// or may not already have been done when the Version was created. But following
+					// the creation of a static Version, Dragom needs to know that if no new commit
+					// was introduced the dynamic Version is equivalent to the static Version just
+					// created. It does that either by looking at the static Version (tag) created on
+					// the last commit of the dynamic Version (branch), or if a new reverting commit
+					// was introduced, by looking at an attribute of this commit that specifies the
+					// equivalent static Version. If we introduce that new reverting commit here, we
+					// must then specify that commit attribute.
 	//TODO: Not sure if that logic should not be in some plugin. Probably it is OK here since the logic is also in CreateStaticVersion, a job.
 	// But maybe the logic to retrieve that information (equivalent static Version) should be centralized. It exists in NewStaticVersionPluginBaseImpl and here.
 					listCommit = scmPlugin.getListCommit(versionNewDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));

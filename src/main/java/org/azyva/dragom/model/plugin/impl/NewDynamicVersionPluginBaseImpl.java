@@ -141,8 +141,7 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 * automatically reused, or if he should be asked again the next time.
 	 *
 	 * @param version Version to switch.
-	 * @return New dynamic Version to switch to. null if no dynamic Version is to be
-	 *   reused.
+	 * @return New dynamic Version to switch to.
 	 */
 	protected Version handleReuseDynamicVersion(Version version) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
