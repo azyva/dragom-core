@@ -293,8 +293,8 @@ public class ReferenceGraphReport {
 			/* *******************************************************************************
 			 * Reference graph report.
 			 * *******************************************************************************/
-			if (ReferenceGraphReport.this.indIncludeReferenceGraph) {
-				if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
+			if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
+				if (ReferenceGraphReport.this.indIncludeReferenceGraph) {
 					List<ReportReference> listReportReference;
 					String extraInfo;
 					ModuleVersion moduleVersion;
@@ -311,6 +311,7 @@ public class ReferenceGraphReport {
 					} else {
 						Reference referenceParent;
 						ReportReferenceGraphNode reportReferenceGraphNodeParent;
+						Object objectImplData;
 
 						referenceParent = referencePath.get(referencePath.size() - 2);
 
@@ -329,14 +330,12 @@ public class ReferenceGraphReport {
 
 						listReportReference = reportReferenceGraphNodeParent.listReportReference;
 
-						if (referenceParent.getImplData() != null) {
-							extraInfo = referenceParent.getImplData().toString();
-						} else {
-							extraInfo = null;
-						}
+						objectImplData = referencePath.getLeafReference().getImplData();
+
+						extraInfo = (objectImplData == null) ? null : objectImplData.toString();
 					}
 
-					moduleVersion = referencePath.get(referencePath.size() - 1).getModuleVersion();
+					moduleVersion = referencePath.getLeafModuleVersion();
 					reportReferenceGraphNode = this.mapReportReferenceGraphNode.get(moduleVersion);
 
 					if (reportReferenceGraphNode == null) {
@@ -345,6 +344,7 @@ public class ReferenceGraphReport {
 						}
 
 						reportReferenceGraphNode = new ReportReferenceGraphNode();
+						reportReferenceGraphNode.moduleVersion = moduleVersion;
 						this.mapReportReferenceGraphNode.put(moduleVersion, reportReferenceGraphNode);
 					}
 
@@ -353,6 +353,8 @@ public class ReferenceGraphReport {
 					if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.FULL_TREE) {
 						reportReference.reportReferenceGraphNode = reportReferenceGraphNode;
 					} else { // if (ReferenceGraphReport.this.referenceGraphMode == ReferenceGraphReport.ReferenceGraphMode.TREE_NO_REDUNDANCY)
+						reportReference.moduleVersion = moduleVersion;
+
 						if (reportReferenceGraphNode.bookmark == null) {
 							reportReferenceGraphNode.bookmark = "REF-" + this.nextBookmarkIndex++;
 						}
@@ -364,16 +366,12 @@ public class ReferenceGraphReport {
 
 					listReportReference.add(reportReference);
 				}
-			}
 
-			if (ReferenceGraphReport.this.indIncludeModules) {
-				/* *******************************************************************************
-				 * Handle the List of Module's and their Version's.
-				 * *******************************************************************************/
+				if (ReferenceGraphReport.this.indIncludeModules) {
+					/* *******************************************************************************
+					 * Handle the List of Module's and their Version's.
+					 * *******************************************************************************/
 
-				// For the list of Module's it is not necessary to consider the repeated
-				// ModuleVersion's.
-				if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
 					ModuleVersion moduleVersion;
 					ReportModule reportModule;
 					ReportVersion reportVersion;
@@ -385,7 +383,7 @@ public class ReferenceGraphReport {
 						reportModule = new ReportModule();
 						reportModule.nodePathModule = moduleVersion.getNodePath();
 						reportModule.listReportVersion = new ArrayList<ReportVersion>();
-						this.mapReportModule.put(moduleVersion.getNodePath(),  reportModule);
+						this.mapReportModule.put(moduleVersion.getNodePath(), reportModule);
 						this.report.listReportModule.add(reportModule);
 					}
 
@@ -394,7 +392,7 @@ public class ReferenceGraphReport {
 					}
 
 					// The Version necessarily does not exist yet since reentry is avoided during the
-					// traversal we are only considering ReferenceGraph.VisitAction.VISIT.
+					// traversal since we are only considering ReferenceGraph.VisitAction.VISIT.
 
 					reportVersion = new ReportVersion();
 
@@ -645,7 +643,6 @@ class Report {
 	@JsonProperty("modules")
 	public List<ReportModule> listReportModule;
 
-
 	/**
 	 * Writes a ReportReference in the text format.
 	 *
@@ -703,7 +700,7 @@ class ReportReference {
 	 * <p>
 	 * Not null if redundancy is avoided in the report and the referenced
 	 * {@link ModuleVersion} has already occurred. In this case
-	 * reportReferenceGraphNode is null moduleVersion and
+	 * reportReferenceGraphNode is null and moduleVersion and
 	 * jumpToReferenceGraphNodeBookmark is not null.
 	 * <p>
 	 * null if reportReferenceGraphNode is not null.

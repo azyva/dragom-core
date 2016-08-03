@@ -230,12 +230,13 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 		ReferenceGraphNode referenceGraphNode;
 
 		isAlreadyProcessed = (moduleReentryAvoider != null) && !moduleReentryAvoider.processModule(reference.getModuleVersion());
-		isMatched = this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion());
 
 		try {
 			// This validates that no cycle exists in the ReferencePath.
 			// TODO: But it may be better to validate the absence of cycle when building the ReferenceGraph.
 			referencePath.add(reference);
+
+			isMatched = this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion());
 
 			if (!indDepthFirst) {
 				visitor.visit(referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));

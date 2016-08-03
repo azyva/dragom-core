@@ -1449,7 +1449,7 @@ public final class Util {
 			Util.readWriteLockStringBuilderSpaces.readLock().unlock();
 			Util.readWriteLockStringBuilderSpaces.writeLock().lock();
 
-			// Current length may have changed between test and lock aquisition.
+			// Current length may have changed between test and lock acquisition.
 			currentLength = Util.stringBuilderSpaces.length();
 
 			if (length > currentLength) {

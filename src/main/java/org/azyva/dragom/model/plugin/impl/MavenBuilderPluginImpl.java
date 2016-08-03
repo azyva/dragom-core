@@ -549,12 +549,12 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 
 		if (settingsFilePath != null) {
 			listCommandLine.add("--settings");
-			listCommandLine.add(this.convertWorkspaceRelativeToAbsolute(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), settingsFilePath));
+			listCommandLine.add(this.convertWorkspaceRelative(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), settingsFilePath));
 		}
 
 		if (globalSettingsFilePath != null) {
 			listCommandLine.add("--global-settings");
-			listCommandLine.add(this.convertWorkspaceRelativeToAbsolute(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), globalSettingsFilePath));
+			listCommandLine.add(this.convertWorkspaceRelative(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), globalSettingsFilePath));
 		}
 
 		if (properties != null) {
@@ -667,12 +667,16 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 		processBuilder.directory(pathModuleWorkspace.toFile());
 		processBuilder.redirectErrorStream(true);
 
+		if (MavenBuilderPluginImpl.logger.isInfoEnabled()) {
+			MavenBuilderPluginImpl.logger.info("Invoking Maven with JAVA_HOME set to " + jdkHomeDir + ", " + pathModuleWorkspace + " as the current working directory and with the following command and arguments: " + listCommandLine);
+		}
+
 		try {
 			if (indWriteLogToFile) {
 				if ((relativeLogFileBase == null) || relativeLogFileBase.equals(MavenBuilderPluginImpl.RelativeLogFileBase.WORKSPACE)) {
-					logFilePath = this.convertWorkspaceRelativeToAbsolute(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), logFilePath);
+					logFilePath = this.convertWorkspaceRelative(((WorkspaceExecContext)execContext).getPathWorkspaceDir(), logFilePath);
 				} else {
-					logFilePath = this.convertWorkspaceRelativeToAbsolute(pathModuleWorkspace, logFilePath);
+					logFilePath = this.convertWorkspaceRelative(pathModuleWorkspace, logFilePath);
 				}
 
 				// Generally, we want to append to the log file. But we replace it if the
@@ -789,14 +793,13 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	}
 
 	/**
-	 * Converts a path that may be relative into an absolute evaluated based on a
-	 * specified directory.
+	 * Converts a path that may be relative by resolving it against another directory.
 	 *
 	 * @param pathBaseDir Path to the base directory.
 	 * @param filePath file path.
-	 * @return Absolute file path.
+	 * @return Converted file path.
 	 */
-	private String convertWorkspaceRelativeToAbsolute(Path pathBaseDir, String filePath) {
+	private String convertWorkspaceRelative(Path pathBaseDir, String filePath) {
 		Path pathFile;
 
 		pathFile = Paths.get(filePath);

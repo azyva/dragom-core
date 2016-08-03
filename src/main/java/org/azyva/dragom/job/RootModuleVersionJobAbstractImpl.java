@@ -510,7 +510,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				this.setIndListModuleVersionRootChanged();
 			}
 
-			if (Util.isAbort()) {
+			if (Util.isAbort() && true) {
 				userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_ABORTED_BY_USER));
 				break;
 			}
@@ -586,9 +586,9 @@ public abstract class RootModuleVersionJobAbstractImpl {
 		// gets removed for the current ReferencePath, and that the
 		// UserInteractionCallback BracketHandle gets closed.
 		try {
+			//TODO: Probably should remove altogether, including message in bundle. Redundant.
 			// We bracket even if the ReferencePath will not be matched in order to better
 			// show the traversal.
-			//TODO: Probably should remove altogether, including message in bundle. Redundant.
 			//bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
 			moduleVersion = reference.getModuleVersion();
@@ -605,9 +605,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				return false;
 			}
 
-
 			// We need to have access to the sources of the Module at different places below:
-			// - To verifying for unsynchronized local or remote changes
+			// - For verifying for unsynchronized local or remote changes
 			// - To obtain the list of references and iterate over them
 			// There are a few combinations of cases where accessing the sources is not
 			// required at all, but they are few and we prefer simplicity here and to always
@@ -675,10 +674,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 			indVisitChildren = true;
 
-			if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
-				RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
-			} else {
-				if (!this.indDepthFirst) {
+			if (!this.indDepthFirst) {
+				if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
+					RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
+				} else {
 					if (this.referencePathMatcher.matches(this.referencePath)) {
 						if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
@@ -693,6 +692,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
 						// the finally block from resetting it.
 						this.referencePath.removeLeafReference();;
 						indReferencePathAlreadyReverted = true;
+
+						// We need to release before visiting the matched ModuleVersion since the
+						// workspace directory may need to be accessed again.
+						workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+						pathModuleWorkspace = null;
 
 						indVisitChildren = this.visitMatchedModuleVersion(reference);
 
@@ -710,6 +714,12 @@ public abstract class RootModuleVersionJobAbstractImpl {
 			if (indVisitChildren && this.referencePathMatcher.canMatchChildren(this.referencePath)) {
 				ReferenceManagerPlugin referenceManagerPlugin = null;
 				List<Reference> listReference;
+
+				// The workspace directory may have been released above and we need to access it
+				// again.
+				if (pathModuleWorkspace == null) {
+					pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
+				}
 
 				if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
 					listReference = Collections.emptyList();
@@ -740,43 +750,50 @@ public abstract class RootModuleVersionJobAbstractImpl {
 						return false;
 					}
 				}
+			}
 
+			if (this.indDepthFirst) {
 				if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
 					RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
 				} else {
-					if (this.indDepthFirst) {
-						if (this.referencePathMatcher.matches(this.referencePath)) {
-							if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
-								return false;
-							} else {
-								// This is not required since bracketHandle can only be null here, but the
-								// compiler does not know. This avoids a warning.
-								if (bracketHandle != null) {
-									bracketHandle.close();
-								}
-
-								bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+					if (this.referencePathMatcher.matches(this.referencePath)) {
+						if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
+							return false;
+						} else {
+							// This is not required since bracketHandle can only be null here, but the
+							// compiler does not know. This avoids a warning.
+							if (bracketHandle != null) {
+								bracketHandle.close();
 							}
 
-							// We are about to delegate to visitMatchedModuleVersion for the rest of the
-							// processing. This method starts working on the same current module and also
-							// manages the ReferencePath. We must therefore reset it now. And we must prevent
-							// the finally block from resetting it.
-							this.referencePath.removeLeafReference();;
-							indReferencePathAlreadyReverted = true;
-
-							// Return value is useless when the traversal is depth first.
-							this.visitMatchedModuleVersion(reference);
-
-							if (Util.isAbort()) {
-								return false;
-							}
-
-							// We redo the things that were undone before calling visitMatchedModuleVersion.
-							this.referencePath.add(reference);
-							indReferencePathAlreadyReverted = false;
+							bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
 						}
+
+						// We are about to delegate to visitMatchedModuleVersion for the rest of the
+						// processing. This method starts working on the same current module and also
+						// manages the ReferencePath. We must therefore reset it now. And we must prevent
+						// the finally block from resetting it.
+						this.referencePath.removeLeafReference();;
+						indReferencePathAlreadyReverted = true;
+
+						// We need to release before iterating through the references since the workspace
+						// directory may need to be accessed again.
+						if (pathModuleWorkspace != null) {
+							workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+							pathModuleWorkspace = null;
+						}
+
+						// Return value is useless when the traversal is depth first.
+						this.visitMatchedModuleVersion(reference);
+
+						if (Util.isAbort()) {
+							return false;
+						}
+
+						// We redo the things that were undone before calling visitMatchedModuleVersion.
+						this.referencePath.add(reference);
+						indReferencePathAlreadyReverted = false;
 					}
 				}
 			}
