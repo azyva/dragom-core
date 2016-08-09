@@ -136,6 +136,16 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	private static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_SWITCHED_OR_KEPT = "MODULE_VERSION_ALREADY_SWITCHED_OR_KEPT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_OTHER_VERSION_ALREADY_SWITCHED_OR_KEPT = "OTHER_VERSION_ALREADY_SWITCHED_OR_KEPT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	private static final String MSG_PATTERN_KEY_DYNAMIC_MODULE_VERSION_KEPT = "DYNAMIC_MODULE_VERSION_KEPT";
 
 	/**
@@ -477,6 +487,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 								if (referenceChildNew.equalsNoVersion(referenceChildOrg)) {
 									referenceChildNewFound = referenceChildNew;
+									break;
 								}
 							}
 
@@ -829,7 +840,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				// If the version of the module is the same as the new version stored in
 				// mapNodePathVersionDynamic, simply keep it. No switch needs to
 				// be performed.
-				SwitchToDynamicVersion.logger.info("ModuleVersion " + moduleVersion + " is currently a dynamic version that was already switched to or previously kept by the user. We simply keep it.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_SWITCHED_OR_KEPT), moduleVersion));
 				return false;
 			} else {
 				// we rightfully assume the new version exists since it was inserted in
@@ -837,7 +848,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				// check it out in some workspace directory. It probably already is, but even if
 				// not, if the caller needs the sources, it is responsible for checking it out
 				// itself.
-				SwitchToDynamicVersion.logger.info("Another version " + versionNewDynamic + " of ModuleVersion " + moduleVersion + " was already switched to or previously kept by the user. We assume we want to switch that ModuleVersion to that same version.");
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_OTHER_VERSION_ALREADY_SWITCHED_OR_KEPT), moduleVersion, versionNewDynamic));
 
 				if (byReferenceVersion != null) {
 					byReferenceVersion.object = versionNewDynamic;
@@ -896,7 +907,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			if (!indSameVersion) {
 				if (indUserWorkspaceDir) {
 					if (indCreateNewVersion) {
-						scmPlugin.switchVersion(pathModuleWorkspace, byReferenceVersionBase.object);
+						if (!moduleVersion.getVersion().equals(byReferenceVersionBase.object)) {
+							scmPlugin.switchVersion(pathModuleWorkspace, byReferenceVersionBase.object);
+						}
+
 						scmPlugin.createVersion(pathModuleWorkspace, versionNewDynamic, true);
 						message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
 						userInteractionCallbackPlugin.provideInfo(message);

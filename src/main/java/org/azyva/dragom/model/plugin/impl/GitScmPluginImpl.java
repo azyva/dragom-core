@@ -1204,6 +1204,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
+		// If the new version is the same as the current one, there is nothing to do.
+		if (version.equals(this.getVersion(pathModuleWorkspace))) {
+			return;
+		}
+
 		Git.checkout(pathModuleWorkspace, version);
 
 		// After switching to a new dynamic Version, the workspace may not be synchronized
@@ -1214,15 +1219,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
 		}
 
-		/* If the WorkspaceDir belongs to the user, it is specific to a version and the
+		/* The WorkspaceDir belongs to the user and it is specific to a version and the
 		 * new version must be reflected in the workspace.
 		 */
-		if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
-			// TODO: Eventually must think about the implications of this if workspace allows for multiple versions of same module.
-			// What if the new version already exists? We will probably have to delete one of them, but which one.
-			// Have to deal with main repository if ever it is the one deleted.
-			workspacePlugin.updateWorkspaceDir(workspaceDir, new WorkspaceDirUserModuleVersion(new ModuleVersion(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath(), version)));
-		}
+		// TODO: Eventually must think about the implications of this if workspace allows for multiple versions of same module.
+		// What if the new version already exists? We will probably have to delete one of them, but which one.
+		// Have to deal with main repository if ever it is the one deleted.
+		workspacePlugin.updateWorkspaceDir(workspaceDir, new WorkspaceDirUserModuleVersion(new ModuleVersion(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath(), version)));
 	}
 
 	@Override
@@ -1263,6 +1266,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			branch = versionTarget.getVersion();
 
 			Git.createBranch(pathModuleWorkspace, branch, indSwitch);
+
+			if (indSwitch) {
+				workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
+
+				/* If the WorkspaceDir belongs to the user, it is specific to a version and the
+				 * new version must be reflected in the workspace.
+				 */
+				if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
+					workspacePlugin.updateWorkspaceDir(workspaceDir, new WorkspaceDirUserModuleVersion(new ModuleVersion(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath(), versionTarget)));
+				}
+			}
 
 			try {
 				if (!indSwitch) {
