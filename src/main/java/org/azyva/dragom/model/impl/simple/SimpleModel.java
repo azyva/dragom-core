@@ -55,7 +55,7 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * specific node, contrary to real Model properties.
  * <p>
  * The fact that initialization Properties can be specified does not violate the
- * general principal that a Model is static since initialization Properties are
+ * general principle that a Model is static since initialization Properties are
  * not meant to change between tool invocations.
  * <p>
  * Note that {@link NodePlugin}'s provided by Model can use runtime properties
@@ -79,7 +79,8 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 
 	/**
 	 * Map of known ArtifactoryGrouipId to Module. This is to avoid having to perform
-	 * a costly search every time the finModuleByArtifactGroupId method is called.
+	 * a costly search every time the {@link #findModuleByArtifactGroupId} method is
+	 * called.
 	 */
 	private Map<ArtifactGroupId, SimpleModule> mapArtifactGroupIdModule;
 

@@ -179,7 +179,7 @@ public abstract class SimpleNode implements Node {
 	 * Sets the parent {@link SimpleClassificationNode}.
 	 * <p>
 	 * This method has package scope since fields of a SimpleNode can only be set
-	 * set while dynamically completing a {@link SimpleModel} using
+	 * while dynamically completing a {@link SimpleModel} using
 	 * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
 	 *
 	 * @param simpleClassificationNode See description.
@@ -342,7 +342,7 @@ public abstract class SimpleNode implements Node {
 	 * method would evaluate these expressions. These expressions would be evaluated
 	 * in the context of this SimpleNode, but the SimpleNode on which the property
 	 * value was actually defined would also be provided as a root object. This would
-	 * provides for a very flexible and powerful inheritance mechanism that would
+	 * provide for a very flexible and powerful inheritance mechanism that would
 	 * subsume the functionality provided by parent references described above and
 	 * much more.
 	 * <p>
