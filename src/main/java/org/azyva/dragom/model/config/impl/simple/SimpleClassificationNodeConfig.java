@@ -39,22 +39,11 @@ import org.azyva.dragom.model.config.NodeType;
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements ClassificationNodeConfig, MutableClassificationNodeConfig {
+	private boolean indNew;
+
 	SimpleConfig simpleConfig;
 
 	private Map<String, NodeConfig> mapNodeConfigChild;
-
-	/**
-	 * Constructor for non-root ClassificationNodeConfig.
-	 *
-	 * @param simpleClassificationNodeConfigParent Parent
-	 *   SimpleClassificationNodeConfig.
-	 */
-	public SimpleClassificationNodeConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
-		super(simpleClassificationNodeConfigParent);
-
-		// LinkedHashMap is used to preserve insertion order.
-		this.mapNodeConfigChild = new LinkedHashMap<String, NodeConfig>();
-	}
 
 	/**
 	 * Constructor for root ClassificationNodeConfig.
@@ -65,6 +54,19 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		super(null);
 
 		this.simpleConfig = simpleConfig;
+
+		// LinkedHashMap is used to preserve insertion order.
+		this.mapNodeConfigChild = new LinkedHashMap<String, NodeConfig>();
+	}
+
+	/**
+	 * Constructor for non-root ClassificationNodeConfig.
+	 *
+	 * @param simpleClassificationNodeConfigParent Parent
+	 *   SimpleClassificationNodeConfig.
+	 */
+	public SimpleClassificationNodeConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+		super(simpleClassificationNodeConfigParent);
 
 		// LinkedHashMap is used to preserve insertion order.
 		this.mapNodeConfigChild = new LinkedHashMap<String, NodeConfig>();
@@ -99,13 +101,39 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 	 *
 	 * @param nodeConfigChild.
 	 */
-	public void setNodeConfigChild(NodeConfig nodeConfigChild) {
+	void setNodeConfigChild(NodeConfig nodeConfigChild) {
 		this.mapNodeConfigChild.put(nodeConfigChild.getName(), nodeConfigChild);
+	}
+
+	/**
+	 * Renames a child {@link NodeConfig}.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNodeConfig#setNodeConfigValue}.
+	 *
+	 * @param currentName Current name.
+	 * @param newName New name.
+	 */
+	void renameNodeConfigChild(String currentName, String newName) {
+		NodeConfig nodeConfigChild;
+
+		nodeConfigChild = this.mapNodeConfigChild.remove(currentName);
+
+		if (nodeConfigChild == null) {
+			throw new RuntimeException("NodeConfig with current name " + currentName + " not found.");
+		}
+
+		this.mapNodeConfigChild.put(newName, nodeConfigChild);
 	}
 
 	@Override
 	public NodeConfigValue getNodeConfigValue() {
 		return this.getClassificationNodeConfigValue();
+	}
+
+	@Override
+	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		this.setClassificationNodeConfigValue((ClassificationNodeConfigValue)nodeConfigValue);
 	}
 
 	@Override
@@ -121,7 +149,11 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 
 	@Override
 	public void setClassificationNodeConfigValue(ClassificationNodeConfigValue classificationNodeConfigValue) {
-		this.setNodeConfigValue(classificationNodeConfigValue);
+		this.extractNodeConfigValue(classificationNodeConfigValue);
+
+		if (this.indNew) {
+
+		}
 	}
 
 	@Override

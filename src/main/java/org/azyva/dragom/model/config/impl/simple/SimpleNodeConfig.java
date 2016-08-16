@@ -39,10 +39,32 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @see org.azyva.dragom.model.config.simple
  */
 public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig {
+	/**
+	 * Indicates that the {@link SimpleNodeConfig} is new and has not been finalized
+	 * yet. This is the state in which it is after having been created using the
+	 * create methods of {@link SimpleConfig} or
+	 * {@link SimpleClassificationNodeConfig}.
+	 */
+	private boolean indNew;
+
+	/**
+	 * Parent {@link SimpleClassificationNodeConfig}.
+	 */
 	private SimpleClassificationNodeConfig simpleClassificationNodeConfigParent;
 
+	/**
+	 * Name.
+	 */
 	private String name;
+
+	/**
+	 * Map of {@link PropertyDefConfig}.
+	 */
 	private Map<String, PropertyDefConfig> mapPropertyDefConfig;
+
+	/**
+	 * Map of {@link PluginDefConfig}.
+	 */
 	private Map<PluginKey, PluginDefConfig> mapPluginDefConfig;
 
 	/**
@@ -52,6 +74,8 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	 *   SimpleClassificationNodeConfig.
 	 */
 	SimpleNodeConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+		this.indNew = true;
+
 		this.simpleClassificationNodeConfigParent = simpleClassificationNodeConfigParent;
 
 		// LinkedHashMap are used to preserve insertion order.
@@ -119,19 +143,31 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 		}
 	}
 
-	@Override
-	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
-		if (nodeConfigValue.getName() == null) {
-			throw new RuntimeException("Name of NodeConfigValue must not be null.");
+	/**
+	 * Called by subclasses to extract the data from a {@link NodeConfigValue} and set
+	 * them within the {@link NodeConfig}.
+	 *
+	 * @param nodeConfigValue
+	 */
+	public void extractNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		String previousName;
+
+		if ((nodeConfigValue.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
+			throw new RuntimeException("Name of NodeConfigValue must not be null for non-root SimpleClassificationNodeConfig.");
 		}
 
-		if (this.simpleClassificationNodeConfigParent != null) {
-			this.name = nodeConfigValue.getName();
-			this.simpleClassificationNodeConfigParent.setNodeConfigChild(this);
-			this.simpleClassificationNodeConfigParent = null;
+		previousName = this.name;
+		this.name = nodeConfigValue.getName();
+
+		if (this.indNew) {
+			if (this.simpleClassificationNodeConfigParent != null) {
+				this.simpleClassificationNodeConfigParent.setNodeConfigChild(this);
+			}
+
+			this.indNew = false;
 		} else {
-			if (!this.name.equals(nodeConfigValue.getName())) {
-				throw new RuntimeException("NodeConfig name change not allowed (" + this.name + " to " + nodeConfigValue.getName() + ")");
+			if ((this.simpleClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
+				this.simpleClassificationNodeConfigParent.renameNodeConfigChild(previousName, this.name);
 			}
 		}
 
@@ -140,6 +176,8 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 		for(PropertyDefConfig propertyDefConfig: nodeConfigValue.getListPropertyDefConfig()) {
 			this.mapPropertyDefConfig.put(propertyDefConfig.getName(),  propertyDefConfig);
 		}
+
+		this.mapPluginDefConfig.clear();
 
 		for(PluginDefConfig pluginDefConfig: nodeConfigValue.getListPluginDefConfig()) {
 			this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
