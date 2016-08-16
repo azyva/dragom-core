@@ -71,7 +71,8 @@ public class XmlClassificationNodeConfig extends XmlNodeConfig implements Classi
 	@Override
 	public List<NodeConfig> getListChildNodeConfig() {
 		// A copy is returned to prevent the internal Map from being modified by the
-		// caller.
+		// caller. Ideally, an unmodifiable List view of the Collection returned by
+		// Map.values should be returned, but that does not seem possible.
 		return new ArrayList<NodeConfig>(this.mapNodeConfigChild.values());
 	}
 

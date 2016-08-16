@@ -96,7 +96,8 @@ public abstract class XmlNodeConfig implements NodeConfig {
 	@Override
 	public List<PropertyDefConfig> getListPropertyDefConfig() {
 		// A copy is returned to prevent the internal Map from being modified by the
-		// caller.
+		// caller. Ideally, an unmodifiable List view of the Collection returned by
+		// Map.values should be returned, but that does not seem possible.
 		return new ArrayList<PropertyDefConfig>(this.mapPropertyDefConfig.values());
 	}
 
@@ -116,7 +117,8 @@ public abstract class XmlNodeConfig implements NodeConfig {
 	@Override
 	public List<PluginDefConfig> getListPluginDefConfig() {
 		// A copy is returned to prevent the internal Map from being modified by the
-		// caller.
+		// caller. Ideally, an unmodifiable List view of the Collection returned by
+		// Map.values should be returned, but that does not seem possible.
 		return new ArrayList<PluginDefConfig>(this.mapPluginDefConfig.values());
 	}
 

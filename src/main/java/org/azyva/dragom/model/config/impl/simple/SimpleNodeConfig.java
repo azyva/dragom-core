@@ -24,7 +24,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
+import org.azyva.dragom.model.config.NodeConfigValue;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
@@ -36,7 +38,9 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @author David Raymond
  * @see org.azyva.dragom.model.config.simple
  */
-public abstract class SimpleNodeConfig implements NodeConfig {
+public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig {
+	private SimpleClassificationNodeConfig simpleClassificationNodeConfigParent;
+
 	private String name;
 	private Map<String, PropertyDefConfig> mapPropertyDefConfig;
 	private Map<PluginKey, PluginDefConfig> mapPluginDefConfig;
@@ -44,10 +48,11 @@ public abstract class SimpleNodeConfig implements NodeConfig {
 	/**
 	 * Constructor.
 	 *
-	 * @param name Name.
+	 * @param simpleClassificationNodeConfigParent Parent
+	 *   SimpleClassificationNodeConfig.
 	 */
-	public SimpleNodeConfig(String name) {
-		this.name = name;
+	SimpleNodeConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+		this.simpleClassificationNodeConfigParent = simpleClassificationNodeConfigParent;
 
 		// LinkedHashMap are used to preserve insertion order.
 		this.mapPropertyDefConfig = new LinkedHashMap<String, PropertyDefConfig>();
@@ -72,23 +77,9 @@ public abstract class SimpleNodeConfig implements NodeConfig {
 	@Override
 	public List<PropertyDefConfig> getListPropertyDefConfig() {
 		// A copy is returned to prevent the internal Map from being modified by the
-		// caller.
+		// caller. Ideally, an unmodifiable List view of the Collection returned by
+		// Map.values should be returned, but that does not seem possible.
 		return new ArrayList<PropertyDefConfig>(this.mapPropertyDefConfig.values());
-	}
-
-	/**
-	 * Adds a {@link PropertyDefConfig}.
-	 * <p>
-	 * Any implementation of PropertyDefConfig can be added.
-	 *
-	 * @param propertyDefConfig PropertyDefConfig.
-	 */
-	public void addPropertyDefConfig(PropertyDefConfig propertyDefConfig) {
-		if (this.mapPropertyDefConfig.containsKey(propertyDefConfig.getName())) {
-			throw new RuntimeException("Property " + propertyDefConfig.getName() + " alreaady present in configuration for node " + this.name + '.');
-		}
-
-		this.mapPropertyDefConfig.put(propertyDefConfig.getName(), propertyDefConfig);
 	}
 
 	@Override
@@ -97,32 +88,62 @@ public abstract class SimpleNodeConfig implements NodeConfig {
 	}
 
 	@Override
-	public boolean isPluginDefConfigExists(			Class<? extends NodePlugin> classNodePlugin, String pluginId) {
+	public boolean isPluginDefConfigExists(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
 		return this.mapPluginDefConfig.containsKey(new PluginKey(classNodePlugin, pluginId));
 	}
 
 	@Override
 	public List<PluginDefConfig> getListPluginDefConfig() {
 		// A copy is returned to prevent the internal Map from being modified by the
-		// caller.
+		// caller. Ideally, an unmodifiable List view of the Collection returned by
+		// Map.values should be returned, but that does not seem possible.
 		return new ArrayList<PluginDefConfig>(this.mapPluginDefConfig.values());
 	}
 
 	/**
-	 * Adds a {@link PluginDefConfig}.
-	 * <p>
-	 * Any implementation of PluginDefConfig can be added.
+	 * Called by subclasses to fill a {@link NodeConfigValue} which must be created by
+	 * the subclass since its real type (ModuleConfigValue or
+	 * ClassificationNodeConfigValue) is determined by the subclass.
 	 *
-	 * @param pluginDefConfig PluginDefConfig.
+	 * @param nodeConfigValue NodeConfigValue.
 	 */
-	public void addPluginDefConfig(PluginDefConfig pluginDefConfig) {
-		PluginKey pluginKey;
+	protected void fillNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		nodeConfigValue.setName(this.name);
 
-		pluginKey = new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId());
-		if (this.mapPluginDefConfig.containsKey(pluginKey)) {
-			throw new RuntimeException("Plugin " + pluginDefConfig.getClassNodePlugin().getName() + ':' + pluginDefConfig.getPluginId() + " alreaady present in configuration for node " + this.name + '.');
+		for(PropertyDefConfig propertyDefConfig: this.mapPropertyDefConfig.values()) {
+			nodeConfigValue.setPropertyDefConfig(propertyDefConfig);
 		}
 
-		this.mapPluginDefConfig.put(pluginKey, pluginDefConfig);
+		for(PluginDefConfig pluginDefConfig: this.mapPluginDefConfig.values()) {
+			nodeConfigValue.setPluginDefConfig(pluginDefConfig);
+		}
+	}
+
+	@Override
+	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		if (nodeConfigValue.getName() == null) {
+			throw new RuntimeException("Name of NodeConfigValue must not be null.");
+		}
+
+		if (this.simpleClassificationNodeConfigParent != null) {
+			this.name = nodeConfigValue.getName();
+			this.simpleClassificationNodeConfigParent.setNodeConfigChild(this);
+			this.simpleClassificationNodeConfigParent = null;
+		} else {
+			if (!this.name.equals(nodeConfigValue.getName())) {
+				throw new RuntimeException("NodeConfig name change not allowed (" + this.name + " to " + nodeConfigValue.getName() + ")");
+			}
+		}
+
+		this.mapPropertyDefConfig.clear();
+
+		for(PropertyDefConfig propertyDefConfig: nodeConfigValue.getListPropertyDefConfig()) {
+			this.mapPropertyDefConfig.put(propertyDefConfig.getName(),  propertyDefConfig);
+		}
+
+		for(PluginDefConfig pluginDefConfig: nodeConfigValue.getListPluginDefConfig()) {
+			this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
+		}
+
 	}
 }

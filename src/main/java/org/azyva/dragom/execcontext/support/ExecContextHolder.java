@@ -20,6 +20,7 @@
 package org.azyva.dragom.execcontext.support;
 
 import java.text.MessageFormat;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.ResourceBundle;
@@ -27,6 +28,8 @@ import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.ToolLifeCycleExecContext;
+import org.azyva.dragom.execcontext.plugin.ExecContextPlugin;
+import org.azyva.dragom.model.Model;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 
 
@@ -87,6 +90,81 @@ public class ExecContextHolder {
 	 */
 	private static Set<ExecContext> setExecContextLocked = new HashSet<ExecContext>();
 
+	private static class DummyExecContext implements ExecContext {
+		private Model model;
+
+		/**
+		 * Constructor.
+		 *
+		 * @param model Model.
+		 */
+		public DummyExecContext(Model model) {
+			this.model = model;
+		}
+
+		@Override
+		public Model getModel() {
+			return this.model;
+		}
+
+		@Override
+		public <ExecContextPluginInterface extends ExecContextPlugin> ExecContextPluginInterface getExecContextPlugin(Class<ExecContextPluginInterface> classExecContextPluginInterface) {
+			return null;
+		}
+
+		@Override
+		public Set<String> getSetInitProperty() {
+			// TODO Auto-generated method stub
+			return Collections.<String>emptySet();
+		}
+
+		@Override
+		public String getInitProperty(String name) {
+			return null;
+		}
+
+		@Override
+		public String getProperty(String name) {
+			return null;
+		}
+
+		@Override
+		public void setProperty(String name, String value) {
+		}
+
+		@Override
+		public Set<String> getSetProperty(String prefix) {
+			return Collections.<String>emptySet();
+		}
+
+		@Override
+		public void removeProperty(String name) {
+		}
+
+		@Override
+		public void removeProperties(String prefix) {
+		}
+
+		@Override
+		public Object getTransientData(String name) {
+			return null;
+		}
+
+		@Override
+		public void setTransientData(String name, Object value) {
+		}
+
+		@Override
+		public String getName() {
+			return "Dummy ExecContext";
+		}
+
+		@Override
+		public void release() {
+		}
+
+	}
+
 	/**
 	 * Sets the {@link ExecContext} in thread-local storage and starts tool
 	 * execution.
@@ -114,6 +192,27 @@ public class ExecContextHolder {
 
 			toolLifeCycleExecContext.startTool(propertiesInit);
 		}
+	}
+
+	/**
+	 * Sets a dummy {@link ExecContext} in thread-local storage.
+	 * <p>
+	 * Useful in non-tool contexts where an ExecContext is not really required. But
+	 * since many methods rely on an ExecContext being available, a dummy non-null
+	 * ExecContext prevents NullPointerException's.
+	 * <p>
+	 * Since a {@link Model} is an integral part of the ExecContext, it is specified
+	 * here as an argument to be associated with the ExecContext.
+	 *
+	 * @param Model Model.
+	 * @return Dummy ExecContext.
+	 */
+	public static ExecContext setDummy(Model model) {
+		ExecContext execContext = new DummyExecContext(model);
+
+		ExecContextHolder.setAndStartTool(execContext, null);
+
+		return execContext;
 	}
 
 	/**

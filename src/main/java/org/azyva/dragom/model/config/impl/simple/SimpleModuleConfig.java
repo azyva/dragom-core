@@ -20,6 +20,9 @@
 package org.azyva.dragom.model.config.impl.simple;
 
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.ModuleConfigValue;
+import org.azyva.dragom.model.config.MutableModuleConfig;
+import org.azyva.dragom.model.config.NodeConfigValue;
 import org.azyva.dragom.model.config.NodeType;
 
 /**
@@ -28,18 +31,40 @@ import org.azyva.dragom.model.config.NodeType;
  * @author David Raymond
  * @see org.azyva.dragom.model.config.simple
  */
-public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig {
+public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig, MutableModuleConfig  {
 	/**
 	 * Constructor.
 	 *
-	 * @param name Name.
+	 * @param simpleClassificationNodeConfigParent Parent
+	 *   SimpleClassificationNodeConfig.
 	 */
-	public SimpleModuleConfig(String name) {
-		super(name);
+	SimpleModuleConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+		super(simpleClassificationNodeConfigParent);
 	}
 
 	@Override
 	public NodeType getNodeType() {
 		return NodeType.MODULE;
+	}
+
+	@Override
+	public NodeConfigValue getNodeConfigValue() {
+		return this.getModuleConfigValue();
+	}
+
+	@Override
+	public ModuleConfigValue getModuleConfigValue() {
+		ModuleConfigValue moduleConfigValue;
+
+		moduleConfigValue = new ModuleConfigValue();
+
+		this.fillNodeConfigValue(moduleConfigValue);
+
+		return moduleConfigValue;
+	}
+
+	@Override
+	public void setModuleConfigValue(ModuleConfigValue moduleConfigValue) {
+		this.setNodeConfigValue(moduleConfigValue);
 	}
 }
