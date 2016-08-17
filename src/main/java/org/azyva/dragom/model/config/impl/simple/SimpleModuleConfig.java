@@ -53,6 +53,11 @@ public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig
 	}
 
 	@Override
+	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		this.setModuleConfigValue((ModuleConfigValue)nodeConfigValue);
+	}
+
+	@Override
 	public ModuleConfigValue getModuleConfigValue() {
 		ModuleConfigValue moduleConfigValue;
 
@@ -65,6 +70,11 @@ public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig
 
 	@Override
 	public void setModuleConfigValue(ModuleConfigValue moduleConfigValue) {
-		this.setNodeConfigValue(moduleConfigValue);
+		this.extractNodeConfigValue(classificationNodeConfigValue);
+
+		if (this.indNew) {
+
+		}
 	}
+
 }
