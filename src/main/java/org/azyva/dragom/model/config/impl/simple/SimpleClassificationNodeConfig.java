@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
+import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
 import org.azyva.dragom.model.config.MutableModuleConfig;
 import org.azyva.dragom.model.config.NodeConfig;
@@ -39,8 +40,6 @@ import org.azyva.dragom.model.config.NodeType;
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements ClassificationNodeConfig, MutableClassificationNodeConfig {
-	private boolean indNew;
-
 	SimpleConfig simpleConfig;
 
 	private Map<String, NodeConfig> mapNodeConfigChild;
@@ -126,6 +125,18 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		this.mapNodeConfigChild.put(newName, nodeConfigChild);
 	}
 
+	/**
+	 * Removes a child {@link NodeConfig}.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNodeConfig#delete}.
+	 *
+	 * @param childNodeName
+	 */
+	void removeChildNodeConfig(String childNodeName) {
+		this.mapNodeConfigChild.remove(childNodeName);
+	}
+
 	@Override
 	public NodeConfigValue getNodeConfigValue() {
 		return this.getClassificationNodeConfigValue();
@@ -136,11 +147,26 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		this.setClassificationNodeConfigValue((ClassificationNodeConfigValue)nodeConfigValue);
 	}
 
+	/**
+	 * We need to override delete which is already defined in {@link SimpleNodeConfig}
+	 * since only a SimpleClassificationNodeConfig can be a root ClassificationNodeConfig
+	 * within a {@link Config}.
+	 */
+	@Override
+	public void delete() {
+		super.delete();
+
+		if (this.simpleConfig != null) {
+			this.simpleConfig.setClassificationNodeConfigRoot(null);
+			this.simpleConfig = null;
+		}
+	}
+
 	@Override
 	public ClassificationNodeConfigValue getClassificationNodeConfigValue() {
 		ClassificationNodeConfigValue classificationNodeConfigValue;
 
-		classificationNodeConfigValue = new ClassificationNodeConfigValue();
+		classificationNodeConfigValue = new SimpleClassificationNodeConfigValue();
 
 		this.fillNodeConfigValue(classificationNodeConfigValue);
 
@@ -149,16 +175,18 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 
 	@Override
 	public void setClassificationNodeConfigValue(ClassificationNodeConfigValue classificationNodeConfigValue) {
+		boolean indNew;
+
+		// We have to save the value of indNew since extractNodeConfigValue resets it.
+		indNew = this.indNew;
+
 		this.extractNodeConfigValue(classificationNodeConfigValue);
 
-		if (this.indNew) {
-
+		if (indNew) {
+			if (this.simpleConfig != null) {
+				this.simpleConfig.setClassificationNodeConfigRoot(this);
+			}
 		}
-	}
-
-	@Override
-	public void deleteChildNodeConfig(String childNodeName) {
-		this.mapNodeConfigChild.remove(childNodeName);
 	}
 
 	@Override

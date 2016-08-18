@@ -45,7 +45,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	 * create methods of {@link SimpleConfig} or
 	 * {@link SimpleClassificationNodeConfig}.
 	 */
-	private boolean indNew;
+	protected boolean indNew;
 
 	/**
 	 * Parent {@link SimpleClassificationNodeConfig}.
@@ -124,6 +124,19 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 		return new ArrayList<PluginDefConfig>(this.mapPluginDefConfig.values());
 	}
 
+	@Override
+	public boolean isNew() {
+		return this.indNew;
+	}
+
+	@Override
+	public void delete() {
+		if (!this.indNew && (this.simpleClassificationNodeConfigParent != null)) {
+			this.simpleClassificationNodeConfigParent.removeChildNodeConfig(this.name);
+			this.simpleClassificationNodeConfigParent = null;
+		}
+	}
+
 	/**
 	 * Called by subclasses to fill a {@link NodeConfigValue} which must be created by
 	 * the subclass since its real type (ModuleConfigValue or
@@ -146,10 +159,13 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	/**
 	 * Called by subclasses to extract the data from a {@link NodeConfigValue} and set
 	 * them within the {@link NodeConfig}.
+	 * <p>
+	 * Uses the indNew variable, but does not reset it. It is intended to be reset by
+	 * the subclass caller method.
 	 *
 	 * @param nodeConfigValue
 	 */
-	public void extractNodeConfigValue(NodeConfigValue nodeConfigValue) {
+	protected void extractNodeConfigValue(NodeConfigValue nodeConfigValue) {
 		String previousName;
 
 		if ((nodeConfigValue.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
@@ -163,8 +179,6 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 			if (this.simpleClassificationNodeConfigParent != null) {
 				this.simpleClassificationNodeConfigParent.setNodeConfigChild(this);
 			}
-
-			this.indNew = false;
 		} else {
 			if ((this.simpleClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
 				this.simpleClassificationNodeConfigParent.renameNodeConfigChild(previousName, this.name);

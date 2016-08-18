@@ -31,10 +31,14 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleBuilder;
+import org.azyva.dragom.model.MutableClassificationNode;
+import org.azyva.dragom.model.MutableModel;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
+import org.azyva.dragom.model.config.MutableConfig;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
@@ -64,12 +68,23 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  *
  * @author David Raymond
  */
-public class SimpleModel implements Model, ModelNodeBuilderFactory {
+public class SimpleModel implements Model, MutableModel, ModelNodeBuilderFactory {
+	/**
+	 * Indicates if the SimpleModel is mutable, based on whether the {@link Config}
+	 * provided is mutable.
+	 */
+	private boolean indMutable;
+
 	/**
 	 * Initialization Properties that can override properties specified within the
 	 * {@link Model} {@link Config}.
 	 */
 	private Properties propertiesInit;
+
+	/**
+	 * {@link Config} for the Model.
+	 */
+	private Config config;
 
 	/**
 	 * {@link SimpleClassificationNode} representing the root
@@ -275,9 +290,15 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 	 */
 	public SimpleModel(Config config, Properties propertiesInit) {
 		this.propertiesInit = propertiesInit;
-		this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
+		this.config = config;
+		this.indMutable = (this.config instanceof MutableConfig);
+
+		if (!this.indMutable || (config.getClassificationNodeConfigRoot() != null)) {
+			this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
+		}
 
 		this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, SimpleModule>();
+		??? this map may need to be flushed when mutating the model (all of it?)
 	}
 
 	/**
@@ -432,8 +453,40 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory {
 		return null;
 	}
 
+	/**
+	 * Sets the root {@link SimpleClassificationNode}.
+	 * <p>
+	 * If one is already set, it is overwritten.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNode#setNodeConfigValue}.
+	 *
+	 * @param simpleClassificationNodeRoot Root SimpleClassificationNode.
+	 */
+	void setSimpleClassificationNodeRoot(SimpleClassificationNode simpleClassificationNodeRoot) {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		this.simpleClassificationNodeRoot = simpleClassificationNodeRoot;
+		??? if replace, destroy recursive.
+	}
+
+	@Override
+	public MutableClassificationNode createClassificationNodeConfigRoot() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		return new SimpleClassificationNode(((MutableConfig)this.config).createClassificationNodeConfigRoot(), this);
+	}
+
 	@Override
 	public ClassificationNodeBuilder createClassificationNodeBuilder() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
 		return new SimpleClassificationNodeBuilder(this);
 	}
 

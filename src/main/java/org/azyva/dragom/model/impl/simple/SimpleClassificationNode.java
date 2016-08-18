@@ -28,12 +28,17 @@ import java.util.Set;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
+import org.azyva.dragom.model.MutableClassificationNode;
+import org.azyva.dragom.model.MutableModule;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
+import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
+import org.azyva.dragom.model.config.NodeConfigValue;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.slf4j.Logger;
@@ -44,7 +49,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author David Raymond
  */
-public class SimpleClassificationNode extends SimpleNode implements ClassificationNode {
+public class SimpleClassificationNode extends SimpleNode implements ClassificationNode, MutableClassificationNode {
 	private static final Logger logger = LoggerFactory.getLogger(SimpleClassificationNode.class);
 
 	private Map<String, SimpleNode> mapSimpleNodeChild;
@@ -275,15 +280,16 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 	/**
-	 * Returns a child {@link Node}, dynamically creating it if it does not exist.
+	 * Returns a child {@link ClassificationNode}, dynamically creating it if it does not
+	 * exist.
 	 * <p>
 	 * This method has package scope since SimpleModel can only be completed
 	 * dynamically with new {@link SimpleClassificationNode}'s using
 	 * {@link SimpleModel.getClassificationNode}.
 	 *
-	 * @param name Name of the child Node.
-	 * @return Child Node. null if no child of the specified name is currently
-	 *   defined.
+	 * @param name Name of the child ClassificationNode.
+	 * @return Child ClassificationNode. null if no child of the specified name is
+	 *   currently defined and none can be dynamically created.
 	 */
 	SimpleClassificationNode getSimpleClassificationNodeChildDynamic(String name) {
 		SimpleNode simpleNode;
@@ -317,10 +323,16 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		}
 	}
 
-	/*
+	/**
+	 * Returns a child {@link Module}, dynamically creating it if it does not exist.
+	 * <p>
 	 * This method has package scope since SimpleModel can only be completed
-	 * dynamically with new {@link SimpleModule}'s using
+	 * dynamically with new {@link SimpleModule's using
 	 * {@link SimpleModel.getModule}.
+	 *
+	 * @param name Name of the child Module.
+	 * @return Child Module. null if no child of the specified name is currently
+	 *   defined and none can be dynamically created.
 	 */
 	SimpleModule getSimpleModuleChildDynamic(String name) {
 		SimpleNode simpleNode;
@@ -353,4 +365,105 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			throw new RuntimeException("The child node " + name + " is not a module.");
 		}
 	}
+
+	@Override
+	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+		boolean indConfigNew;
+
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		// We need to save whether the state was State.CONFIG_NEW since
+		// super.setNodeCOnfigValue transitions the state to State.CONFIG.
+		indConfigNew = this.state == State.CONFIG_NEW;
+
+		super.setNodeConfigValue(nodeConfigValue);
+
+		if (indConfigNew && (this.getClassificationNodeParent() != null)) {
+			((SimpleModel)this.getModel()).setSimpleClassificationNodeRoot(this);
+		}
+	}
+
+	@Override
+	public ClassificationNodeConfigValue getClassificationNodeConfigValue() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		return (ClassificationNodeConfigValue)this.getNodeConfigValue();
+	}
+
+	@Override
+	public void setClassificationNodeConfigValue(ClassificationNodeConfigValue classificationNodeConfigValue) {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		this.setNodeConfigValue(classificationNodeConfigValue);
+	}
+
+	/**
+	 * Sets a child {@link SimpleNode}.
+	 * <p>
+	 * If one already exists with the same name, it is overwritten. Otherwise it is
+	 * added.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNode#setNodeConfigValue}.
+	 *
+	 * @param nodeChild.
+	 */
+	void setSimpleNodeChild(SimpleNode simpleNodeChild) {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		this.mapSimpleNodeChild.put(simpleNodeChild.getName(), simpleNodeChild);
+//		??? if overrwite must destroy previous one
+	}
+
+//	??? rename here.
+
+	/**
+	 * Removes a child {@link Node}.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNode#delete}.
+	 *
+	 * @param childNodeName
+	 */
+	void removeChildNode(String childNodeName) {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		this.mapSimpleNodeChild.remove(childNodeName);
+	}
+
+
+	@Override
+	public MutableClassificationNode createChildClassificationNode() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		return new SimpleClassificationNode(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildClassificationNodeConfig(), this);
+???		// TODO Auto-generated method stub
+		??? initialize the children. (otherwise initialization of list will not be performed if map is not null anymore)
+		must create the (not finalized) ClassificationNodeConfig.
+	}
+
+	@Override
+	public MutableModule createChildModule() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("SimpleModel must be mutable.");
+		}
+
+		return new SimpleModule(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildModuleConfig(), this);
+???		// TODO Auto-generated method stub
+		??? initialize the children. (otherwise initialization of list will not be performed if map is not null anymore)
+		must create the (not finalized) ModuleConfig.
+	}
+
 }
