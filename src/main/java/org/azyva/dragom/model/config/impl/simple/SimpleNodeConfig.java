@@ -24,16 +24,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.azyva.dragom.model.MutableNode;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeConfigValue;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
+import org.azyva.dragom.model.config.SimpleNodeConfigTransferObject;
 import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**
- * Simple implementation for {@link NodeConfig}.
+ * Simple implementation for {@link NodeConfig} and {@link MutableNodeConfig}.
  *
  * @author David Raymond
  * @see org.azyva.dragom.model.config.simple
@@ -130,72 +133,78 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	}
 
 	@Override
-	public void delete() {
-		if (!this.indNew && (this.simpleClassificationNodeConfigParent != null)) {
-			this.simpleClassificationNodeConfigParent.removeChildNodeConfig(this.name);
-			this.simpleClassificationNodeConfigParent = null;
-		}
-	}
+	public NodeConfigTransferObject getNodeConfigTransferObject() {
+		NodeConfigTransferObject nodeConfigTransferObject;
 
-	/**
-	 * Called by subclasses to fill a {@link NodeConfigValue} which must be created by
-	 * the subclass since its real type (ModuleConfigValue or
-	 * ClassificationNodeConfigValue) is determined by the subclass.
-	 *
-	 * @param nodeConfigValue NodeConfigValue.
-	 */
-	protected void fillNodeConfigValue(NodeConfigValue nodeConfigValue) {
-		nodeConfigValue.setName(this.name);
+		nodeConfigTransferObject = new SimpleNodeConfigTransferObject();
+
+		nodeConfigTransferObject.setName(this.name);
 
 		for(PropertyDefConfig propertyDefConfig: this.mapPropertyDefConfig.values()) {
-			nodeConfigValue.setPropertyDefConfig(propertyDefConfig);
+			nodeConfigTransferObject.setPropertyDefConfig(propertyDefConfig);
 		}
 
 		for(PluginDefConfig pluginDefConfig: this.mapPluginDefConfig.values()) {
-			nodeConfigValue.setPluginDefConfig(pluginDefConfig);
+			nodeConfigTransferObject.setPluginDefConfig(pluginDefConfig);
 		}
+
+		return nodeConfigTransferObject;
 	}
 
 	/**
-	 * Called by subclasses to extract the data from a {@link NodeConfigValue} and set
+	 * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
 	 * them within the {@link NodeConfig}.
 	 * <p>
 	 * Uses the indNew variable, but does not reset it. It is intended to be reset by
-	 * the subclass caller method.
+	 * the subclass caller method, {@link MutableNodeConfig#setNodeConfigValueTransferObject}.
+	 * <p>
+	 * The reason for not directly implementing
+	 * MutableNodeConfig.setNodeConfigValueTransferObject is that subclasses can have
+	 * other tasks to perform.
 	 *
-	 * @param nodeConfigValue
+	 * @param nodeConfigTransferObject
+	 * @throws DuplicateNodeExcpeption When the new configuration data would introduce
+	 *   a duplicate {@link MutableNode} within the parent.
 	 */
-	protected void extractNodeConfigValue(NodeConfigValue nodeConfigValue) {
+	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws DuplicateNodeException {
 		String previousName;
 
-		if ((nodeConfigValue.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
-			throw new RuntimeException("Name of NodeConfigValue must not be null for non-root SimpleClassificationNodeConfig.");
+		if ((nodeConfigTransferObject.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
+			throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNodeConfig.");
 		}
 
 		previousName = this.name;
-		this.name = nodeConfigValue.getName();
+		this.name = nodeConfigTransferObject.getName();
 
 		if (this.indNew) {
 			if (this.simpleClassificationNodeConfigParent != null) {
-				this.simpleClassificationNodeConfigParent.setNodeConfigChild(this);
+				this.simpleClassificationNodeConfigParent.setSimpleNodeConfigChild(this);
 			}
 		} else {
 			if ((this.simpleClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
-				this.simpleClassificationNodeConfigParent.renameNodeConfigChild(previousName, this.name);
+				this.simpleClassificationNodeConfigParent.renameSimpleNodeConfigChild(previousName, this.name);
 			}
 		}
 
 		this.mapPropertyDefConfig.clear();
 
-		for(PropertyDefConfig propertyDefConfig: nodeConfigValue.getListPropertyDefConfig()) {
+		for(PropertyDefConfig propertyDefConfig: nodeConfigTransferObject.getListPropertyDefConfig()) {
 			this.mapPropertyDefConfig.put(propertyDefConfig.getName(),  propertyDefConfig);
 		}
 
 		this.mapPluginDefConfig.clear();
 
-		for(PluginDefConfig pluginDefConfig: nodeConfigValue.getListPluginDefConfig()) {
+		for(PluginDefConfig pluginDefConfig: nodeConfigTransferObject.getListPluginDefConfig()) {
 			this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
 		}
 
+	}
+
+	@Override
+	public void delete() {
+		if (!this.indNew && (this.simpleClassificationNodeConfigParent != null)) {
+			this.simpleClassificationNodeConfigParent.removeChildNodeConfig(this.name);
+			this.simpleClassificationNodeConfigParent = null;
+		}
 	}
 }

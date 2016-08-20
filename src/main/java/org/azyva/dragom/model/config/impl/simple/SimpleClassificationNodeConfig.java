@@ -25,13 +25,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
-import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
 import org.azyva.dragom.model.config.MutableModuleConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeConfigValue;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.OptimisticLockException;
 
 /**
  * Simple implementation for {@link ClassificationNodeConfig}.
@@ -40,9 +41,16 @@ import org.azyva.dragom.model.config.NodeType;
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements ClassificationNodeConfig, MutableClassificationNodeConfig {
+	/**
+	 * Containing SimpleConfig. null if this SimpleClassificationNodeConfig is not
+	 * the root SimpleClassificationNodeConfig.
+	 */
 	SimpleConfig simpleConfig;
 
-	private Map<String, NodeConfig> mapNodeConfigChild;
+	/**
+	 * Map of child {@link NodeConfig}.
+	 */
+	private Map<String, SimpleNodeConfig> mapSimpleNodeConfigChild;
 
 	/**
 	 * Constructor for root ClassificationNodeConfig.
@@ -55,7 +63,7 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		this.simpleConfig = simpleConfig;
 
 		// LinkedHashMap is used to preserve insertion order.
-		this.mapNodeConfigChild = new LinkedHashMap<String, NodeConfig>();
+		this.mapSimpleNodeConfigChild = new LinkedHashMap<String, SimpleNodeConfig>();
 	}
 
 	/**
@@ -68,7 +76,7 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		super(simpleClassificationNodeConfigParent);
 
 		// LinkedHashMap is used to preserve insertion order.
-		this.mapNodeConfigChild = new LinkedHashMap<String, NodeConfig>();
+		this.mapSimpleNodeConfigChild = new LinkedHashMap<String, SimpleNodeConfig>();
 	}
 
 	@Override
@@ -81,70 +89,82 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		// A copy is returned to prevent the internal Map from being modified by the
 		// caller. Ideally, an unmodifiable List view of the Collection returned by
 		// Map.values should be returned, but that does not seem possible.
-		return new ArrayList<NodeConfig>(this.mapNodeConfigChild.values());
+		return new ArrayList<NodeConfig>(this.mapSimpleNodeConfigChild.values());
 	}
 
 	@Override
 	public NodeConfig getNodeConfigChild(String name) {
-		return this.mapNodeConfigChild.get(name);
+		return this.mapSimpleNodeConfigChild.get(name);
+	}
+
+	@Override
+	public void setNodeConfigTransferObject(NodeConfigTransferObject NodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+		boolean indNew;
+
+		// We have to save the value of indNew since extractNodeConfigValue resets it.
+		indNew = this.indNew;
+
+		this.extractNodeConfigTransferObject(NodeConfigTransferObject);
+
+		if (indNew) {
+			if (this.simpleConfig != null) {
+				this.simpleConfig.setSimpleClassificationNodeConfigRoot(this);
+			}
+		}
 	}
 
 	/**
 	 * Sets a child {@link NodeConfig}.
 	 * <p>
-	 * If one already exists with the same name, it is overwritten. Otherwise it is
-	 * added.
-	 * <p>
-	 * This method is intended to be called by
-	 * {@link SimpleNodeConfig#setNodeConfigValue}.
+	 * This method is called by
+	 * {@link SimpleNodeConfig#extractNodeConfigTransferObject}.
 	 *
-	 * @param nodeConfigChild.
+	 * @param simpleNodeConfigChild.
+	 * @throws DuplicateNodeException When a SimpleNodeConfig already exists with the
+	 *   same name.
 	 */
-	void setNodeConfigChild(NodeConfig nodeConfigChild) {
-		this.mapNodeConfigChild.put(nodeConfigChild.getName(), nodeConfigChild);
+	void setSimpleNodeConfigChild(SimpleNodeConfig simpleNodeConfigChild) throws DuplicateNodeException {
+		if (this.mapSimpleNodeConfigChild.containsKey(simpleNodeConfigChild.getName())) {
+			throw new DuplicateNodeException();
+		}
+
+		this.mapSimpleNodeConfigChild.put(simpleNodeConfigChild.getName(), simpleNodeConfigChild);
 	}
 
 	/**
 	 * Renames a child {@link NodeConfig}.
 	 * <p>
-	 * This method is intended to be called by
-	 * {@link SimpleNodeConfig#setNodeConfigValue}.
+	 * This method is called by
+	 * {@link SimpleNodeConfig#extractNodeConfigTransferObject}.
 	 *
 	 * @param currentName Current name.
 	 * @param newName New name.
+	 * @throws DuplicateNodeException When a SimpleNodeConfig already exists with the
+	 *   same name.
 	 */
-	void renameNodeConfigChild(String currentName, String newName) {
-		NodeConfig nodeConfigChild;
-
-		nodeConfigChild = this.mapNodeConfigChild.remove(currentName);
-
-		if (nodeConfigChild == null) {
-			throw new RuntimeException("NodeConfig with current name " + currentName + " not found.");
+	void renameSimpleNodeConfigChild(String currentName, String newName) throws DuplicateNodeException {
+		if (!this.mapSimpleNodeConfigChild.containsKey(currentName)) {
+			throw new RuntimeException("SimpleNodeConfig with current name " + currentName + " not found.");
 		}
 
-		this.mapNodeConfigChild.put(newName, nodeConfigChild);
+		if (this.mapSimpleNodeConfigChild.containsKey(newName)) {
+			throw new DuplicateNodeException();
+		}
+
+		this.mapSimpleNodeConfigChild.put(newName, this.mapSimpleNodeConfigChild.remove(currentName));
 	}
 
 	/**
 	 * Removes a child {@link NodeConfig}.
 	 * <p>
-	 * This method is intended to be called by
-	 * {@link SimpleNodeConfig#delete}.
+	 * This method is called by {@link SimpleNodeConfig#delete}.
 	 *
 	 * @param childNodeName
 	 */
 	void removeChildNodeConfig(String childNodeName) {
-		this.mapNodeConfigChild.remove(childNodeName);
-	}
-
-	@Override
-	public NodeConfigValue getNodeConfigValue() {
-		return this.getClassificationNodeConfigValue();
-	}
-
-	@Override
-	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
-		this.setClassificationNodeConfigValue((ClassificationNodeConfigValue)nodeConfigValue);
+		if (this.mapSimpleNodeConfigChild.remove(childNodeName) == null) {
+			throw new RuntimeException("SimpleNodeConfig with name " + childNodeName + " not found.");
+		}
 	}
 
 	/**
@@ -157,45 +177,18 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 		super.delete();
 
 		if (this.simpleConfig != null) {
-			this.simpleConfig.setClassificationNodeConfigRoot(null);
+			this.simpleConfig.setSimpleClassificationNodeConfigRoot(null);
 			this.simpleConfig = null;
 		}
 	}
 
 	@Override
-	public ClassificationNodeConfigValue getClassificationNodeConfigValue() {
-		ClassificationNodeConfigValue classificationNodeConfigValue;
-
-		classificationNodeConfigValue = new SimpleClassificationNodeConfigValue();
-
-		this.fillNodeConfigValue(classificationNodeConfigValue);
-
-		return classificationNodeConfigValue;
-	}
-
-	@Override
-	public void setClassificationNodeConfigValue(ClassificationNodeConfigValue classificationNodeConfigValue) {
-		boolean indNew;
-
-		// We have to save the value of indNew since extractNodeConfigValue resets it.
-		indNew = this.indNew;
-
-		this.extractNodeConfigValue(classificationNodeConfigValue);
-
-		if (indNew) {
-			if (this.simpleConfig != null) {
-				this.simpleConfig.setClassificationNodeConfigRoot(this);
-			}
-		}
+	public MutableClassificationNodeConfig createChildClassificationNodeConfig() {
+		return new SimpleClassificationNodeConfig(this);
 	}
 
 	@Override
 	public MutableModuleConfig createChildModuleConfig() {
 		return new SimpleModuleConfig(this);
-	}
-
-	@Override
-	public MutableClassificationNodeConfig createChildClassificationNodeConfig() {
-		return new SimpleClassificationNodeConfig(this);
 	}
 }

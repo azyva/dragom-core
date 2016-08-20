@@ -19,11 +19,12 @@
 
 package org.azyva.dragom.model.config.impl.simple;
 
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
-import org.azyva.dragom.model.config.ModuleConfigValue;
 import org.azyva.dragom.model.config.MutableModuleConfig;
-import org.azyva.dragom.model.config.NodeConfigValue;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.OptimisticLockException;
 
 /**
  * Simple implementation for {@link ModuleConfig}.
@@ -48,29 +49,8 @@ public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig
 	}
 
 	@Override
-	public NodeConfigValue getNodeConfigValue() {
-		return this.getModuleConfigValue();
-	}
-
-	@Override
-	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
-		this.setModuleConfigValue((ModuleConfigValue)nodeConfigValue);
-	}
-
-	@Override
-	public ModuleConfigValue getModuleConfigValue() {
-		ModuleConfigValue moduleConfigValue;
-
-		moduleConfigValue = new SimpleModuleConfigValue();
-
-		this.fillNodeConfigValue(moduleConfigValue);
-
-		return moduleConfigValue;
-	}
-
-	@Override
-	public void setModuleConfigValue(ModuleConfigValue moduleConfigValue) {
-		this.extractNodeConfigValue(moduleConfigValue);
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+		this.extractNodeConfigTransferObject(nodeConfigTransferObject);
 
 		this.indNew = false;
 	}

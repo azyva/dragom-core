@@ -33,19 +33,25 @@ import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.EventPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ClassificationNode;
+import org.azyva.dragom.model.ClassificationNodeBuilder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleBuilder;
+import org.azyva.dragom.model.MutableModel;
 import org.azyva.dragom.model.MutableNode;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.MutableConfig;
 import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeConfigValue;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.OptimisticLockException;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PropertyDefConfig;
 import org.azyva.dragom.model.event.NodeEvent;
@@ -60,9 +66,9 @@ import org.azyva.dragom.model.plugin.impl.MavenBuilderPluginImpl;
 import org.azyva.dragom.util.Util;
 
 /**
- * Represents a node at runtime.
+ * Simple implementation of {@link Node} and {@link MutableNode}.
  * <p>
- * Two type of Node's exist each represented by a different subclass:
+ * Two type of SimpleNode's exist each represented by a different subclass:
  * <p>
  * <li>{@link SimpleClassificationNode}</li>
  * <li>{@link SimpleModule}</li>
@@ -97,7 +103,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 		 * {@link SimpleClassificationNode#getNodeConfigValue},
 		 * {@link SimpleClassificationNode#getClassificationNodeConfigValue},
 		 * {@link SimpleModule#getNodeConfigValue} or
-		 * {@link SimpleModule#getModuleConfigValue} or the methods mentionned above can
+		 * {@link SimpleModule#getModuleConfigValue} or the methods mentioned above can
 		 * be called.
 		 * <p>
 		 * When one of {@link SimpleClassificationNode#setNodeConfigValue},
@@ -140,14 +146,10 @@ public abstract class SimpleNode implements Node, MutableNode {
 		DYNAMICALLY_CREATED,
 
 		/**
-		 * SimpleNode has been destroyed and cannot be used anymore. This can happen in
-		 * various situations:
-		 * <p>
-		 * <li>It was deleted using {@link SimpleNode#delete};</li>
-		 * <li>It was unlinked from its parent cache because of a configuration date
-		 *     change, so that it gets recreated when needed.</li>
+		 * SimpleNode has been deleted and cannot be used anymore. This happens only when
+		 * {@link SimpleNode#delete} is called.
 		 */
-		DESTROYED
+		DELETED
 	}
 
 	protected State state;
@@ -217,9 +219,9 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * Constructor for the root SimpleClassificationNode when creating a {@link Model}
 	 * from {@link Config}.
 	 * <p>
-	 * If nodeConfig is a {@link MutableNodeConfig}, if nodeConfig.isNew(), it means
-	 * we are creating a new {@link Nodel} in a {@link MutableModel} with initially
-	 * empty {@link NodeConfig}.
+	 * If nodeConfig is a {@link MutableNodeConfig} and nodeConfig.isNew(), it means
+	 * we are creating a new {@link MutableNode} in a {@link MutableModel} with an
+	 * initially empty {@link MutableNodeConfig}.
 	 * <p>
 	 * Must not be used for SimpleNode's other than the root SimpleClassificationNode.
 	 * Use {@link SimpleNode(NodeConfig, SimpleNode)} for these SimpleNode's.
@@ -236,10 +238,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 		}
 
 		this.nodeConfig = nodeConfig;
-
-		if (this.nodeConfig instanceof MutableNodeConfig) {
-			this.indMutable = true;
-		}
+		this.indMutable = (this.nodeConfig instanceof MutableNodeConfig);
 
 		if (this.indMutable && ((MutableNodeConfig)nodeConfig).isNew()) {
 			this.state = State.CONFIG_NEW;
@@ -255,9 +254,9 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * Constructor for Node's other than the root SimpleClassificationNode when
 	 * creating a {@link Model} from {@link Config}.
 	 * <p>
-	 * If nodeConfig is a {@link MutableNodeConfig}, if nodeConfig.isNew(), it means
-	 * we are creating a new {@link Nodel} in a {@link MutableModel} with initially
-	 * empty {@link NodeConfig}.
+	 * If nodeConfig is a {@link MutableNodeConfig} and nodeConfig.isNew(), it means
+	 * we are creating a new {@link MutableNode} in a {@link MutableModel} with an
+	 * initially empty {@link MutableNodeConfig}.
 	 * <p>
 	 * Must not be used for the root SimpleClassificationNode. Use
 	 * {@link SimpleNode(NodeConfig, SimpleModel)} for the root
@@ -267,13 +266,12 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * {@link SimpleClassificationNode#SimpleClassificationNode(ClassificationNodeConfig, SimpleClassificationNode)}
 	 * or {@link SimpleModule#SimpleModule(ModuleConfig, SimpleClassificationNode)}.
 	 *
-	 * @param nodeConfig NodeConfig. Can be null to indicate that a new Node is being
-	 *   created in a MutableModel.
+	 * @param nodeConfig NodeConfig.
 	 * @param simpleClassificationNodeParent Parent SimpleClassificationNode.
 	 */
 	protected SimpleNode(NodeConfig nodeConfig, SimpleClassificationNode simpleClassificationNodeParent) {
 		if (simpleClassificationNodeParent == null) {
-			throw new RuntimeException("The parent of node " + nodeConfig.getName() + " cannot be null unless it is the root classification node.");
+			throw new RuntimeException("The parent of node " + nodeConfig.getName() + " cannot be null.");
 		}
 
 		this.nodeConfig = nodeConfig;
@@ -324,6 +322,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * @param name Name.
 	 */
 	void setName(String name) {
+		this.checkDeleted();
+
 		if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
 			throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
 		}
@@ -342,6 +342,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * @param value Value of the property.
 	 */
 	void setProperty(String name, String value, boolean indOnlyThisNode) {
+		this.checkDeleted();
+
 		if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
 			throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
 		}
@@ -357,14 +359,15 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * <p>
 	 * This method invokes all the {@link NodeInitPlugin}.
 	 * <p>
-	 * This method has package scope to enforce the use of
-	 * {@link ModelNodeBuilderFactory} implemented by {@link SimpleModel} to create
-	 * new SimpleNode's.
+	 * This method has package scope since it can only be called by
+	 * {@link SimpleClassificationNode#createChildNodesFromConfig},
+	 * {@link SimpleNode#setNodeConfigTransferObject(NodeConfigTransferObject)
+	 * and {@link SimpleNodeBuilder#create}.
 	 */
 	void init() {
 		List<String> listPluginId;
 
-		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_BEING_COMPLETED) ) {
+		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_BEING_COMPLETED)) {
 			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
 		}
 
@@ -402,6 +405,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public ClassificationNode getClassificationNodeParent() {
+		this.checkDeleted();
+
 		return this.simpleClassificationNodeParent;
 	}
 
@@ -414,6 +419,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public String getName() {
+		this.checkDeleted();
+
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
 		}
@@ -426,6 +433,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public Model getModel() {
+		this.checkDeleted();
+
 		return this.simpleModel;
 	}
 
@@ -440,6 +449,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public NodePath getNodePath() {
+		this.checkDeleted();
+
 		// The root ClassificationNode does not have a NodePath.
 		if (this.simpleClassificationNodeParent == null) {
 			return null;
@@ -509,6 +520,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 		Properties propertiesInit;
 		String value;
 		SimpleNode simpleNodeCurrent;
+
+		this.checkDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -634,10 +647,6 @@ public abstract class SimpleNode implements Node, MutableNode {
 	private PluginDefConfig getPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
 		SimpleNode simpleNodeCurrent;
 
-		if (this.state == State.CONFIG_NEW) {
-			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
-		}
-
 		simpleNodeCurrent = this;
 
 		while (simpleNodeCurrent != null) {
@@ -682,6 +691,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 		PluginDefConfig pluginDefConfig;
 		Class<?> classPlugin;
 		NodePlugin nodePlugin;
+
+		this.checkDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -766,6 +777,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	public boolean isNodePluginExists(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
 		PluginDefConfig pluginDefConfig;
 
+		this.checkDeleted();
+
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
 		}
@@ -809,6 +822,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 		List<String> listPluginId;
 		Set<String> setPluginIdEncountered;
 		SimpleNode nodeCurrent;
+
+		this.checkDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -866,6 +881,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public <NodeEventClass extends NodeEvent> void registerListener(NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso) {
+		this.checkDeleted();
+
 		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_CREATED)) {
 			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_CREATED. State: " + this.state);
 		}
@@ -897,6 +914,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	public void raiseNodeEvent(NodeEvent nodeEvent) {
 		EventPlugin eventPlugin;
 
+		this.checkDeleted();
+
 		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_CREATED)) {
 			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_CREATED. State: " + this.state);
 		}
@@ -918,33 +937,49 @@ public abstract class SimpleNode implements Node, MutableNode {
 
 	@Override
 	public boolean isCreatedDynamically() {
+		this.checkDeleted();
+
 		return (this.state == State.DYNAMICALLY_CREATED) || (this.state == State.DYNAMICALLY_BEING_COMPLETED);
 	}
 
 	@Override
 	public boolean isNew() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+		this.checkMutable();
+		this.checkDeleted();
 
 		return this.state == State.CONFIG_NEW;
 	}
 
 	@Override
-	public NodeConfigValue getNodeConfigValue() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+	public NodeConfigTransferObject getNodeConfigTransferObject() {
+		// This will catch the case where the SimpleNode has been dynamically created, in
+		// which case its configuration data, which does not exist, cannot be changed.
+		// Note that it is still possible to convert a dynamically created SimpleNode into
+		// one based on MutableNodeConfig. The caller has to detect the fact that it is
+		// currently dynamically created using Node.isCreatedDynamically and if so, do as
+		// if the Node does not exist yet by calling
+		// MutableNode.createChildClassificationNode or MutableNode.createChildModule. It
+		// is when ultimately calling MutableNode.setNodeConfigTransferObject that the
+		// Node will be converted from a dynamically created to one based on
+		// MutableNodeConfig. See MutableNode.isDeleted.
+		this.checkMutable();
+
+		this.checkDeleted();
 
 		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
 
-		return ((MutableNodeConfig)this.getNodeConfig()).getNodeConfigValue();
+		return ((MutableNodeConfig)this.getNodeConfig()).getNodeConfigTransferObject();
 	}
 
 	@Override
-	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+		String newName;
+
+		this.checkMutable();
+		this.checkDeleted();
+
 		if (!this.indMutable) {
 			throw new IllegalStateException("SimpleModel must be mutable.");
 		}
@@ -953,28 +988,76 @@ public abstract class SimpleNode implements Node, MutableNode {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
 
+		newName = nodeConfigTransferObject.getName();
+
+		if (newName == null) {
+			throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
+		}
+
 		if (this.state == State.CONFIG) {
-			this.mapNodePluginConstructor = null;
-			??? destroy all dynamically created nodes on children.
-			??? null mapNodePluginConstructor on children
-			??? handle renames
-			((MutableNodeConfig)this.getNodeConfig()).setNodeConfigValue(nodeConfigValue);
-		} else {
 			if (this.simpleClassificationNodeParent != null) {
-				this.simpleClassificationNodeParent.setSimpleNodeChild(this);
+				String currentName;
+
+				currentName = this.name;
+
+				if (!newName.equals(currentName)) {
+					if (this.simpleClassificationNodeParent.getNodeChild(newName) != null) {
+						throw new DuplicateNodeException();
+					}
+
+					this.simpleClassificationNodeParent.renameSimpleNodeChild(currentName,  newName);
+				}
 			}
 
-			((MutableNodeConfig)this.getNodeConfig()).setNodeConfigValue(nodeConfigValue);
+			try {
+				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject);
+			} catch (DuplicateNodeException dne) {
+				// We have already check for duplicate above at the SimpleClassificationNode
+				// level. We do not expect to get this exception at the
+				// MutableClassificationNodeConfig level.
+				throw new RuntimeException(dne);
+			}
 
+			this.name = newName;
+		} else { // if (this.state == State.CONFIG_NEW) {
+			if (this.simpleClassificationNodeParent != null) {
+				SimpleNode simpleNodeExisting;
+
+				simpleNodeExisting = (SimpleNode)this.simpleClassificationNodeParent.getNodeChild(newName);
+
+				if (simpleNodeExisting != null) {
+					if (!simpleNodeExisting.isCreatedDynamically()) {
+						throw new DuplicateNodeException();
+					}
+				}
+
+				this.simpleClassificationNodeParent.removeChildNode(newName);
+
+				// Sets the state to DELETED.
+				simpleNodeExisting.cleanCaches(true);
+			}
+
+			try {
+				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject);
+			} catch (DuplicateNodeException dne) {
+				// We have already check for duplicate above at the SimpleClassificationNode
+				// level. We do not expect to get this exception at the
+				// MutableClassificationNodeConfig level.
+				throw new RuntimeException(dne);
+			}
+
+			this.name = newName;
+			this.simpleClassificationNodeParent.setSimpleNodeChild(this);
+			this.init();
 			this.state = State.CONFIG;
 		}
+
+		this.cleanCaches(false);
 	}
 
 	@Override
 	public void delete() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+		this.checkMutable();
 
 		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
@@ -982,20 +1065,69 @@ public abstract class SimpleNode implements Node, MutableNode {
 
 		if (this.state == State.CONFIG) {
 			this.simpleClassificationNodeParent.removeChildNode(this.name);
+			((MutableNodeConfig)(this.getNodeConfig())).delete();
 		}
 
-		??? recursive destroy.
-		this.state = State.DESTROYED;
+		// Sets the state to DELETED.
+		this.cleanCaches(true);
 
 	}
 
 	@Override
-	public boolean isDestroyed() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+	public boolean isDeleted() {
+		this.checkMutable();
 
-		return this.state == State.DESTROYED;
+		return (this.state == State.DELETED);
+	}
+
+	/**
+	 * Checks if the MutableNode is deleted.
+	 */
+	protected void checkDeleted() {
+		if (this.state == State.DELETED) {
+			throw new IllegalStateException("MutableNode is deleted.");
+		}
+	}
+
+	/**
+	 * Checks if the MutableNode is really mutable.
+	 */
+	protected void checkMutable() {
+		if (!this.indMutable) {
+			throw new IllegalStateException("MutableNode must be mutable.");
+		}
+	}
+
+	/**
+	 * Called when underlying {@link MutableConfig} data have changed so that any
+	 * cache that could contain instantiated objects whose states are dependent on
+	 * this data is cleared. The current {@link SimpleNode} and its children are
+	 * traversed and the same method is called on all of them because of the
+	 * inheritance mechanisms implemented in Dragom.
+	 * <p>
+	 * Subclasses that manage such caches must override which method to add the
+	 * appropriate behavior.
+	 *
+	 * @param indDelete Indicates to perform a full clean and put the MutableNode in
+	 *   the State.DELETED to make it unusable.
+	 */
+	protected void cleanCaches(boolean indDelete) {
+		this.nodePath = null;
+		this.mapProperty = null;
+		this.mapNodePluginConstructor = null;
+
+		if (indDelete) {
+			this.name = null;
+			this.simpleClassificationNodeParent = null;
+			this.simpleModel = null;
+			this.eventManager = null;
+
+			// To allow isDeleted to be called for a MutableNode that was created dynamically
+			// but was replaced with a MutableNode based on MutableNodeConfig.
+			this.indMutable = true;
+
+			this.state = State.DELETED;
+		}
 	}
 
 	/**
@@ -1009,5 +1141,4 @@ public abstract class SimpleNode implements Node, MutableNode {
 			return this.getNodePath().toString();
 		}
 	}
-???
 }

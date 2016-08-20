@@ -346,7 +346,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 
 	/**
 	 * @return true since Maven does not really implement build avoidance aka
-	 *   incremental builds. Individual Maven plugins (e.g.: Java compiler) can/may be
+	 *   incremental builds. Individual Maven plugins (e.g., Java compiler) can/may be
 	 *   optimized in this regard, but the knowledge of whether there is actually
 	 *   something to build is kept within each such plugins, and not exposed to the
 	 *   outside world (the one who invokes Maven). Therefore from the point of view

@@ -26,21 +26,38 @@ import org.azyva.dragom.model.config.MutableConfig;
 
 
 /**
- * Simple implementation of {@link Config}.
+ * Simple implementation of {@link Config} and {@link MutableConfig}.
  *
  * @author David Raymond
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleConfig implements Config, MutableConfig {
-	ClassificationNodeConfig classificationNodeConfigRoot;
+	/**
+	 * Root SimpleClassificationNodeConfig.
+	 */
+	SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot;
 
 	@Override
 	public ClassificationNodeConfig getClassificationNodeConfigRoot() {
-		return this.classificationNodeConfigRoot;
+		return this.simpleClassificationNodeConfigRoot;
 	}
 
-	void setClassificationNodeConfigRoot(ClassificationNodeConfig classificationNodeConfigRoot) {
-		this.classificationNodeConfigRoot = classificationNodeConfigRoot;
+	/**
+	 * Sets the root {@link SimpleClassificationNodeConfig}.
+	 * <p>
+	 * This method is intended to be called by
+	 * {@link SimpleNodeConfig#setNodeConfigTransferObject}.
+	 *
+	 * @param simpleClassificationNodeConfigRoot Root SimpleClassificationNodeConfig.
+	 */
+	void setSimpleClassificationNodeConfigRoot(SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot) {
+		if (this.simpleClassificationNodeConfigRoot != null && simpleClassificationNodeConfigRoot != null) {
+			throw new RuntimeException("Replacing the root SimpleClassificationNodeConfig is not allowed.");
+		}
+
+		// Setting this.simplClassificationNodeRoot to null is allowed since this
+		// can happen when deleting the root SimpleClassificationNode.
+		this.simpleClassificationNodeConfigRoot = simpleClassificationNodeConfigRoot;
 	}
 
 	@Override

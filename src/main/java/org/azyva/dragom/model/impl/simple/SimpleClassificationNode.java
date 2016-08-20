@@ -30,22 +30,26 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.MutableClassificationNode;
 import org.azyva.dragom.model.MutableModule;
+import org.azyva.dragom.model.MutableNode;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigValue;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfig;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents a classification node at runtime.
+ * Simple implementation of {@link ClassificationNode} and
+ * {@link MutableClassificationNode}.
  *
  * @author David Raymond
  */
@@ -375,7 +379,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 		}
 
 		// We need to save whether the state was State.CONFIG_NEW since
-		// super.setNodeCOnfigValue transitions the state to State.CONFIG.
+		// super.setNodeConfigValue transitions the state to State.CONFIG.
 		indConfigNew = this.state == State.CONFIG_NEW;
 
 		super.setNodeConfigValue(nodeConfigValue);
@@ -406,24 +410,51 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	/**
 	 * Sets a child {@link SimpleNode}.
 	 * <p>
-	 * If one already exists with the same name, it is overwritten. Otherwise it is
-	 * added.
+	 * Contrary to {@link MutableNodeConfig.set
+	 * <p>
+	 * In the case of duplicate SimpleNode, this method throws RuntimeException and
+	 * not DuplicateNodeException. The caller is responsible to handle such case.
 	 * <p>
 	 * This method is intended to be called by
 	 * {@link SimpleNode#setNodeConfigValue}.
 	 *
 	 * @param nodeChild.
 	 */
-	void setSimpleNodeChild(SimpleNode simpleNodeChild) {
+	void setSimpleNodeChild(SimpleNode simpleNodeChild) throws DuplicateNodeException {
 		if (!this.indMutable) {
 			throw new IllegalStateException("SimpleModel must be mutable.");
 		}
 
+		if (this.mapSimpleNodeChild.containsKey(simpleNodeChild.getName())) {
+			throw new RuntimeException("SimpleNode with name " + simpleNodeChild.getName() + " already exists.");
+		}
+
 		this.mapSimpleNodeChild.put(simpleNodeChild.getName(), simpleNodeChild);
-//		??? if overrwite must destroy previous one
 	}
 
-//	??? rename here.
+	/**
+	 * Renames a child {@link SimpleNode}.
+	 * <p>
+	 * In the case of duplicate SimpleNode, this method throws RuntimeException and
+	 * not DuplicateNodeException. The caller is responsible to handle such case.
+	 * <p>
+	 * This method is called by
+	 * {@link SimpleNode#setNodeConfigTransferObject}.
+	 *
+	 * @param currentName Current name.
+	 * @param newName New name.
+	 */
+	void renameSimpleNodeChild(String currentName, String newName) throws DuplicateNodeException {
+		if (!this.mapSimpleNodeChild.containsKey(currentName)) {
+			throw new RuntimeException("SimpleNode with current name " + currentName + " not found.");
+		}
+
+		if (this.mapSimpleNodeChild.containsKey(newName)) {
+			throw new RuntimeException("SimpleNode with new name " + newName + " already exists.");
+		}
+
+		this.mapSimpleNodeChild.put(newName, this.mapSimpleNodeChild.remove(currentName));
+	}
 
 	/**
 	 * Removes a child {@link Node}.
@@ -438,7 +469,9 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 			throw new IllegalStateException("SimpleModel must be mutable.");
 		}
 
-		this.mapSimpleNodeChild.remove(childNodeName);
+		if (this.mapSimpleNodeChild.remove(childNodeName) == null) {
+			throw new RuntimeException("SimpleNode with name " + childNodeName + " not found.");
+		}
 	}
 
 
@@ -467,3 +500,6 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 }
+
+
+cleanCaches

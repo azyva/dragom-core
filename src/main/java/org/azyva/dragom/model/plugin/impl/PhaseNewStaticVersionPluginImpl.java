@@ -21,9 +21,9 @@ package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
 
-import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ArtifactVersion;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Version;
@@ -62,7 +62,7 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
  * considered incorrect. But since static Version's representing phases are not
  * released versions, using a static ArtifactVersion is not appropriate. We use a
  * dynamic ArtifactVersion instead, which happens to not really violate any
- * important release engineering rules. In particular the important rule that a
+ * important release engineering rules. Specifically the important rule that a
  * static ArtifactVersion correspond to a static Version remains respected.
  *
  * In order to continue development in the new phase iteration02,

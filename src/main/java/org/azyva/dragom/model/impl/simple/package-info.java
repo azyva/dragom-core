@@ -17,25 +17,10 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.config.impl.simple;
-
-import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
-import org.azyva.dragom.model.config.NodeType;
-
 /**
- * Simple implementation of {@link ClassificationNodeConfigValue}.
- *
- * @author David Raymond
+ * Simple implementations of classes in {@link org.azyva.dragom.model}.
+ * <p>
+ * Despite the fact that these implementations are said to be simple, they are
+ * still flexible and are expected to be applicable to most cases.
  */
-public class SimpleClassificationNodeConfigValue extends SimpleNodeConfigValue implements ClassificationNodeConfigValue {
-	/**
-	 * Constructor.
-	 */
-	public SimpleClassificationNodeConfigValue() {
-	}
-
-	@Override
-	public NodeType getNodeType() {
-		return NodeType.CLASSIFICATION;
-	}
-}
+package org.azyva.dragom.model.impl.simple;

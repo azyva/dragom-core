@@ -172,7 +172,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * This property is intended to be used with the status command of
 	 * WorkspaceManagerTool.
 	 * The reason for not having an explicit method to perform such pushes is that
-	 * Dragom is not aware of Git's distributed nature. In particular, ScmPlugin does
+	 * Dragom is not aware of Git's distributed nature. Specifically ScmPlugin does
 	 * not offer any push method.
 	 * The rational for implementing this behavior in the isSync method is that when
 	 * calling isSync with the IsSyncFlag.LOCAL_CHANGES, the caller means to check

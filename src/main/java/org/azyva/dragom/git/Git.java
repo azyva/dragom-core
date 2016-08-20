@@ -602,7 +602,7 @@ public class Git {
 		// Git does not natively support commit attributes. It does support "notes" which
 		// could be used to keep commit attributes. But it looks like this is not a robust
 		// solution as notes are independent of commits and can easily be modified. And
-		// also not all Git repository managers support Git notes. In particular, Stash
+		// also not all Git repository managers support Git notes. Specifically, Stash
 		// does not seem to have full support for git notes.
 		// For these reasons commit attributes are stored within the commit messages
 		// themselves.

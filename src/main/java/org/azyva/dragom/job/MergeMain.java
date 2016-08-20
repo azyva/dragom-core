@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
  * For each static source ModuleVersion that is matched in the main traversal, a
  * merge process is initiated into a dynamic destination ModuleVersion that is
  * specified externally (by the user) and that is not necessarily related to some
- * reference graph. In particular, a destination ModuleVersion is not necessarily
+ * reference graph. Specifically a destination ModuleVersion is not necessarily
  * referenced by some previous parent destination ModuleVersion that may have been
  * merged into previously during the traversal.
  * <p>

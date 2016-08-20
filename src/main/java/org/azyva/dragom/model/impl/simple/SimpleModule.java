@@ -22,15 +22,13 @@ package org.azyva.dragom.model.impl.simple;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
-import org.azyva.dragom.model.MutableModel;
 import org.azyva.dragom.model.MutableModule;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.ModuleConfig;
-import org.azyva.dragom.model.config.ModuleConfigValue;
 import org.azyva.dragom.model.config.NodeType;
 
 /**
- * Represents a module at runtime.
+ * Simple implementation of {@link Module} and {@link MutableModule}.
  *
  * @author David Raymond
  */
@@ -49,12 +47,7 @@ public class SimpleModule extends SimpleNode implements Module, MutableModule {
 	}
 
 	/**
-	 * Constructor used when creating a {@link Model} from {@link Config}. In this
-	 * case, moduleConfig is not null.
-	 * <p>
-	 * Also used when creating a new {@link Module} in a {@link MutableModel} with
-	 * initially no underlying {@link ModuleConfig}. In this case moduleConfig is
-	 * null.
+	 * Constructor used when creating a {@link Model} from {@link Config}.
 	 * <p>
 	 * This constructor has package scope to enforce the use of
 	 * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
@@ -70,23 +63,5 @@ public class SimpleModule extends SimpleNode implements Module, MutableModule {
 	@Override
 	public NodeType getNodeType() {
 		return NodeType.MODULE;
-	}
-
-	@Override
-	public ModuleConfigValue getModuleConfigValue() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
-
-		return (ModuleConfigValue)this.getNodeConfigValue();
-	}
-
-	@Override
-	public void setModuleConfigValue(ModuleConfigValue moduleConfigValue) {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
-
-		this.setNodeConfigValue(moduleConfigValue);
 	}
 }
