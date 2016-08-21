@@ -153,7 +153,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 
 	/**
 	 * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
-	 * them within the {@link NodeConfig}.
+	 * them within the SimpleNodeConfig.
 	 * <p>
 	 * Uses the indNew variable, but does not reset it. It is intended to be reset by
 	 * the subclass caller method, {@link MutableNodeConfig#setNodeConfigValueTransferObject}.

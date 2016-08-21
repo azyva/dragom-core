@@ -24,8 +24,11 @@ import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.MutableModule;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.OptimisticLockException;
 
 /**
  * Simple implementation of {@link Module} and {@link MutableModule}.
@@ -62,6 +65,23 @@ public class SimpleModule extends SimpleNode implements Module, MutableModule {
 
 	@Override
 	public NodeType getNodeType() {
+		// This may seem overkill for such a simple method, but it is better to fail fast.
+		this.checkNotDeleted();
+
 		return NodeType.MODULE;
 	}
+
+	@Override
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+		// Validates the state so we do not need to do it here.
+		// here.
+		super.extractNodeConfigTransferObject(nodeConfigTransferObject);
+
+		this.state = State.CONFIG;
+
+		// SimpleNode.setNodeConfigTransferObject does not call init since for
+		// SimpleClassificationNode init must be called laster.
+		this.init();
+	}
+
 }

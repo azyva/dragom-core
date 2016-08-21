@@ -61,7 +61,7 @@ public class SimpleConfig implements Config, MutableConfig {
 	}
 
 	@Override
-	public MutableClassificationNodeConfig createClassificationNodeConfigRoot() {
+	public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
 		return new SimpleClassificationNodeConfig(this);
 	}
 }

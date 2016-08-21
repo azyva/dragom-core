@@ -99,17 +99,14 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 
 	@Override
 	public void setNodeConfigTransferObject(NodeConfigTransferObject NodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
-		boolean indNew;
-
-		// We have to save the value of indNew since extractNodeConfigValue resets it.
-		indNew = this.indNew;
-
 		this.extractNodeConfigTransferObject(NodeConfigTransferObject);
 
-		if (indNew) {
+		if (this.indNew) {
 			if (this.simpleConfig != null) {
 				this.simpleConfig.setSimpleClassificationNodeConfigRoot(this);
 			}
+
+			this.indNew = false;
 		}
 	}
 
@@ -183,12 +180,12 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 	}
 
 	@Override
-	public MutableClassificationNodeConfig createChildClassificationNodeConfig() {
+	public MutableClassificationNodeConfig createChildMutableClassificationNodeConfig() {
 		return new SimpleClassificationNodeConfig(this);
 	}
 
 	@Override
-	public MutableModuleConfig createChildModuleConfig() {
+	public MutableModuleConfig createChildMutableModuleConfig() {
 		return new SimpleModuleConfig(this);
 	}
 }

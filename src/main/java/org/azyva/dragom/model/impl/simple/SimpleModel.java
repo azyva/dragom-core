@@ -19,6 +19,7 @@
 package org.azyva.dragom.model.impl.simple;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -37,7 +38,6 @@ import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.Config;
-import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
 import org.azyva.dragom.model.config.MutableConfig;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
@@ -70,7 +70,7 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @author David Raymond
  * @see org.azyva.dragom.model.impl.simple
  */
-public class SimpleModel implements Model, MutableModel, ModelNodeBuilderFactory {
+public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel {
 	/**
 	 * Indicates if the SimpleModel is mutable, based on whether the {@link Config}
 	 * provided is mutable.
@@ -328,7 +328,7 @@ public class SimpleModel implements Model, MutableModel, ModelNodeBuilderFactory
 	 * @return Root ClassificationNode.
 	 */
 	@Override
-	public Node getClassificationNodeRoot() {
+	public ClassificationNode getClassificationNodeRoot() {
 		return this.simpleClassificationNodeRoot;
 	}
 
@@ -461,6 +461,16 @@ public class SimpleModel implements Model, MutableModel, ModelNodeBuilderFactory
 		return null;
 	}
 
+	@Override
+	public ClassificationNodeBuilder createClassificationNodeBuilder() {
+		return new SimpleClassificationNodeBuilder(this);
+	}
+
+	@Override
+	public ModuleBuilder createModuleBuilder() {
+		return new SimpleModuleBuilder(this);
+	}
+
 	/**
 	 * Sets the root {@link SimpleClassificationNode}.
 	 * <p>
@@ -484,24 +494,42 @@ public class SimpleModel implements Model, MutableModel, ModelNodeBuilderFactory
 	}
 
 	@Override
-	public MutableClassificationNode createClassificationNodeConfigRoot() {
+	public MutableClassificationNode createMutableClassificationNodeRoot() {
 		if (!this.indMutable) {
 			throw new IllegalStateException("SimpleModel must be mutable.");
 		}
 
-		return new SimpleClassificationNode(((MutableConfig)this.config).createClassificationNodeConfigRoot(), this);
+		return new SimpleClassificationNode(((MutableConfig)this.config).createMutableClassificationNodeConfigRoot(), this);
 	}
 
-	@Override
-	public ClassificationNodeBuilder createClassificationNodeBuilder() {
-		return new SimpleClassificationNodeBuilder(this);
-	}
+	/**
+	 * Called by {@link SimpleNode#cleanCaches} for a {@link SimpleNode} being
+	 * cleaned so that the SimpleModel can clean any cached reference to the
+	 * SimpleNode.
+	 *
+	 * @param simpleNode
+	 */
+	void cleanCaches(SimpleNode simpleNode) {
+		if (simpleNode.getNodeType() == NodeType.MODULE) {
+			Iterator<Map.Entry<ArtifactGroupId, SimpleModule>> iteratorArtifactGroupIdModule;
 
-	@Override
-	public ModuleBuilder createModuleBuilder() {
-		return new SimpleModuleBuilder(this);
+			/*
+			 * We need to remove any entry in this.mapArtifactGroupIdModule which refers to
+			 * the SimpleNode.
+			 */
+
+			iteratorArtifactGroupIdModule = this.mapArtifactGroupIdModule.entrySet().iterator();
+
+			while (iteratorArtifactGroupIdModule.hasNext()) {
+				Map.Entry<ArtifactGroupId, SimpleModule> mapEntry;
+
+				mapEntry = iteratorArtifactGroupIdModule.next();
+
+				// We use identity comparison since only one copy of a given SimpleNode is kept.
+				if (mapEntry.getValue() == simpleNode) {
+					iteratorArtifactGroupIdModule.remove();
+				}
+			}
+		}
 	}
 }
-
-
-??? this map of artifactGroupId to modules may need to be flushed when mutating the model (all of it?)

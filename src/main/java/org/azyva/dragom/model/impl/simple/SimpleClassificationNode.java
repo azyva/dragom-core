@@ -30,19 +30,20 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.MutableClassificationNode;
 import org.azyva.dragom.model.MutableModule;
-import org.azyva.dragom.model.MutableNode;
 import org.azyva.dragom.model.Node;
+import org.azyva.dragom.model.NodeBuilder;
 import org.azyva.dragom.model.NodeVisitor;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
-import org.azyva.dragom.model.config.ClassificationNodeConfigValue;
 import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
+import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
-import org.azyva.dragom.model.config.NodeConfigValue;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
-import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfig;
+import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.impl.simple.SimpleClassificationNodeConfig;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,15 @@ import org.slf4j.LoggerFactory;
 public class SimpleClassificationNode extends SimpleNode implements ClassificationNode, MutableClassificationNode {
 	private static final Logger logger = LoggerFactory.getLogger(SimpleClassificationNode.class);
 
+	/**
+	 * Map of child {@link SimpleNode}'s.
+	 * <p>
+	 * For a SimpleClassificationNode base on {@link SimpleClassificationNodeConfig}
+	 * this is initially null which causes it to be lazily created by
+	 * {@link #createChildNodesFromConfig}. If dynamically created, it is initially
+	 * assigned to an empty Map so that it does not get initialized with a null
+	 * {@link ClassificationNodeConfig}.
+	 */
 	private Map<String, SimpleNode> mapSimpleNodeChild;
 
 	/**
@@ -124,6 +134,9 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 */
 	@Override
 	public NodeType getNodeType() {
+		// This may seem overkill for such a simple method, but it is better to fail fast.
+		this.checkNotDeleted();
+
 		return NodeType.CLASSIFICATION;
 	}
 
@@ -138,6 +151,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 */
 	@Override
 	public List<Node> getListChildNode() {
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
+
 		this.createChildNodesFromConfig();
 
 		// A copy is returned to prevent the internal Map from being modified by the
@@ -155,6 +172,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 */
 	@Override
 	public Node getNodeChild(String name) {
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
+
 		this.createChildNodesFromConfig();
 
 		return this.mapSimpleNodeChild.get(name);
@@ -203,6 +224,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	@Override
 	public boolean traverseNodeHierarchyDepthFirst(NodeType nodeTypeFilter, NodeVisitor nodeVisitor) {
 		Set<Map.Entry<String, SimpleNode>> setMapEntry;
+
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
 
 		this.createChildNodesFromConfig();
 
@@ -261,7 +286,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 * <p>
 	 * {@link UndefinedDescendantNodeManagerPlugin} can add new child Nodes
 	 * dynamically at runtime, generally based on information obtained from an
-	 * external system such as a SCM.
+	 * external system such as a SCM by using {@link NodeBuilder}.
 	 * <p>
 	 * This method has package scope to enforce the use of
 	 * {@link ModelNodeBuilderFactory} implemented by {@link SimpleModel} to create
@@ -270,6 +295,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 * @param simpleNode Child SimpleNode.
 	 */
 	void addNodeChild(SimpleNode simpleNode) {
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
+
 		if (simpleNode.getClassificationNodeParent() != this) {
 			throw new RuntimeException("The current node " + this + " is not the parent of the new node " + simpleNode + '.');
 		}
@@ -297,6 +326,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 */
 	SimpleClassificationNode getSimpleClassificationNodeChildDynamic(String name) {
 		SimpleNode simpleNode;
+
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
 
 		simpleNode = (SimpleNode)this.getNodeChild(name);
 
@@ -341,6 +374,10 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	SimpleModule getSimpleModuleChildDynamic(String name) {
 		SimpleNode simpleNode;
 
+		if ((this.state != SimpleNode.State.CONFIG) && (this.state != SimpleNode.State.DYNAMICALLY_CREATED)) {
+			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
+		}
+
 		simpleNode = (SimpleNode)this.getNodeChild(name);
 
 		if (simpleNode == null) {
@@ -371,40 +408,25 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 	@Override
-	public void setNodeConfigValue(NodeConfigValue nodeConfigValue) {
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
 		boolean indConfigNew;
-
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
 
 		// We need to save whether the state was State.CONFIG_NEW since
 		// super.setNodeConfigValue transitions the state to State.CONFIG.
 		indConfigNew = this.state == State.CONFIG_NEW;
 
-		super.setNodeConfigValue(nodeConfigValue);
+		// Validates the state so we do not need to do it here.
+		// here.
+		super.extractNodeConfigTransferObject(nodeConfigTransferObject);
 
-		if (indConfigNew && (this.getClassificationNodeParent() != null)) {
+		// If the parent SimpldClassificationNode is null it means this is the root
+		// SimpleClassificationNode, in which case we must update it in the SimpleModel.
+		if (indConfigNew && (this.getClassificationNodeParent() == null)) {
 			((SimpleModel)this.getModel()).setSimpleClassificationNodeRoot(this);
 		}
-	}
 
-	@Override
-	public ClassificationNodeConfigValue getClassificationNodeConfigValue() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
-
-		return (ClassificationNodeConfigValue)this.getNodeConfigValue();
-	}
-
-	@Override
-	public void setClassificationNodeConfigValue(ClassificationNodeConfigValue classificationNodeConfigValue) {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
-
-		this.setNodeConfigValue(classificationNodeConfigValue);
+		this.state = State.CONFIG;
+		this.init();
 	}
 
 	/**
@@ -421,9 +443,13 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 * @param nodeChild.
 	 */
 	void setSimpleNodeChild(SimpleNode simpleNodeChild) throws DuplicateNodeException {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
+		this.checkMutable();
+
+		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
+			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
+
+		this.createChildNodesFromConfig();
 
 		if (this.mapSimpleNodeChild.containsKey(simpleNodeChild.getName())) {
 			throw new RuntimeException("SimpleNode with name " + simpleNodeChild.getName() + " already exists.");
@@ -445,6 +471,14 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 * @param newName New name.
 	 */
 	void renameSimpleNodeChild(String currentName, String newName) throws DuplicateNodeException {
+		this.checkMutable();
+
+		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
+			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
+		}
+
+		this.createChildNodesFromConfig();
+
 		if (!this.mapSimpleNodeChild.containsKey(currentName)) {
 			throw new RuntimeException("SimpleNode with current name " + currentName + " not found.");
 		}
@@ -465,41 +499,51 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	 * @param childNodeName
 	 */
 	void removeChildNode(String childNodeName) {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
+		this.checkMutable();
+
+		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
+			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
+
+		this.createChildNodesFromConfig();
 
 		if (this.mapSimpleNodeChild.remove(childNodeName) == null) {
 			throw new RuntimeException("SimpleNode with name " + childNodeName + " not found.");
 		}
 	}
 
-
 	@Override
-	public MutableClassificationNode createChildClassificationNode() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+	public MutableClassificationNode createChildMutableClassificationNode() {
+		this.checkMutable();
+		this.checkNotDeleted();
 
-		return new SimpleClassificationNode(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildClassificationNodeConfig(), this);
-???		// TODO Auto-generated method stub
-		??? initialize the children. (otherwise initialization of list will not be performed if map is not null anymore)
-		must create the (not finalized) ClassificationNodeConfig.
+		return new SimpleClassificationNode(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildMutableClassificationNodeConfig(), this);
 	}
 
 	@Override
-	public MutableModule createChildModule() {
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
+	public MutableModule createChildMutableModule() {
+		this.checkMutable();
+		this.checkNotDeleted();
 
-		return new SimpleModule(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildModuleConfig(), this);
-???		// TODO Auto-generated method stub
-		??? initialize the children. (otherwise initialization of list will not be performed if map is not null anymore)
-		must create the (not finalized) ModuleConfig.
+		return new SimpleModule(((MutableClassificationNodeConfig)this.getNodeConfig()).createChildMutableModuleConfig(), this);
 	}
 
+	@Override
+	protected void cleanCaches(boolean indDelete) {
+		// It would seem like using traverseNodeHierarchyDepthFirst would be cleaner since
+		// that method already exists. But the problem is that when cleanCaches is
+		// recursively called we would have to know it is being called by
+		// traverseNodeHierarchyDepthFirst and not perform another traversal. It is
+		// therefore much easier to simple iterate over the immediate children and let the
+		// method itself handle recursion.
+		// Note that traversal is depth first in order to handle the SimpleNode's from
+		// bottom to top.
+		if (this.mapSimpleNodeChild != null) {
+			for(SimpleNode simpleNode: this.mapSimpleNodeChild.values()) {
+				simpleNode.cleanCaches(indDelete);
+			}
+		}
+
+		super.cleanCaches(indDelete);
+	}
 }
-
-
-cleanCaches

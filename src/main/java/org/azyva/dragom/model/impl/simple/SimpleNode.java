@@ -90,9 +90,9 @@ public abstract class SimpleNode implements Node, MutableNode {
 	protected static enum State {
 		/**
 		 * SimpleNode has been created using
-		 * {@link SimpleModel#createClassificationNodeConfigRoot},
-		 * {@link SimpleClassificationNode#createChildModule} or
-		 * {@link SimpleClassificationNode#createChildClassificationNode} and is not
+		 * {@link SimpleModel#createMutableClassificationNodeConfigRoot},
+		 * {@link SimpleClassificationNode#createChildMutableModule} or
+		 * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is not
 		 * finalized, meaning that
 		 * {@link SimpleClassificationNode#setNodeConfigValue},
 		 * {@link SimpleClassificationNode#setClassificationNodeConfigValue},
@@ -119,9 +119,9 @@ public abstract class SimpleNode implements Node, MutableNode {
 
 		/**
 		 * SimpleNode has been created using
-		 * {@link SimpleModel#createClassificationNodeConfigRoot},
-		 * {@link SimpleClassificationNode#createChildModule} or
-		 * {@link SimpleClassificationNode#createChildClassificationNode} and is finalized
+		 * {@link SimpleModel#createMutableClassificationNodeConfigRoot},
+		 * {@link SimpleClassificationNode#createChildMutableModule} or
+		 * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is finalized
 		 * (see {@link #CONFIG_NEW}).
 		 * <p>
 		 * This state is also used when the SimpleNode is a {@link SimpleModule} and has
@@ -322,8 +322,6 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * @param name Name.
 	 */
 	void setName(String name) {
-		this.checkDeleted();
-
 		if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
 			throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
 		}
@@ -342,8 +340,6 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * @param value Value of the property.
 	 */
 	void setProperty(String name, String value, boolean indOnlyThisNode) {
-		this.checkDeleted();
-
 		if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
 			throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
 		}
@@ -392,8 +388,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * @return NodeConfig.
 	 */
 	protected NodeConfig getNodeConfig() {
-		if (this.state != State.CONFIG) {
-			throw new IllegalStateException("State must be CONFIG. State: " + this.state);
+		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)){
+			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
 
 		return this.nodeConfig;
@@ -405,7 +401,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public ClassificationNode getClassificationNodeParent() {
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		return this.simpleClassificationNodeParent;
 	}
@@ -419,7 +415,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public String getName() {
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -433,7 +429,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public Model getModel() {
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		return this.simpleModel;
 	}
@@ -449,7 +445,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public NodePath getNodePath() {
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		// The root ClassificationNode does not have a NodePath.
 		if (this.simpleClassificationNodeParent == null) {
@@ -521,7 +517,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 		String value;
 		SimpleNode simpleNodeCurrent;
 
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -692,7 +688,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 		Class<?> classPlugin;
 		NodePlugin nodePlugin;
 
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -777,7 +773,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	public boolean isNodePluginExists(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
 		PluginDefConfig pluginDefConfig;
 
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -823,7 +819,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 		Set<String> setPluginIdEncountered;
 		SimpleNode nodeCurrent;
 
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if (this.state == State.CONFIG_NEW) {
 			throw new IllegalStateException("State must not be CONFIG_NEW. State: " + this.state);
@@ -881,8 +877,6 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 */
 	@Override
 	public <NodeEventClass extends NodeEvent> void registerListener(NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso) {
-		this.checkDeleted();
-
 		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_CREATED)) {
 			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_CREATED. State: " + this.state);
 		}
@@ -914,8 +908,6 @@ public abstract class SimpleNode implements Node, MutableNode {
 	public void raiseNodeEvent(NodeEvent nodeEvent) {
 		EventPlugin eventPlugin;
 
-		this.checkDeleted();
-
 		if ((this.state != State.CONFIG) && (this.state != State.DYNAMICALLY_CREATED)) {
 			throw new IllegalStateException("State must be CONFIG or DYNAMICALLY_CREATED. State: " + this.state);
 		}
@@ -937,7 +929,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 
 	@Override
 	public boolean isCreatedDynamically() {
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		return (this.state == State.DYNAMICALLY_CREATED) || (this.state == State.DYNAMICALLY_BEING_COMPLETED);
 	}
@@ -945,7 +937,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	@Override
 	public boolean isNew() {
 		this.checkMutable();
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		return this.state == State.CONFIG_NEW;
 	}
@@ -958,13 +950,14 @@ public abstract class SimpleNode implements Node, MutableNode {
 		// one based on MutableNodeConfig. The caller has to detect the fact that it is
 		// currently dynamically created using Node.isCreatedDynamically and if so, do as
 		// if the Node does not exist yet by calling
-		// MutableNode.createChildClassificationNode or MutableNode.createChildModule. It
-		// is when ultimately calling MutableNode.setNodeConfigTransferObject that the
-		// Node will be converted from a dynamically created to one based on
-		// MutableNodeConfig. See MutableNode.isDeleted.
+		// MutableClassificationNode.createChildMutableClassificationNode or
+		// MutableClassificationNode.createChildMutableModule. It is when ultimately
+		// calling MutableNode.setNodeConfigTransferObject that the Node will be converted
+		// from a dynamically created to one based on MutableNodeConfig. See
+		// MutableNode.isDeleted.
 		this.checkMutable();
 
-		this.checkDeleted();
+		this.checkNotDeleted();
 
 		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
@@ -973,16 +966,29 @@ public abstract class SimpleNode implements Node, MutableNode {
 		return ((MutableNodeConfig)this.getNodeConfig()).getNodeConfigTransferObject();
 	}
 
-	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+	/**
+	 * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
+	 * them within the SimpleNode.
+	 * <p>
+	 * Does most of the processing that
+	 * {@link MutableNode#setNodeConfigValueTransferObject} must do, except calling init
+	 * and setting the new state.
+	 * <p>
+	 * The reason for not directly implementing
+	 * MutableNode.setNodeConfigValueTransferObject is that subclasses can have
+	 * other tasks to perform.
+	 *
+	 * @param nodeConfigTransferObject
+	 * @throws OptimisticLockException When the underlying {@link MutableNodeConfig}
+	 *   detects that the configuration data was changed since the call to
+	 *   {@link #getNodeConfigTransferObject}.
+	 * @throws DuplicateNodeExcpeption When the new configuration data would introduce
+	 *   a duplicate {@link MutableNode} within the parent.
+	 */
+	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
 		String newName;
 
 		this.checkMutable();
-		this.checkDeleted();
-
-		if (!this.indMutable) {
-			throw new IllegalStateException("SimpleModel must be mutable.");
-		}
 
 		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
@@ -990,13 +996,13 @@ public abstract class SimpleNode implements Node, MutableNode {
 
 		newName = nodeConfigTransferObject.getName();
 
-		if (newName == null) {
-			throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
-		}
-
 		if (this.state == State.CONFIG) {
 			if (this.simpleClassificationNodeParent != null) {
 				String currentName;
+
+				if (newName == null) {
+					throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
+				}
 
 				currentName = this.name;
 
@@ -1023,6 +1029,10 @@ public abstract class SimpleNode implements Node, MutableNode {
 			if (this.simpleClassificationNodeParent != null) {
 				SimpleNode simpleNodeExisting;
 
+				if (newName == null) {
+					throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
+				}
+
 				simpleNodeExisting = (SimpleNode)this.simpleClassificationNodeParent.getNodeChild(newName);
 
 				if (simpleNodeExisting != null) {
@@ -1047,9 +1057,10 @@ public abstract class SimpleNode implements Node, MutableNode {
 			}
 
 			this.name = newName;
-			this.simpleClassificationNodeParent.setSimpleNodeChild(this);
-			this.init();
-			this.state = State.CONFIG;
+
+			if (this.simpleClassificationNodeParent != null) {
+				this.simpleClassificationNodeParent.setSimpleNodeChild(this);
+			}
 		}
 
 		this.cleanCaches(false);
@@ -1081,9 +1092,15 @@ public abstract class SimpleNode implements Node, MutableNode {
 	}
 
 	/**
-	 * Checks if the MutableNode is deleted.
+	 * Checks if the MutableNode is not deleted.
+	 * <p>
+	 * Utility method to facilitate validating the {@link SimpleNode} is not deleted
+	 * at the beginning of other methods. Most methods must validate the SimpleNode
+	 * is not deleted. But some methods implicitly perform this validation by
+	 * verifying for specific states. In this case, calling this method is not
+	 * required.
 	 */
-	protected void checkDeleted() {
+	protected void checkNotDeleted() {
 		if (this.state == State.DELETED) {
 			throw new IllegalStateException("MutableNode is deleted.");
 		}
@@ -1115,6 +1132,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 		this.nodePath = null;
 		this.mapProperty = null;
 		this.mapNodePluginConstructor = null;
+
+		this.simpleModel.cleanCaches(this);
 
 		if (indDelete) {
 			this.name = null;
