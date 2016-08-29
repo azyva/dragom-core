@@ -316,7 +316,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * Sets the name.
 	 * <p>
 	 * This method has package scope since fields of a SimpleNode can only be set
-	 * while dynamically completing a {@link SimpleModel} using{@code}
+	 * while dynamically completing a {@link SimpleModel} using
 	 * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
 	 *
 	 * @param name Name.
@@ -1039,12 +1039,12 @@ public abstract class SimpleNode implements Node, MutableNode {
 					if (!simpleNodeExisting.isCreatedDynamically()) {
 						throw new DuplicateNodeException();
 					}
+
+					this.simpleClassificationNodeParent.removeChildNode(newName);
+
+					// Sets the state to DELETED.
+					simpleNodeExisting.cleanCaches(true);
 				}
-
-				this.simpleClassificationNodeParent.removeChildNode(newName);
-
-				// Sets the state to DELETED.
-				simpleNodeExisting.cleanCaches(true);
 			}
 
 			try {
@@ -1059,7 +1059,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 			this.name = newName;
 
 			if (this.simpleClassificationNodeParent != null) {
-				this.simpleClassificationNodeParent.setSimpleNodeChild(this);
+				this.simpleClassificationNodeParent.setSimpleNodeChild(newName, this);
 			}
 		}
 

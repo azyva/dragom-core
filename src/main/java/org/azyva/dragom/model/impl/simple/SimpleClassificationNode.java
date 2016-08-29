@@ -38,7 +38,6 @@ import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
-import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
@@ -432,17 +431,17 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	/**
 	 * Sets a child {@link SimpleNode}.
 	 * <p>
-	 * Contrary to {@link MutableNodeConfig.set
-	 * <p>
 	 * In the case of duplicate SimpleNode, this method throws RuntimeException and
 	 * not DuplicateNodeException. The caller is responsible to handle such case.
 	 * <p>
-	 * This method is intended to be called by
-	 * {@link SimpleNode#setNodeConfigValue}.
+	 * This method is called by {@link SimpleNode#extractNodeConfigTransferObject}.
 	 *
-	 * @param nodeChild.
+	 * @param name Name of the Child SimpleNode. Passed by the caller so that getName
+	 *   does not need to be called, which would be invalid when the SimpleNode is
+	 *   being created.
+	 * @param simpleNodeChild Child SimpleNode.
 	 */
-	void setSimpleNodeChild(SimpleNode simpleNodeChild) throws DuplicateNodeException {
+	void setSimpleNodeChild(String name, SimpleNode simpleNodeChild) {
 		this.checkMutable();
 
 		if ((this.state != State.CONFIG) && (this.state != State.CONFIG_NEW)) {
@@ -451,11 +450,11 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 
 		this.createChildNodesFromConfig();
 
-		if (this.mapSimpleNodeChild.containsKey(simpleNodeChild.getName())) {
-			throw new RuntimeException("SimpleNode with name " + simpleNodeChild.getName() + " already exists.");
+		if (this.mapSimpleNodeChild.containsKey(name)) {
+			throw new RuntimeException("SimpleNode with name " + name + " already exists.");
 		}
 
-		this.mapSimpleNodeChild.put(simpleNodeChild.getName(), simpleNodeChild);
+		this.mapSimpleNodeChild.put(name, simpleNodeChild);
 	}
 
 	/**

@@ -1488,8 +1488,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				stringBuilderMergeMessage.append('\n');
 			}
 
-			// Remove the useless trailing newline.
-			stringBuilderMergeMessage.setLength(stringBuilderMergeMessage.length() - 1);
+			if (!listCommitExclude.isEmpty()) {
+				// Remove the useless trailing newline.
+				stringBuilderMergeMessage.setLength(stringBuilderMergeMessage.length() - 1);
+			}
 
 			commandLine.addArgument("-m").addArgument(stringBuilderMergeMessage.toString(), false).addArgument(Git.convertToRef(versionSrc));
 
