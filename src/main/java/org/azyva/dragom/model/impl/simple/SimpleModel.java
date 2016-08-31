@@ -303,6 +303,8 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 			if (config.getClassificationNodeConfigRoot() == null) {
 				throw new RuntimeException("Root ClassificationNodeConfig must be specified.");
 			}
+
+			this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
 		}
 
 

@@ -25,15 +25,17 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewDynamicVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.reference.ReferencePath;
 
 /**
  * Factory for NewDynamicVersionPlugin that implements a strategy for development
  * workflow that uses development phases.
  *
- * See the NewStaticVersionPhasePlugin sibling for general information about the
- * concept of development phases and about freezing the current phase.
+ * See the PhaseNewStaticVersionPluginImpl sibling for general information about
+ * the concept of development phases and about freezing the current phase.
  *
- * After having frozen the current phase, SwitchToDynamicVersion and this plugin
+ * After having frozen the current phase using CreateStaticVersion and
+ * PhaseNewStaticVersionPluginImpl, SwitchToDynamicVersion and this plugin
  * are used to change the ArtifactVersion to that corresponding to the new phase
  * while keeping the same original dynamic Version. This is done in a deceptively
  * simple manner by simply returning that the current dynamic Version must be kept
@@ -43,7 +45,7 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
  *
  * If the current Version is not dynamic, it is expected to be the static Version
  * created when freezing the previous phase. In that case, the (existing) base
- * Version of that static Version is returned, which is expected to the the
+ * Version of that static Version is returned, which is expected to be the
  * development version for the project on which various static Version
  * corresponding to the phases are created.
  *
@@ -56,7 +58,7 @@ public class PhaseNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl i
 	}
 
 	@Override
-	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase) {
+	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
 		ScmPlugin scmPlugin;
 		Version versionNewDynamic;
 		ScmPlugin.BaseVersion baseVersion;

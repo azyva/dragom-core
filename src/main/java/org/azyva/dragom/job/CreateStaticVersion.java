@@ -747,10 +747,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponsRevertArtifactVersion;
 				Map<String, String> mapCommitAttr;
 
-				// Finally handle reverting the ArtifactVersion. Note that is some cases the
+				// Finally handle reverting the ArtifactVersion. Note that in some cases the
 				// ArtifactVersion does not need to be updated above if it is already the correct
-				// value. This can happen in phase developpement (see
-				// NewDynamicVersionPhasePluginFactory). We may be tempted to not attempt to
+				// value. This can happen in phase development (see
+				// PhaseNewDynamicVersionPluginImpl). We may be tempted to not attempt to
 				// revert the ArtifactVersion in that case arguing that if it was not adjusted
 				// prior to creating the new static Version, it will not need to be reverted. But
 				// the ArtifactVersionMapperPlugin can behave in a non-deterministic manner where

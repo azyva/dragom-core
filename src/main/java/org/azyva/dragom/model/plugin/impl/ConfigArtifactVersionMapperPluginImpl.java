@@ -261,9 +261,11 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			matcher = versionMapping.patternSrcVersion.matcher(version.toString());
 
 			if (matcher.matches()) {
-				artifactVersion = new ArtifactVersion(matcher.replaceAll(versionMapping.destinationVersion));
+				String stringArtifactVersion;
 
-				ConfigArtifactVersionMapperPluginImpl.logger.debug("Version {} mapped to ArtifactVersion {}.", version, artifactVersion);
+				stringArtifactVersion = matcher.replaceAll(versionMapping.destinationVersion);
+
+				ConfigArtifactVersionMapperPluginImpl.logger.debug("Version {} mapped to ArtifactVersion {}.", version, stringArtifactVersion);
 
 				if (versionMapping.indAddPhase) {
 					ExecContext execContext;
@@ -271,7 +273,6 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 					UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 					String phase;
 					AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReusePhase;
-					String stringVersion;
 					int indexPhase;
 
 					execContext = ExecContextHolder.get();
@@ -301,9 +302,9 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 						if (!alwaysNeverAskUserResponseCanReusePhase.isAlways()) {
 							if (phase == null) {
-								phase = userInteractionCallbackPlugin.getInfo(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, artifactVersion));
+								phase = userInteractionCallbackPlugin.getInfo(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE), this.getModule(), version, stringArtifactVersion));
 							} else {
-								phase = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT), this.getModule(), version, artifactVersion, phase), phase);
+								phase = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(ConfigArtifactVersionMapperPluginImpl.resourceBundle.getString(ConfigArtifactVersionMapperPluginImpl.MSG_PATTERN_KEY_INPUT_PHASE_WITH_DEFAULT), this.getModule(), version, stringArtifactVersion, phase), phase);
 							}
 
 							runtimePropertiesPlugin.setProperty(null, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PHASE, phase);
@@ -320,19 +321,18 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 						execContext.setTransientData(ConfigArtifactVersionMapperPluginImpl.class.getName() + '.' + this.getModule() + ".Phase", phase);
 					}
 
-					stringVersion = artifactVersion.getVersion();
-					indexPhase = stringVersion.indexOf("@PHASE");
+					indexPhase = stringArtifactVersion.indexOf("@PHASE");
 
 					if (indexPhase == -1) {
 						throw new RuntimeException("Version regex " + versionMapping.patternSrcVersion + " to ArtifactVersion " + versionMapping.destinationVersion + " for module " + this.getModule() + " specified to add a phase but the destination version does not contain the @{PHASE} parameter.");
 					}
 
-					ConfigArtifactVersionMapperPluginImpl.logger.debug("@PHASE within ArtifactVersion {} replaced with {}.", stringVersion, phase);
+					ConfigArtifactVersionMapperPluginImpl.logger.debug("@PHASE within ArtifactVersion {} replaced with {}.", stringArtifactVersion, phase);
 
 					// Magic number 6 below is the length of "@PHASE". Not worth having a constant.
-					return new ArtifactVersion(artifactVersion.getVersionType(), stringVersion.substring(0, indexPhase) + phase + stringVersion.substring(indexPhase + 6));
+					return new ArtifactVersion(stringArtifactVersion.substring(0, indexPhase) + phase + stringArtifactVersion.substring(indexPhase + 6));
 				} else {
-					return artifactVersion;
+					return new ArtifactVersion(stringArtifactVersion);
 				}
 			}
 		}

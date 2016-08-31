@@ -1090,7 +1090,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			stringBuilderCommits = new StringBuilder();
 			commandLine = new CommandLine("git");
-			commandLine.addArgument("rev-list").addArgument("--pretty=oneline").addArgument(version.getVersion());
+			commandLine.addArgument("rev-list").addArgument("--pretty=oneline").addArgument(Git.convertToRef(version));
 			Git.executeGitCommand(commandLine, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
 
 			bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));

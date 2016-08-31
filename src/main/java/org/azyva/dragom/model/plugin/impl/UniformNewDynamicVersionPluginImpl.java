@@ -32,6 +32,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.NewDynamicVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
 import org.azyva.dragom.util.Util;
@@ -123,7 +124,7 @@ public class UniformNewDynamicVersionPluginImpl extends NewDynamicVersionPluginB
 	}
 
 	@Override
-	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase) {
+	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		Version versionNewDynamic;

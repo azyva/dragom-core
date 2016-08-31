@@ -166,6 +166,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED_SWITCH_REQUIRED = "NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED_SWITCH_REQUIRED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED = "NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED";
 
 	/**
@@ -677,9 +682,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
 			if (indReferenceProcessed || ((visitModuleActionPerformed == VisitModuleActionPerformed.SWITCH) && indCanMatchChildren)) {
 				boolean indUserWorkspaceDir;
-				String message;
 				boolean indReferenceUpdated;
+				String message;
 				ByReference<Version> byReferenceVersionChild;
+				ByReference<Reference> byReferenceReference;
 
 				// We now need to update the references within the current ModuleVersion. We must
 				// interact with the user about the workspace directory in which the module is
@@ -701,6 +707,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				indReferenceUpdated = false;
 
 				byReferenceVersionChild = new ByReference<Version>();
+				byReferenceReference = new ByReference<Reference>();
 
 				for (Reference referenceChild: listReference) {
 					if (referenceChild.getModuleVersion() == null) {
@@ -722,9 +729,9 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 									return visitModuleActionPerformed;
 								}
 
-								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic, null)) {
+								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic, byReferenceReference)) {
 									indReferenceUpdated = true;
-									message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNewDynamic);
+									message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNewDynamic, byReferenceReference.object);
 									userInteractionCallbackPlugin.provideInfo(message);
 									this.listActionsPerformed.add(message);
 								} else {
@@ -742,9 +749,9 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 								return visitModuleActionPerformed;
 							}
 
-							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, null)) {
+							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, byReferenceReference)) {
 								indReferenceUpdated = true;
-								message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionChild.object);
+								message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionChild.object, byReferenceReference.object);
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
 							} else {
@@ -862,7 +869,13 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 		// entry for it in mapNodePathVersionDynamic.
 
 		byReferenceVersionBase = new ByReference<Version>();
-		versionNewDynamic = newDynamicVersionPlugin.getVersionNewDynamic(moduleVersion.getVersion(), byReferenceVersionBase);
+		versionNewDynamic = newDynamicVersionPlugin.getVersionNewDynamic(moduleVersion.getVersion(), byReferenceVersionBase, this.referencePath);
+
+		// Generally, null being returned will be accompanied by a request for abort. This
+		// will be handled by the caller.
+		if (versionNewDynamic == null) {
+			return false;
+		}
 
 		indSameVersion = versionNewDynamic.equals(moduleVersion.getVersion());
 
@@ -909,10 +922,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					if (indCreateNewVersion) {
 						if (!moduleVersion.getVersion().equals(byReferenceVersionBase.object)) {
 							scmPlugin.switchVersion(pathModuleWorkspace, byReferenceVersionBase.object);
+							message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED_SWITCH_REQUIRED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
+						} else {
+							message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
 						}
 
 						scmPlugin.createVersion(pathModuleWorkspace, versionNewDynamic, true);
-						message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED), moduleVersion, versionNewDynamic, byReferenceVersionBase.object);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					} else {
@@ -983,40 +998,56 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 					Version versionEquivalentStatic;
 					Map<String, String> mapCommitAttr;
 
-					// We are about to introduce a commit that adjusts the ArtifactVersion according
-					// to the new dynamic Version. For an already existing dynamic Version this may
-					// or may not already have been done when the Version was created. But following
-					// the creation of a static Version, Dragom needs to know that if no new commit
-					// was introduced the dynamic Version is equivalent to the static Version just
-					// created. It does that either by looking at the static Version (tag) created on
-					// the last commit of the dynamic Version (branch), or if a new reverting commit
-					// was introduced, by looking at an attribute of this commit that specifies the
-					// equivalent static Version. If we introduce that new reverting commit here, we
-					// must then specify that commit attribute.
-	//TODO: Not sure if that logic should not be in some plugin. Probably it is OK here since the logic is also in CreateStaticVersion, a job.
-	// But maybe the logic to retrieve that information (equivalent static Version) should be centralized. It exists in NewStaticVersionPluginBaseImpl and here.
-					listCommit = scmPlugin.getListCommit(versionNewDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
+					// The Version management logic of Dragom relies on the knowledge that a new
+					// dynamic Version created based on a static Version is initially equivalent to
+					// that static Version, even if a commit is introduced to adjust the
+					// ArtifactVersion. This is so that when creating a new static Version, an
+					// existing static Version can be reused instead of introducing a new redundant
+					// one. This is done by including the commit attribute
+					// dragom-equivalent-static-version on such commits.
+					// We are about to introduce such a commit so we must handle that commit
+					// attribute.
+					// If the new dynamic Version was created and the base Version is static, it is
+					// necessarily equivalent to that base Version. If the base Version is dynamic
+					// and that base version itself had an equivalent static Version, we could argue
+					// that the new dynamic Version is also equivalent. But the Version hierarchy is
+					// getting deeper in that case and we do not handle that case as this could be
+					// confusing.
+					// If the dynamic Version already existed and we get here, it means the
+					// ArtifactVersion had not been updated when that dynamic Version was created
+					// (whenever that may have occurred), and we update it here with a new commit. If
+					// the dynamic Version already had an equivalent static Version, we know that
+					// after the new commit, it will still remain equivalent to that static Version,
+					// so we must record again the same dragom-equivalent-static-version commit
+					// attribute.
+					if (indCreateNewVersion && (byReferenceVersionBase.object.getVersionType() == VersionType.STATIC)) {
+						versionEquivalentStatic = byReferenceVersionBase.object;
+					} else {
+		//TODO: Not sure if that logic should not be in some plugin. Probably it is OK here since the logic is also in CreateStaticVersion, a job.
+		// But maybe the logic to retrieve that information (equivalent static Version) should be centralized. It exists in NewStaticVersionPluginBaseImpl and here.
+						listCommit = scmPlugin.getListCommit(versionNewDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
-					if (!listCommit.isEmpty()) {
-						ScmPlugin.Commit commit;
+						if (!listCommit.isEmpty()) {
+							ScmPlugin.Commit commit;
 
-						commit = listCommit.get(0);
+							commit = listCommit.get(0);
 
-						stringEquivalentStaticVersion = commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
+							stringEquivalentStaticVersion = commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
 
-						if (stringEquivalentStaticVersion != null) {
-							versionEquivalentStatic = new Version(stringEquivalentStaticVersion);
+							if (stringEquivalentStaticVersion != null) {
+								versionEquivalentStatic = new Version(stringEquivalentStaticVersion);
 
-							if (versionEquivalentStatic.getVersionType() != VersionType.STATIC) {
-								throw new RuntimeException("Version " + versionEquivalentStatic + " must be static.");
+								if (versionEquivalentStatic.getVersionType() != VersionType.STATIC) {
+									throw new RuntimeException("Version " + versionEquivalentStatic + " must be static.");
+								}
+							} else if (commit.arrayVersionStatic.length >= 1) {
+								versionEquivalentStatic = commit.arrayVersionStatic[0];
+							} else {
+								versionEquivalentStatic = null;
 							}
-						} else if (commit.arrayVersionStatic.length >= 1) {
-							versionEquivalentStatic = commit.arrayVersionStatic[0];
 						} else {
 							versionEquivalentStatic = null;
 						}
-					} else {
-						versionEquivalentStatic = null;
 					}
 
 					message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_ARTIFACT_VERSION_CHANGED), module, versionNewDynamic, artifactVersion, artifactVersionNew);

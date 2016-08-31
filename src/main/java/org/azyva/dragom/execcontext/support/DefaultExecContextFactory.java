@@ -210,8 +210,12 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 					throw new RuntimeException(ioe);
 				}
 			} else {
-				if (!this.pathPropertiesFile.getParent().toFile().mkdirs()) {
-					throw new RuntimeException("Parent directory of " + this.pathPropertiesFile + " could not be created.");
+				// The Properties file may not exist, but its containing directory may already
+				// exist.
+				if (!this.pathPropertiesFile.getParent().toFile().isDirectory()) {
+					if (!this.pathPropertiesFile.getParent().toFile().mkdirs()) {
+						throw new RuntimeException("Parent directory of " + this.pathPropertiesFile + " could not be created.");
+					}
 				}
 
 				this.saveProperties();

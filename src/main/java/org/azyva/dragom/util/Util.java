@@ -48,6 +48,7 @@ import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.PluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.reference.ReferencePath;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,6 +150,22 @@ public final class Util {
 	 * other {@link ModuleVersion}.
 	 */
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES = "SWITCH_WITH_UNSYNC_LOCAL_CHANGES";
+
+	/**
+	 * Context for {@link Util#handleDoYouWantToCOntinue} that represents the fact
+	 * that during the switch to a hotfix dynamic {@link Version}, the
+	 * {@link ReferencePath} contains non-static Versions. which may be OK if they
+	 * were created in the context of the hotfix.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH = "NON_STATIC_VERSIONS_REFERENCE_PATH";
+
+	/**
+	 * Context for {@link Util#handleDoYouWantToCOntinue} that represents the fact
+	 * that during the switch to a hotfix dynamic {@link Version}, the
+	 * {@link ReferencePath} contains non-static Versions. which may be OK if they
+	 * were created in the context of the hotfix.
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION = "USE_CURRENT_HOTFIX_VERSION";
 
 	/**
 	 * Path to the static Dragom properties resource within the classpath.

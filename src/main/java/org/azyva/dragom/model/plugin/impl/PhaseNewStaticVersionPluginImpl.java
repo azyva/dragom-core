@@ -34,7 +34,7 @@ import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 
 /**
- * Factory for NewStaticVersionPlugin that implements a strategy for development
+ * Factory for NewStaticVersionPlugin that implements a strategy for a development
  * workflow that uses development phases.
  *
  * The idea is as follows. When a (development) project starts, a new dynamic
@@ -57,19 +57,19 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
  * During the creation of that Version, CreateStaticVersion attempts to adjust the
  * ArtifactVersion within the module. But the ArtifactVersionMapperPlugin is
  * expected to be configured in such a way that the ArtifactVersion corresponding
- * to the new static Version so that no adjustment is required. Here we actually
- * map a dynamic ArtifactVersion to the new static Version, which is generally
- * considered incorrect. But since static Version's representing phases are not
- * released versions, using a static ArtifactVersion is not appropriate. We use a
- * dynamic ArtifactVersion instead, which happens to not really violate any
- * important release engineering rules. Specifically the important rule that a
+ * to the new static Version is so that no adjustment is required. Here we
+ * actually map a dynamic ArtifactVersion to the new static Version, which is
+ * generally considered incorrect. But since static Version's representing phases
+ * are not released versions, using a static ArtifactVersion is not appropriate.
+ * We use a dynamic ArtifactVersion instead, which happens to not really violate
+ * any important release engineering rules. Specifically the important rule that a
  * static ArtifactVersion correspond to a static Version remains respected.
  *
  * In order to continue development in the new phase iteration02,
  * SwitchToDynamicVersion and the NewDynamicVersionPhasePlugin sibling are used to
  * change the ArtifactVersion to develop-myproject-iteration02-SNAPSHOT (while
  * keeping the same dynamic Version D/develop-myproject). See
- * NewDynamicVersionPhasePlugin for more information.
+ * PhaseNewDynamicVersionPluginImpl for more information.
  *
  * @author David Raymond
  */

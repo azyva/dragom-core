@@ -634,7 +634,7 @@ public class Git {
 	 * Converts a {@link Version} to a Git reference such as refs/tags/&lt;tag&gt; or
 	 * refs/remotes/origin/&lt;branch&gt;.
 	 * <p>
-	 * In the case of a dynamic Version, the remove branch is used.
+	 * In the case of a dynamic Version, the remote branch is used.
 	 *
 	 * @param version Version.
 	 * @return Git reference.

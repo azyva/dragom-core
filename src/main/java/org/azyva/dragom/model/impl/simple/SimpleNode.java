@@ -561,7 +561,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 				// not possible for a SimpleNode to have both since setProperty can only be called
 				// by SimpleNodeBuilder which has nothing to do with Config.
 
-				if (this.state == State.CONFIG) {
+				if (simpleNodeCurrent.state == State.CONFIG) {
 					PropertyDefConfig propertyDefConfig;
 
 					// getNodeConfig cannot return null here since if the SimpleNode was dynamically
@@ -650,7 +650,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 			PluginDefConfig pluginDefConfig;
 
 			// PluginDefConfig's are available only if the Node is base on a NodeConfig.
-			if (this.state == State.CONFIG) {
+			if (simpleNodeCurrent.state == State.CONFIG) {
 				pluginDefConfig = simpleNodeCurrent.getNodeConfig().getPluginDefConfig(classNodePlugin, pluginId);
 
 				if (pluginDefConfig != null) {
@@ -834,7 +834,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 			List<PluginDefConfig> listPluginDefConfig;
 
 			// PluginDefConfig's are available only if the Node is base on a NodeConfig.
-			if (this.state == State.CONFIG) {
+			if (nodeCurrent.state == State.CONFIG) {
 				listPluginDefConfig = nodeCurrent.getNodeConfig().getListPluginDefConfig();
 
 				for (PluginDefConfig pluginDefConfig: listPluginDefConfig) {

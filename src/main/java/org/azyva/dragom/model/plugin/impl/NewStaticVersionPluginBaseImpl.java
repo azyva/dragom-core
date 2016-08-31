@@ -340,7 +340,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		// This algorithm is valid for modules which store ArtifactVersion within their
 		// build script (Maven). In other cases, a revert commit may not be required, nor a
 		// commit for adjusting the ArtifactVersion in the first place. In such a case we
-		// revert to the list of static Version on the current commit..
+		// revert to the list of static Version on the current commit.
 
 		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
