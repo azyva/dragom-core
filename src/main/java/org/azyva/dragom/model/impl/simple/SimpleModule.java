@@ -29,6 +29,7 @@ import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 
 /**
  * Simple implementation of {@link Module} and {@link MutableModule}.
@@ -72,10 +73,11 @@ public class SimpleModule extends SimpleNode implements Module, MutableModule {
 	}
 
 	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+			throws OptimisticLockException, DuplicateNodeException {
 		// Validates the state so we do not need to do it here.
 		// here.
-		super.extractNodeConfigTransferObject(nodeConfigTransferObject);
+		super.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 
 		this.state = State.CONFIG;
 

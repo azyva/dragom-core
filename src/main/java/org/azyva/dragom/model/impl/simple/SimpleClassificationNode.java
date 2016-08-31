@@ -42,6 +42,7 @@ import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.impl.simple.SimpleClassificationNodeConfig;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.slf4j.Logger;
@@ -407,7 +408,8 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 	}
 
 	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+			throws OptimisticLockException, DuplicateNodeException {
 		boolean indConfigNew;
 
 		// We need to save whether the state was State.CONFIG_NEW since
@@ -416,7 +418,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
 
 		// Validates the state so we do not need to do it here.
 		// here.
-		super.extractNodeConfigTransferObject(nodeConfigTransferObject);
+		super.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 
 		// If the parent SimpldClassificationNode is null it means this is the root
 		// SimpleClassificationNode, in which case we must update it in the SimpleModel.

@@ -33,6 +33,7 @@ import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 
 /**
  * Simple implementation for {@link ClassificationNodeConfig}.
@@ -98,8 +99,8 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
 	}
 
 	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject NodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
-		this.extractNodeConfigTransferObject(NodeConfigTransferObject);
+	public void setNodeConfigTransferObject(NodeConfigTransferObject NodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
+		this.extractNodeConfigTransferObject(NodeConfigTransferObject, optimisticLockHandle);
 
 		if (this.indNew) {
 			if (this.simpleConfig != null) {

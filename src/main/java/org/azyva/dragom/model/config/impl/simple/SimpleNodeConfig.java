@@ -29,6 +29,8 @@ import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
+import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
@@ -56,6 +58,14 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	private SimpleClassificationNodeConfig simpleClassificationNodeConfigParent;
 
 	/**
+	 * Unique revision number to manage optimistic locking (see
+	 * {@link OptimisticLockHandle}).
+	 * <p>
+	 * Starts at since 0 within OptimisticLockHandle means not locked.
+	 */
+	protected int revision;
+
+	/**
 	 * Name.
 	 */
 	private String name;
@@ -80,6 +90,8 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 		this.indNew = true;
 
 		this.simpleClassificationNodeConfigParent = simpleClassificationNodeConfigParent;
+
+		this.revision = 1;
 
 		// LinkedHashMap are used to preserve insertion order.
 		this.mapPropertyDefConfig = new LinkedHashMap<String, PropertyDefConfig>();
@@ -132,9 +144,56 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 		return this.indNew;
 	}
 
+	/**
+	 * Check whether the {@link OptimisticLockHandle} corresponds to the current state
+	 * of the data it represents.
+	 * <p>
+	 * If optimisticLockHandle is null, nothing is done.
+	 * <p>
+	 * If optimisticLockHandle is not null and is locked
+	 * ({@link OptimisticLockHandle#isLocked}), its state must correspond to the state
+	 * of the data it represents, otherwise {@link OptimisticLockException} is thrown.
+	 * <p>
+	 * If optimisticLockHandle is not null and is not locked, it is simply locked to
+	 * the current state of the data, unless indRequireLock, in which case an
+	 * exception is thrown.
+	 *
+	 * @param optimisticLockHandle OptimisticLockHandle. Can be null.
+	 * @param indRequireLock Indicates if it is required that the OptimisticLockHandle
+	 *   be locked.
+	 */
+	protected void checkOptimisticLock(OptimisticLockHandle optimisticLockHandle, boolean indRequireLock) {
+		if (optimisticLockHandle != null) {
+			if (optimisticLockHandle.isLocked()) {
+				if (((SimpleOptimisticLockHandle)optimisticLockHandle).getRevision() != this.revision) {
+					throw new OptimisticLockException();
+				}
+			} else {
+				if (indRequireLock) {
+					throw new RuntimeException("Lock required.");
+				}
+
+				((SimpleOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+			}
+		}
+	}
+
 	@Override
-	public NodeConfigTransferObject getNodeConfigTransferObject() {
+	public OptimisticLockHandle createOptimisticLockHandle(boolean indLock) {
+		return new SimpleOptimisticLockHandle(indLock ? this.revision : 0);
+	}
+
+	@Override
+	public boolean isOptimisticLockValid(OptimisticLockHandle optimisticLockHandle) {
+		return (((SimpleOptimisticLockHandle)optimisticLockHandle).getRevision() == this.revision);
+	}
+
+	@Override
+	public NodeConfigTransferObject getNodeConfigTransferObject(OptimisticLockHandle optimisticLockHandle)
+			throws OptimisticLockException {
 		NodeConfigTransferObject nodeConfigTransferObject;
+
+		this.checkOptimisticLock(optimisticLockHandle, false);
 
 		nodeConfigTransferObject = new SimpleNodeConfigTransferObject();
 
@@ -161,13 +220,29 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 	 * The reason for not directly implementing
 	 * MutableNodeConfig.setNodeConfigValueTransferObject is that subclasses can have
 	 * other tasks to perform.
+	 * <p>
+	 * If optimisticLockHandle is null, no optimistic lock is managed.
+	 * <p>
+	 * If optimisticLockHandle is not null, it must be locked
+	 * ({@link OptimisticLockHandle#isLocked}) and its state must correspond to the
+	 * state of the data it represents, otherwise {@link OptimisticLockException} is
+	 * thrown. The state of the OptimisticLockHandle is updated to the new revision of
+	 * the SimpleNodeConfig.
 	 *
-	 * @param nodeConfigTransferObject
+	 * @param nodeConfigTransferObject NodeConfigTransferObject.
+	 * @param optimisticLockHandle OptimisticLockHandle. Can be null.
+	 * @throws OptimisticLockException Can be thrown only if optimisticLockHandle is
+	 *   not null. This is a RuntimeException that may be of interest to
+	 *   the caller.
 	 * @throws DuplicateNodeExcpeption When the new configuration data would introduce
-	 *   a duplicate {@link MutableNode} within the parent.
+	 *   a duplicate {@link MutableNode} within the parent. This is a RuntimeException
+	 *   that may be of interest to the caller.
 	 */
-	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws DuplicateNodeException {
+	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+			throws DuplicateNodeException {
 		String previousName;
+
+		this.checkOptimisticLock(optimisticLockHandle, !this.indNew);
 
 		if ((nodeConfigTransferObject.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
 			throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNodeConfig.");
@@ -198,6 +273,13 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 			this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
 		}
 
+		if (!this.indNew) {
+			this.revision++;
+		}
+
+		if (optimisticLockHandle != null) {
+			((SimpleOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+		}
 	}
 
 	@Override

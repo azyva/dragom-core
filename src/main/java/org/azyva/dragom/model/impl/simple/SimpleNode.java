@@ -52,6 +52,7 @@ import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PropertyDefConfig;
 import org.azyva.dragom.model.event.NodeEvent;
@@ -943,7 +944,18 @@ public abstract class SimpleNode implements Node, MutableNode {
 	}
 
 	@Override
-	public NodeConfigTransferObject getNodeConfigTransferObject() {
+	public OptimisticLockHandle createOptimisticLockHandle(boolean indLock) {
+		return ((MutableNodeConfig)this.getNodeConfig()).createOptimisticLockHandle(indLock);
+	}
+
+	@Override
+	public boolean isOptimisticLockValid(OptimisticLockHandle optimisticLockHandle) {
+		return ((MutableNodeConfig)this.getNodeConfig()).isOptimisticLockValid(optimisticLockHandle);
+	}
+
+	@Override
+	public NodeConfigTransferObject getNodeConfigTransferObject(OptimisticLockHandle optimisticLockHandle)
+			throws OptimisticLockException {
 		// This will catch the case where the SimpleNode has been dynamically created, in
 		// which case its configuration data, which does not exist, cannot be changed.
 		// Note that it is still possible to convert a dynamically created SimpleNode into
@@ -963,12 +975,12 @@ public abstract class SimpleNode implements Node, MutableNode {
 			throw new IllegalStateException("State must be CONFIG or CONFIG_NEW. State: " + this.state);
 		}
 
-		return ((MutableNodeConfig)this.getNodeConfig()).getNodeConfigTransferObject();
+		return ((MutableNodeConfig)this.getNodeConfig()).getNodeConfigTransferObject(optimisticLockHandle);
 	}
 
 	/**
 	 * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
-	 * them within the SimpleNode.
+	 * them within the configuration of the SimpleNode.
 	 * <p>
 	 * Does most of the processing that
 	 * {@link MutableNode#setNodeConfigValueTransferObject} must do, except calling init
@@ -977,15 +989,28 @@ public abstract class SimpleNode implements Node, MutableNode {
 	 * The reason for not directly implementing
 	 * MutableNode.setNodeConfigValueTransferObject is that subclasses can have
 	 * other tasks to perform.
+	 * <p>
+	 * If optimisticLockHandle is null, no optimistic lock is managed.
+	 * <p>
+	 * If optimisticLockHandle is not null, it must be locked
+	 * ({@link OptimisticLockHandle#isLocked}) and its state must correspond to the
+	 * state of the data it represents, otherwise {@link OptimisticLockException} is
+	 * thrown. The state of the OptimisticLockHandle is updated to the new revision of
+	 * the SimpleNodeConfig.
 	 *
-	 * @param nodeConfigTransferObject
+	 * @param nodeConfigTransferObject NodeConfigTransferObject.
 	 * @throws OptimisticLockException When the underlying {@link MutableNodeConfig}
 	 *   detects that the configuration data was changed since the call to
 	 *   {@link #getNodeConfigTransferObject}.
+	 * @throws OptimisticLockException Can be thrown only if optimisticLockHandle is
+	 *   not null. This is a RuntimeException that may be of interest to
+	 *   the caller.
 	 * @throws DuplicateNodeExcpeption When the new configuration data would introduce
-	 *   a duplicate {@link MutableNode} within the parent.
+	 *   a duplicate {@link MutableNode} within the parent. This is a RuntimeException
+	 *   that may be of interest to the caller.
 	 */
-	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject) throws OptimisticLockException, DuplicateNodeException {
+	protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+			throws OptimisticLockException, DuplicateNodeException {
 		String newName;
 
 		this.checkMutable();
@@ -1016,7 +1041,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 			}
 
 			try {
-				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject);
+				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 			} catch (DuplicateNodeException dne) {
 				// We have already check for duplicate above at the SimpleClassificationNode
 				// level. We do not expect to get this exception at the
@@ -1048,7 +1073,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 			}
 
 			try {
-				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject);
+				((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 			} catch (DuplicateNodeException dne) {
 				// We have already check for duplicate above at the SimpleClassificationNode
 				// level. We do not expect to get this exception at the
