@@ -234,12 +234,10 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 			setCurrentPluginRequest = new HashSet<CurrentPluginRequest>();
 
 			RuntimeSelectionPluginFactory.threadLocalCurrentPluginRequest.set(setCurrentPluginRequest);
+		}
 
-			setCurrentPluginRequest.add(currentPluginRequest);
-		} else {
-			if (setCurrentPluginRequest.contains(currentPluginRequest)) {
-				throw new RuntimeException("Cycle detected when resolving NodePlugin for class " + classNodePlugin + " and Node " + node + '.');
-			}
+		if (!setCurrentPluginRequest.add(currentPluginRequest)) {
+			throw new RuntimeException("Cycle detected when resolving NodePlugin for class " + classNodePlugin + " and Node " + node + '.');
 		}
 
 		try {
@@ -248,7 +246,7 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 
 			stringClassNodePlugin = classNodePlugin.getName();
 
-			specificPluginId = runtimePropertiesPlugin.getProperty(node,  RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_SPECIFIC_PLUGIN_ID_PREFIX + stringClassNodePlugin);
+			specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_SPECIFIC_PLUGIN_ID_PREFIX + stringClassNodePlugin);
 
 			if (specificPluginId != null) {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));

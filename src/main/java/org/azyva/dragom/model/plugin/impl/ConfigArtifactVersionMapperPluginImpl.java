@@ -251,8 +251,6 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 	@Override
 	public ArtifactVersion mapVersionToArtifactVersion(Version version) {
-		ArtifactVersion artifactVersion;
-
 		for (VersionMapping versionMapping: this.getListVersionMappingVersionToArtifactVersion()) {
 			Matcher matcher;
 
