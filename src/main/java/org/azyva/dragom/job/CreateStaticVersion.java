@@ -118,7 +118,7 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_REFERENCE_UPDATED = "REFERENCE_UPDATED";
+	private static final String MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION = "CHANGE_REFERENCE_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
@@ -129,6 +129,16 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE = "REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_COMMIT_REFERENCE_CHANGE_AFTER_ABORT = "COMMIT_REFERENCE_CHANGE_AFTER_ABORT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_REFERENCES_UPDATED = "REFERENCES_UPDATED";
 
 	/**
 	 * See description in ResourceBundle.
@@ -297,6 +307,9 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 					boolean indUserWorkspaceDir;
 					ReferenceManagerPlugin referenceManagerPlugin = null;
 					List<Reference> listReference;
+					boolean indReferenceUpdated;
+					boolean indAbort;
+					ByReference<Reference> byReferenceReference;
 
 					workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
@@ -321,6 +334,13 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
 					}
 
+					// We want to perform a single commit for all reference updates, but only if at
+					// least one such update is performed.
+					indReferenceUpdated = false;
+
+					indAbort = false;
+					byReferenceReference = new ByReference<Reference>();
+
 					for (Reference referenceChild: listReference) {
 						ByReference<Version> byReferenceVersionChild;
 						boolean indVersionChanged;
@@ -337,7 +357,11 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 						indVersionChanged = this.visitModuleVersion(referenceChild, byReferenceVersionChild);
 
 						if (Util.isAbort()) {
-							return false;
+							// We do not return false immediately here since some references may have been
+							// updated and we want to give the user the opportunity to commit these changes,
+							// even if no static Version will be created.
+							indAbort = true;
+							break;
 						}
 
 						// indVersionChanged can be true only if a static Version was created for the
@@ -353,29 +377,50 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 							}
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-								return false;
+								// We do not return false immediately here since some references may have been
+								// updated and we want to give the user the opportunity to commit these changes,
+								// even if no static Version will be created.
+								indAbort = true;
+								break;
 							}
 
-							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, null)) {
-								Map<String, String> mapCommitAttr;
-
-								message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCE_UPDATED), this.referencePath, referenceChild, byReferenceVersionChild.object);
-								mapCommitAttr = new HashMap<String, String>();
-								mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-								scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, byReferenceReference)) {
+								message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionChild.object, byReferenceReference);
 								userInteractionCallbackPlugin.provideInfo(message);
 								this.listActionsPerformed.add(message);
-
-								if (indUserWorkspaceDir) {
-									message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
-									userInteractionCallbackPlugin.provideInfo(message);
-									this.listActionsPerformed.add(message);
-								} else {
-									CreateStaticVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " and were committed to the SCM.");
-								}
+								indReferenceUpdated = true;
 							} else {
 								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), this.referencePath, referenceChild, byReferenceVersionChild.object));
 							}
+						}
+					}
+
+					if (indReferenceUpdated) {
+						String message;
+						Map<String, String> mapCommitAttr;
+
+						// If the user aborted, we kindly ask before committing the changes.
+						if (indAbort) {
+							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_COMMIT_REFERENCE_CHANGE_AFTER_ABORT), this.referencePath));
+
+							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT)) {
+								return false;
+							}
+						}
+
+						message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
+						mapCommitAttr = new HashMap<String, String>();
+						mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
+						scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+						userInteractionCallbackPlugin.provideInfo(message);
+						this.listActionsPerformed.add(message);
+
+						if (indUserWorkspaceDir) {
+							message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+							userInteractionCallbackPlugin.provideInfo(message);
+							this.listActionsPerformed.add(message);
+						} else {
+							CreateStaticVersion.logger.info("The previous changes were performed in " + pathModuleWorkspace + " and were committed to the SCM.");
 						}
 					}
 				}
@@ -424,6 +469,10 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 		WorkspacePlugin workspacePlugin = null;
 		ReferenceManagerPlugin referenceManagerPlugin = null;
 		List<Reference> listReference;
+		boolean indUserWorkspaceDir;
+		boolean indReferenceUpdated;
+		boolean indAbort;
+		ByReference<Reference> byReferenceReference;
 
 		pathModuleWorkspace = null;
 		this.referencePath.add(referenceParent);
@@ -480,12 +529,20 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
 			}
 
+			indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
+
 			// We must first ensure that all references are to static Version, offering the
 			// user the opportunity to create static Version.
 
+			// We want to perform a single commit for all reference updates, but only if at
+			// least one such update is performed.
+			indReferenceUpdated = false;
+
+			indAbort = false;
+			byReferenceReference = new ByReference<Reference>();
+
 			for (Reference referenceChild: listReference) {
 				ByReference<Version> byReferenceVersionReference;
-				boolean indUserWorkspaceDir;
 				String message;
 
 				if (referenceChild.getModuleVersion() == null) {
@@ -506,44 +563,64 @@ public class CreateStaticVersion extends RootModuleVersionJobAbstractImpl {
 				byReferenceVersionReference = new ByReference<Version>();
 
 				if (!this.visitModuleForCreateStaticVersion(referenceChild, byReferenceVersionReference)) {
-					return false;
+					// We do not return false immediately here since some references may have been
+					// updated and we want to give the user the opportunity to commit these changes,
+					// even if no static Version will be created.
+					indAbort = true;
+					break;
 				}
 
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionReference.object));
 
-				// Since we will be updating the module, we must interact with the user about the
-				// workspace directory in which the module is checked out.
-
-				indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
-
-				if (indUserWorkspaceDir) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), referenceParent.getModuleVersion(), pathModuleWorkspace));
-				}
-
 				if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-					return false;
+					// We do not return false immediately here since some references may have been
+					// updated and we want to give the user the opportunity to commit these changes,
+					// even if no static Version will be created.
+					indAbort = true;
+					break;
 				}
 
-				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionReference.object, null)) {
-					Map<String, String> mapCommitAttr;
-
-					message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCE_UPDATED), this.referencePath, referenceChild, byReferenceVersionReference.object);
-					mapCommitAttr = new HashMap<String, String>();
-					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-					scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+				if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionReference.object, byReferenceReference)) {
+					message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, byReferenceVersionReference.object, byReferenceReference);
 					userInteractionCallbackPlugin.provideInfo(message);
 					this.listActionsPerformed.add(message);
-
-					if (indUserWorkspaceDir) {
-						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
-						userInteractionCallbackPlugin.provideInfo(message);
-						this.listActionsPerformed.add(message);
-					} else {
-						CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
-					}
+					indReferenceUpdated = true;
 				} else {
 					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION_NO_ARTIFACT_VERSION_CHANGE), this.referencePath, referenceChild, byReferenceVersionReference.object));
 				}
+			}
+
+			if (indReferenceUpdated) {
+				String message;
+				Map<String, String> mapCommitAttr;
+
+				// If the user aborted, we kindly ask before committing the changes.
+				if (indAbort) {
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_COMMIT_REFERENCE_CHANGE_AFTER_ABORT), this.referencePath));
+
+					if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT)) {
+						return false;
+					}
+				}
+
+				message = MessageFormat.format(CreateStaticVersion.resourceBundle.getString(CreateStaticVersion.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
+				mapCommitAttr = new HashMap<String, String>();
+				mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
+				scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+				userInteractionCallbackPlugin.provideInfo(message);
+				this.listActionsPerformed.add(message);
+
+				if (indUserWorkspaceDir) {
+					message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+					userInteractionCallbackPlugin.provideInfo(message);
+					this.listActionsPerformed.add(message);
+				} else {
+					CreateStaticVersion.logger.info("The previous change was performed in " + pathModuleWorkspace + " and was committed to the SCM.");
+				}
+			}
+
+			if (indAbort) {
+				return false;
 			}
 
 			// We must release the workspace directory since it will be requested again by

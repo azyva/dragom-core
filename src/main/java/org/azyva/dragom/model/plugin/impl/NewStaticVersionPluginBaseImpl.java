@@ -19,6 +19,7 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,12 +30,16 @@ import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.job.SwitchToDynamicVersion;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
+import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 import org.azyva.dragom.util.YesAlwaysNoUserResponse;
@@ -75,6 +80,11 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED = "NEW_STATIC_VERSION_PREFIX_SPECIFIED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_EXISTING_EQUIVALENT_STATIC_VERSION_EXCLUDE_VESION_CHANGING_COMMITS = "EXISTING_EQUIVALENT_STATIC_VERSION_EXCLUDE_VESION_CHANGING_COMMITS";
 
 	/**
 	 * ResourceBundle specific to this class.
@@ -151,7 +161,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * Handles the case where an existing equivalent static Version exists that is
 	 * equivalent to the dynamic Version.
-	 *
+	 * <p>
 	 * When getting a new static version for the current dynamic version, it may be
 	 * pertinent to verify if there is already a static Version corresponding to the
 	 * current dynamic Version. This is important since if the process is restarted by
@@ -159,6 +169,12 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 * performed, we need to make it as if we were continuing from where we left off,
 	 * and reusing existing static Version that may have been created during the
 	 * previous execution does the trick.
+	 * <p>
+	 * Also, even ignoring the case where the process is restarted, if the user ran
+	 * this job once, used {@link SwitchToDynamicVersion} with the intent of
+	 * performing additional changes and runs the process again without having
+	 * actually performed any work, it is expected that the static Version that was
+	 * created in the first execution gets reused.
 	 *
 	 * @param versionDynamic Dynamic Version.
 	 * @return Existing equivalent static Version. null if none.
@@ -324,34 +340,34 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 *   Version.
 	 */
 	private Version getVersionExistingEquivalentStatic(Version versionDynamic) {
+		Module module;
 		ScmPlugin scmPlugin;
 		List<ScmPlugin.Commit> listCommit;
 		String stringEquivalentStaticVersion;
 		Version versionExistingEquivalentStatic;
 
-		// In order to check for an existing static version corresponding to the current
-		// dynamic version we consider the message of the last commit of the current
-		// dynamic version which, if there is a corresponding static version, will contain
-		// the special attribute equivalent-static-version at the beginning. This attribute
-		// will have been included when creating the static Version to revert the changes
-		// to the ArtifactVersion.
-		// This is necessary since an existing static version will generally not correspond
-		// to the last commit of a dynamic version because of that revert commit.
-		// This algorithm is valid for modules which store ArtifactVersion within their
-		// build script (Maven). In other cases, a revert commit may not be required, nor a
-		// commit for adjusting the ArtifactVersion in the first place. In such a case we
-		// revert to the list of static Version on the current commit.
+		module = this.getModule();
+		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
-
+		// In most cases we need only the current commit.
 		listCommit = scmPlugin.getListCommit(versionDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
+		versionExistingEquivalentStatic = null;
+
 		if (!listCommit.isEmpty()) {
-			ScmPlugin.Commit commit;
+			ScmPlugin.Commit commitCurrent;
 
-			commit = listCommit.get(0);
+			commitCurrent = listCommit.get(0);
 
-			stringEquivalentStaticVersion = commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
+			// In order to check for an existing static version corresponding to the current
+			// dynamic version we consider the message of the last commit of the current
+			// dynamic version which, if there is a corresponding static version, it will
+			// contain the special attribute equivalent-static-version at the beginning. This
+			// attribute will have been included when creating the static Version to revert
+			// the changes to the ArtifactVersion.
+			// This is necessary since an existing static version will generally not correspond
+			// to the last commit of a dynamic version because of that revert commit.
+			stringEquivalentStaticVersion = commitCurrent.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
 
 			if (stringEquivalentStaticVersion != null) {
 				versionExistingEquivalentStatic = new Version(stringEquivalentStaticVersion);
@@ -359,13 +375,86 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 				if (versionExistingEquivalentStatic.getVersionType() != VersionType.STATIC) {
 					throw new RuntimeException("Version " + versionExistingEquivalentStatic + " must be static.");
 				}
-			} else if (commit.arrayVersionStatic.length >= 1) {
-				versionExistingEquivalentStatic = commit.arrayVersionStatic[0];
-			} else {
-				versionExistingEquivalentStatic = null;
 			}
-		} else {
-			versionExistingEquivalentStatic = null;
+
+			// If the equivalent-static-version attribute is not specified for the current
+			// commit, in most cases it means that other commits were performed between some
+			// previous commit which does have this attribute and the current commit, and in
+			// such cases there is no static Version that is equivalent to the current dynamic
+			// Version. But in the exceptional case were these other intervening commits are
+			// only Version-changing commits introduced by Dragom, and the list of references
+			// in the current Version are identical to those of this potentially equivalent
+			// static Version, we can conclude that the current dynamic Version is equivalent
+			// to that static Version which was previously created. Performing this
+			// verification is not trivial but is worth it to avoid uselessly creating static
+			// Version's.
+			if (versionExistingEquivalentStatic == null) {
+				// For this part of the algorithm we need more commits.
+				// We use the nice binary magic number 16 here as the maximum number of commits to
+				// return. We do not want to leave it unbounded, and it does not seem worth paging
+				// the results since past a few commits, it is unlikely
+				listCommit = scmPlugin.getListCommit(versionDynamic, new ScmPlugin.CommitPaging(16), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
+
+				// We have handled the current commit above, but we need to include it in the loop
+				// below since if that commit is a regular commit, there is no existing equivalent
+				// static version
+				for (ScmPlugin.Commit commit: listCommit) {
+					stringEquivalentStaticVersion = commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION);
+
+					if (stringEquivalentStaticVersion != null) {
+						break;
+					}
+
+					// If a non-Version-changing commit is encountered, it is useless to perform the
+					// reference comparison.
+					if (   (commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE) == null)
+					    && (commit.mapAttr.get(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE) == null)) {
+						break;
+					}
+				}
+
+				if ((stringEquivalentStaticVersion != null) && module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
+					Version versionStatic;
+					WorkspacePlugin workspacePlugin;
+					ReferenceManagerPlugin referenceManagerPlugin;
+					Path pathModuleWorkspace;
+					List<Reference> listReferenceStaticVersion;
+					List<Reference> listReferenceDynamicVersion;
+					UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+					versionStatic = new Version(stringEquivalentStaticVersion);
+
+					if (versionStatic.getVersionType() != VersionType.STATIC) {
+						throw new RuntimeException("Version " + versionStatic + " must be static.");
+					}
+
+					workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+					referenceManagerPlugin = module.getNodePlugin(ReferenceManagerPlugin.class, null);
+
+					pathModuleWorkspace = scmPlugin.checkoutSystem(versionStatic);
+					listReferenceStaticVersion = referenceManagerPlugin.getListReference(pathModuleWorkspace);
+					workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+
+					pathModuleWorkspace = scmPlugin.checkoutSystem(versionDynamic);
+					listReferenceDynamicVersion = referenceManagerPlugin.getListReference(pathModuleWorkspace);
+					workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+
+					if (listReferenceStaticVersion.equals(listReferenceDynamicVersion)) {
+						userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EXISTING_EQUIVALENT_STATIC_VERSION_EXCLUDE_VESION_CHANGING_COMMITS), new ModuleVersion(module.getNodePath(), versionDynamic), versionStatic));
+						versionExistingEquivalentStatic = versionStatic;
+					}
+				}
+			}
+
+			// This algorithm is valid for modules which store ArtifactVersion within their
+			// build script (Maven). In other cases, a revert commit may not be required, nor a
+			// commit for adjusting the ArtifactVersion in the first place. In such a case we
+			// revert to the list of static Version on the current commit.
+			if ((versionExistingEquivalentStatic == null) && (commitCurrent.arrayVersionStatic.length >= 1)) {
+				versionExistingEquivalentStatic = commitCurrent.arrayVersionStatic[0];
+			}
 		}
 
 		return versionExistingEquivalentStatic;

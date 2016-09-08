@@ -131,6 +131,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	private static final String MSG_PATTERN_KEY_COMMIT_REFERENCE_CHANGE_AFTER_ABORT = "COMMIT_REFERENCE_CHANGE_AFTER_ABORT";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	private static final String MSG_PATTERN_KEY_REFERENCES_UPDATED = "REFERENCES_UPDATED";
 
 	/**
@@ -685,6 +690,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				boolean indReferenceUpdated;
 				String message;
 				ByReference<Version> byReferenceVersionChild;
+				boolean indAbort;
 				ByReference<Reference> byReferenceReference;
 
 				// We now need to update the references within the current ModuleVersion. We must
@@ -706,6 +712,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				// least one such update is performed.
 				indReferenceUpdated = false;
 
+				indAbort = false;
 				byReferenceVersionChild = new ByReference<Version>();
 				byReferenceReference = new ByReference<Reference>();
 
@@ -726,7 +733,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, versionNewDynamic));
 
 								if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-									return visitModuleActionPerformed;
+									// We do not return false immediately here since some references may have been
+									// updated and we want to give the user the opportunity to commit these changes,
+									// even if no static Version will be created.
+									indAbort = true;
+									break;
 								}
 
 								if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, versionNewDynamic, byReferenceReference)) {
@@ -746,7 +757,11 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
 
 							if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
-								return visitModuleActionPerformed;
+								// We do not return false immediately here since some references may have been
+								// updated and we want to give the user the opportunity to commit these changes,
+								// even if no static Version will be created.
+								indAbort = true;
+								break;
 							}
 
 							if (referenceManagerPlugin.updateReferenceVersion(pathModuleWorkspace, referenceChild, byReferenceVersionChild.object, byReferenceReference)) {
@@ -760,13 +775,26 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						}
 
 						if (Util.isAbort()) {
-							return visitModuleActionPerformed;
+							// We do not return false immediately here since some references may have been
+							// updated and we want to give the user the opportunity to commit these changes,
+							// even if no static Version will be created.
+							indAbort = true;
+							break;
 						}
 					}
 				}
 
 				if (indReferenceUpdated) {
 					Map<String, String> mapCommitAttr;
+
+					// If the user aborted, we kindly ask before committing the changes.
+					if (indAbort) {
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_COMMIT_REFERENCE_CHANGE_AFTER_ABORT), this.referencePath));
+
+						if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT)) {
+							return visitModuleActionPerformed;
+						}
+					}
 
 					mapCommitAttr = new HashMap<String, String>();
 					mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
@@ -930,6 +958,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						scmPlugin.createVersion(pathModuleWorkspace, versionNewDynamic, true);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
+
+						message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM), pathModuleWorkspace);
+						userInteractionCallbackPlugin.provideInfo(message);
+						this.listActionsPerformed.add(message);
 					} else {
 						SwitchToDynamicVersion.logger.info("Switching the version in directory " + pathModuleWorkspace + " to the new version " + versionNewDynamic + '.');
 						scmPlugin.switchVersion(pathModuleWorkspace, versionNewDynamic);
@@ -937,10 +969,6 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 					}
-
-					message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM), pathModuleWorkspace);
-					userInteractionCallbackPlugin.provideInfo(message);
-					this.listActionsPerformed.add(message);
 				} else {
 					if (indCreateNewVersion) {
 						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionBase.object);

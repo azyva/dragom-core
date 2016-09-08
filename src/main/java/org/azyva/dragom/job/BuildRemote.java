@@ -67,7 +67,7 @@ import org.azyva.dragom.util.Util;
  * {@link BuildReferenceGraph.performJob} to build the ReferenceGraph before
  * performing the rest of the processing.
  * <p>
- * Although this class required a workspace in order to build the ReferenceGraph,
+ * Although this class requires a workspace in order to build the ReferenceGraph,
  * it is not actually used to perform the builds. The notion of build scope as
  * supported by {@link Build} is therefore not implemented and all matched
  * ModuleVersion's are built.

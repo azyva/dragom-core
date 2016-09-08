@@ -160,12 +160,20 @@ public final class Util {
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH = "NON_STATIC_VERSIONS_REFERENCE_PATH";
 
 	/**
-	 * Context for {@link Util#handleDoYouWantToCOntinue} that represents the fact
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
 	 * that during the switch to a hotfix dynamic {@link Version}, the
 	 * {@link ReferencePath} contains non-static Versions. which may be OK if they
 	 * were created in the context of the hotfix.
 	 */
 	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION = "USE_CURRENT_HOTFIX_VERSION";
+
+	/**
+	 * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+	 * that during the creation of a static Version or the switch to a dynamic Version
+	 * one or more references were changed but not committed and the user requested to
+	 * abort. Should the commit be performed in that case?
+	 */
+	public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT = "COMMIT_REFERENCE_CHANGE_AFTER_ABORT";
 
 	/**
 	 * Path to the static Dragom properties resource within the classpath.
@@ -613,7 +621,9 @@ public final class Util {
 				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
-		} while (false);
+
+			break;
+		} while (true);
 
 		return alwaysNeverAskUserResponse;
 	}
@@ -741,7 +751,9 @@ public final class Util {
 				userInteractionCallbackPlugin.provideInfo(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_INVALID_RESPONSE_TRY_AGAIN));
 				continue;
 			}
-		} while (false);
+
+			break;
+		} while (true);
 
 		return alwaysNeverYesNoAskUserResponse;
 	}
