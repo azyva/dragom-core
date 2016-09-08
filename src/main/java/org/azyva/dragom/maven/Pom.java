@@ -19,7 +19,11 @@
 
 package org.azyva.dragom.maven;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -60,14 +64,18 @@ import org.xml.sax.SAXException;
  * needs to be modified. But given that it uses the DOM API provided in the JDK,
  * its has the following limitations in this regard:
  *
- * - Anything before the root element of the document is not preserved. This
- *   includes the XML header ("XML declaration") and <doctype> declaration. This
- *   should not be a problem as POM files generally do not include the XML header
- *   nor a <doctype> declaration;
  * - Attribute order is not preserved;
  * - Whitespace between attribute declarations is not preserved;
+ * - Formatting in any XML comment appearing before th root element is not
+ *   preserved.
  *
  * It is believed that these limitations will not cause major problems.
+ *
+ * Generally using the DOM API (Transformer), any non-comment elements before the
+ * root element of and anything after the close of the root element is not
+ * preserved either. However this class does preserve bytes before and after the
+ * root element or the first comment element with special code. This includes the
+ * XML and DOCTYPE declarations, if any.
  *
  * A solution would be to use another parser such as VTD-XML. But such a parser is
  * not usable transparently through the JDK XML parser API.
@@ -280,6 +288,22 @@ public class Pom {
 	// Document corresponding to the loaded POM file.
 	private Document documentPom;
 
+	enum BeforeAfterReadState {
+		INIT,
+		MAYBE_BODY,
+		XML_HEADER,
+		BODY
+	}
+
+	// Bytes appearing before the start of the XML document. This can include the XML
+	// declaration ("<?...>"), DOCTYPE declaration (<!...>) and any whitespace before
+	// the root element.
+	private String before;
+
+	// Bytes appearing after the close of the root element. This includes whitespace
+	// at the very end of the file.
+	private String after;
+
 	// Path to the POM file that was last loaded. Used for error reporting. pathPom
 	// may be changed after the POM is loaded but errors would relate to the original
 	// file.
@@ -304,6 +328,10 @@ public class Pom {
 	public void loadPom() {
 		DocumentBuilderFactory documentBuilderFactory;
 		DocumentBuilder documentBuilder;
+		StringBuilder stringBuilderBefore;
+		StringBuilder stringBuilderAfter;
+		InputStream inputStream;
+		BeforeAfterReadState beforeAfterReadState;
 
 		if (this.pathPom == null) {
 			throw new RuntimeException("pathPom is null.");
@@ -316,18 +344,96 @@ public class Pom {
 		// except for those that are explicitly set below.
 		documentBuilderFactory.setExpandEntityReferences(false);
 
+		documentBuilderFactory.setValidating(false);
+
+		try {
+			documentBuilderFactory.setFeature("http://xml.org/sax/features/namespaces", false);
+			documentBuilderFactory.setFeature("http://xml.org/sax/features/validation", false);
+			documentBuilderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", false);
+			documentBuilderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		} catch (ParserConfigurationException pce) {
+			throw new RuntimeException(pce);
+		}
+
 		try {
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		} catch (ParserConfigurationException pce) {
 			throw new RuntimeException(pce);
 		}
 
-
 		try {
 			this.documentPom = documentBuilder.parse(this.pathPom.toFile());
 		} catch (SAXException | IOException e) {
 			throw new RuntimeException(e);
 		}
+
+		stringBuilderBefore = new StringBuilder();
+		stringBuilderAfter = new StringBuilder();
+
+		// After parsing the XML file into a Document (and hence validating that it is
+		// well-formed), we read it again to extract the bytes before and after the
+		// root element since these are not preserved when writing back teh DOM to a
+		// file.
+		try {
+			inputStream = new FileInputStream(this.pathPom.toFile());
+			beforeAfterReadState = BeforeAfterReadState.INIT;
+
+			do {
+				int aByte = inputStream.read();
+
+				if (aByte == -1) {
+					break;
+				}
+
+				switch (beforeAfterReadState) {
+				case INIT:
+					if (aByte != '<') {
+						stringBuilderBefore.append((char)aByte);
+					} else {
+						beforeAfterReadState = BeforeAfterReadState.MAYBE_BODY;
+					}
+					break;
+				case MAYBE_BODY:
+					if (aByte == '?') {
+						stringBuilderBefore.append("<?");
+						beforeAfterReadState = BeforeAfterReadState.XML_HEADER;
+					} else if (aByte == '!') {
+						aByte = inputStream.read();
+
+						if (aByte != '-') {
+							stringBuilderBefore.append("<!").append((char)aByte);
+							beforeAfterReadState = BeforeAfterReadState.XML_HEADER;
+						} else {
+							beforeAfterReadState = BeforeAfterReadState.BODY;
+						}
+					} else {
+						beforeAfterReadState = BeforeAfterReadState.BODY;
+					}
+					break;
+				case XML_HEADER:
+					if (aByte != '<') {
+						stringBuilderBefore.append((char)aByte);
+					} else {
+						beforeAfterReadState = BeforeAfterReadState.MAYBE_BODY;
+					}
+					break;
+				case BODY:
+					if (Character.isWhitespace((char)aByte)) {
+						stringBuilderAfter.append((char)aByte);
+					} else {
+						stringBuilderAfter.setLength(0);
+					}
+					break;
+				}
+			} while (true);
+
+			inputStream.close();
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
+
+		this.before = stringBuilderBefore.toString();
+		this.after = stringBuilderAfter.toString();
 
 		this.pathPomLoaded = this.pathPom;
 	}
@@ -338,6 +444,7 @@ public class Pom {
 	public void savePom() {
 		TransformerFactory transformerFactory;
 		Transformer transformer;
+		OutputStream outputStream;
 
 		if (this.documentPom == null) {
 			throw new RuntimeException("documentPom is null.");
@@ -358,9 +465,13 @@ public class Pom {
 		transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 
 		try {
-			transformer.transform(new DOMSource(this.documentPom), new StreamResult(this.pathPom.toFile()));
-		} catch (TransformerException te) {
-			throw new RuntimeException(te);
+			outputStream = new FileOutputStream(this.pathPom.toFile());
+			outputStream.write(this.before.getBytes());
+			transformer.transform(new DOMSource(this.documentPom), new StreamResult(outputStream));
+			outputStream.write(this.after.getBytes());
+			outputStream.close();
+		} catch (TransformerException | IOException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -856,12 +967,14 @@ public class Pom {
 
 		pom.setPathPom(Paths.get("C:/Projects/test.xml"));
 		pom.loadPom();
+		/*
 		System.out.println("Version: " + pom.getVersion());
 		List<ReferencedArtifact> list = pom.getListReferencedArtifact(EnumSet.allOf(ReferencedArtifactType.class),  null,  null,  null);
 		System.out.println("List: " + list);
 		ReferencedArtifact referencedArtifact = new Pom.ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, "org.azyva", "dependency-management", "1.2");
 		pom.setReferencedArtifactVersion(referencedArtifact, "1.10");
 		System.out.println("Submodules: " + pom.getListSubmodule());
+		*/
 		pom.savePom();
 	}
 }
