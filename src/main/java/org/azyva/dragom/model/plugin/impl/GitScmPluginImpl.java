@@ -521,6 +521,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			// the case that no push is actually performed by this call.
 			this.gitPush(pathMainUserWorkspaceDir, "refs/heads/" + branch);
 
+			// We also perform a relatively useless push from the current workspace directory.
+			// Since the remote repository has already been pushed-to above, the only benefit
+			// for this push is to update the remote tracking branche in the current workspace
+			// directory.
+			// TODO: May be optimized by only updating the remote tracking branch and not actually pushing nothing.
+			this.gitPush(pathModuleWorkspace, "refs/heads/" + branch);
+
 			// Finally we perform a local fetch from the main to the current Workspace
 			// directory. For this special fetch, we need to update the remote tracking
 			// branches from the main Workspace directory to the remote tracking branches in
@@ -1359,7 +1366,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
-		Git.addCommit(pathModuleWorkspace, message, mapCommitAttr, true);
+		// We pass false for indPush since we are pushing explicitly below in order
+		// to handle the main workspace directory.
+		Git.addCommit(pathModuleWorkspace, message, mapCommitAttr, false);
+
+		// TODO: Maybe we couild pass null for gitRef since the upstream may always already be set in the case of a commit. But not sure.
+		this.push(pathModuleWorkspace, "refs/heads/" + Git.getBranch(pathModuleWorkspace));
 	}
 
 
