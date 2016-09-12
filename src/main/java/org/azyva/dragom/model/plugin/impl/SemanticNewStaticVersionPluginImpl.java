@@ -46,9 +46,10 @@ import org.slf4j.LoggerFactory;
  * Specific static Version and static Version prefix are also supported for maximum
  * flexibility.
  *
- * The semantic versions are assumed to have the typical M.m.r format, with all 3
- * components present. When interpreting semantic versions, trailing components can
- * be absent. When generating a semantic version, all 3 components will be present.
+ * The semantic versions are assumed to have the typical M.m.r format (major, minor,
+ * revision), with all 3 components present. When interpreting semantic versions,
+ * trailing components can be absent. When generating a semantic version, all 3
+ * components will be present.
  *
  * The initial value for the revision component is 0 and the default number of
  * decimal positions for revision is 1, as in 1.0.0.
@@ -65,8 +66,8 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	 *
 	 * If this property is not defined, semantic Versions are assumed to have no
 	 * prefix, which is generally not desirable since we generally want to
-	 * distinguish between different types. But this plugin still allows this property
-	 * to be undefined.
+	 * distinguish between different types of Versions. But this plugin still allows
+	 * this property to be undefined.
 	 */
 	private static final String MODEL_PROPERTY_SEMANTIC_VERSION_PREFIX = "SEMANTIC_VERSION_PREFIX";
 
@@ -74,7 +75,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	 * Runtime property specifying the semantic Version type based on which to create
 	 * new Version's. The possible values are "minor" and "major".
 	 */
-	private static final String RUNTIME_PROPERTY_NEW_SEMANTIC_VERSION_TYPE = "NEW_SEMANTIC_VERSION_TYPE"; // major/minor
+	private static final String RUNTIME_PROPERTY_NEW_SEMANTIC_VERSION_TYPE = "NEW_SEMANTIC_VERSION_TYPE";
 
 	/**
 	 * Runtime property of type AlwaysNeverAskUserResponse that indicates if a
@@ -197,7 +198,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	 * @param versionDynamic Dynamic Version.
 	 * @return New static Version.
 	 */
-	public Version getStaticVersionPrefix(Version versionDynamic) {
+	private Version getStaticVersionPrefix(Version versionDynamic) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		Module module;
@@ -220,27 +221,34 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 
 		SemanticNewStaticVersionPluginImpl.logger.info("Sorted list of available static Version's for Module " + module + ": " + listVersionStatic);
 
-		if (listVersionStatic.isEmpty()) {
-			versionStaticMax = null;
-			arraySemanticVersionComponentMax = null;
-		} else {
-			versionStaticMax = listVersionStatic.get(listVersionStatic.size() - 1);
-
-			SemanticNewStaticVersionPluginImpl.logger.info("Largest available static Version for Module " + module + ": " + versionStaticMax);
-
-			// Using VersionClassifierPlugin above is a convenient way to find the largest
-			// static Version. But here we interpret Version's in a numeric semantic way and
-			// there is not guarantee that the largest Version found can be interpreted in
-			// this way. We must therefore validate it.
-
-			arraySemanticVersionComponentMax = this.getArraySemanticVersionComponent(versionStaticMax);
-
-			if (arraySemanticVersionComponentMax == null) {
-				SemanticNewStaticVersionPluginImpl.logger.info("The largest available static Version " + versionStaticMax + " for Module " + module + " cannot be interpreted numerically and semantically. We do not use it.");
-
+		do {
+			if (listVersionStatic.isEmpty()) {
 				versionStaticMax = null;
+				arraySemanticVersionComponentMax = null;
+			} else {
+				versionStaticMax = listVersionStatic.get(listVersionStatic.size() - 1);
+
+				SemanticNewStaticVersionPluginImpl.logger.info("Largest available static Version for Module " + module + ": " + versionStaticMax);
+
+				// Using VersionClassifierPlugin above is a convenient way to find the largest
+				// static Version. But here we interpret Version's in a numeric semantic way and
+				// there is no guarantee that the largest Version found can be interpreted in
+				// this way. We must therefore validate it.
+
+				arraySemanticVersionComponentMax = this.getArraySemanticVersionComponent(versionStaticMax);
+
+				if (arraySemanticVersionComponentMax == null) {
+					SemanticNewStaticVersionPluginImpl.logger.info("The largest available static Version " + versionStaticMax + " for Module " + module + " cannot be interpreted numerically and semantically. We do not use it and try the next one.");
+
+					versionStaticMax = null;
+
+					// If the largest static Version cannot be interpreted semantically, we try with
+					// the next largest, and so one. We do this simply by removing the last Version
+					// from the List.
+					listVersionStatic.remove(listVersionStatic.size() - 1);
+				}
 			}
-		}
+		} while ((versionStaticMax == null) && !listVersionStatic.isEmpty());
 
 		semanticVersionPrefixNotNull = this.semanticVersionPrefix == null ? "" : this.semanticVersionPrefix;
 
@@ -258,8 +266,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 				// use a new revision of the Version. We could in principle immediately compute
 				// the new revision by adding 1 to the last component of
 				// arraySemanticVersionComponentMax but we instead simply set the prefix and
-				// let the logic below compute the new revision which should in principle be
-				// the same.
+				// let the logic compute the new revision which should in principle be the same.
 				return new Version(VersionType.STATIC, semanticVersionPrefixNotNull + String.valueOf(arraySemanticVersionComponentMax[0]) + '.' + String.valueOf(arraySemanticVersionComponentMax[1]));
 			} else {
 				NewSemanticVersionType newSemanticVersionType;
