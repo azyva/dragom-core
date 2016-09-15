@@ -77,24 +77,24 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 	 * Prefix for the runtime property specifying the specific plugin ID to delegate
 	 * to.
 	 */
-	private static final String RUNTIME_PROPERTY_SPECIFIC_PLUGIN_ID_PREFIX = "SPECIFIC_PLUGIN_ID.";
+	private static final String RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID = "SPECIFIC_PLUGIN_ID.";
 
 	/**
 	 * Prefix for the runtime property of that indicates if letting the user specify
 	 * the plugin ID is allowed.
 	 */
-	private static final String RUNTIME_PROPERTY_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID_PREFIX = "IND_ALLOW_USER_SPECIFIED_PLUGIN_ID.";
+	private static final String RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID = "IND_ALLOW_USER_SPECIFIED_PLUGIN_ID.";
 
 	/**
 	 * Prefix for the runtime property of type AlwaysNeverAskUserResponse that
 	 * indicates if a previously established plugin ID can be reused.
 	 */
-	private static final String RUNTIME_PROPERTY_CAN_REUSE_PLUGIN_ID_PREFIX = "CAN_REUSE_PLUGIN_ID.";
+	private static final String RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID = "CAN_REUSE_PLUGIN_ID.";
 
 	/**
 	 * Prefix for the runtime property that specifies the plugin ID to reuse.
 	 */
-	private static final String RUNTIME_PROPERTY_REUSE_PLUGIN_ID_PREFIX = "REUSE_PLUGIN_ID.";
+	private static final String RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID = "REUSE_PLUGIN_ID.";
 
 	/**
 	 * See description in ResourceBundle.
@@ -246,7 +246,7 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 
 			stringClassNodePlugin = classNodePlugin.getName();
 
-			specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_SPECIFIC_PLUGIN_ID_PREFIX + stringClassNodePlugin);
+			specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID + stringClassNodePlugin);
 
 			if (specificPluginId != null) {
 				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));
@@ -256,10 +256,10 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 
 			pluginId = null;
 
-			if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(node,  RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID_PREFIX + stringClassNodePlugin))) {
-				alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_CAN_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin));
+			if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(node,  RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID + stringClassNodePlugin))) {
+				alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin));
 
-				reusePluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin);
+				reusePluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin);
 
 				if (reusePluginId == null) {
 					if (alwaysNeverAskUserResponseCanReusePluginId.isAlways()) {
@@ -281,13 +281,13 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 						pluginId = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT), stringClassNodePlugin, node, reusePluginId), reusePluginId);
 					}
 
-					runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin, pluginId);
+					runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin, pluginId);
 
 					// The result is not useful. We only want to adjust the runtime property which
 					// will be reused the next time around.
 					Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
 							runtimePropertiesPlugin,
-							RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_CAN_REUSE_PLUGIN_ID_PREFIX + stringClassNodePlugin,
+							RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin,
 							userInteractionCallbackPlugin,
 							MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
 				}

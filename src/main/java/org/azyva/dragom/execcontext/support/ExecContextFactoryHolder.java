@@ -63,7 +63,7 @@ public class ExecContextFactoryHolder {
 
 	// Ensures that the Dragom properties are loaded into the system properties.
 	static {
-		Util.setDragomSystemProperties();
+		Util.applyDragomSystemProperties();
 	}
 
 	/**

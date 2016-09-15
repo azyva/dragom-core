@@ -189,7 +189,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 	 * Maven allows to simply define a property without a value, as in
 	 * "--define skipTests".
 	 */
-	private static final String RUNTIME_PROPERTY_PROPERTY_PREFIX = "MAVEN_PROPERTY.";
+	private static final String RUNTIME_PROPERTY_PREFIX_PROPERTY = "MAVEN_PROPERTY.";
 
 	/**
 	 * Runtime property specifying the Maven profiles to activate on the command line.
@@ -581,7 +581,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
 
 				listCommandLine.add("--define");
 
-				value = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_PROPERTY_PREFIX + property);
+				value = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_PREFIX_PROPERTY + property);
 
 				if (value == null) {
 					listCommandLine.add(property);

@@ -92,7 +92,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	 * The mapping keys are separated by ",". A mapping key can refer to another
 	 * mapping group by prefixing the group name with "$".
 	 */
-	private static final String RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP_PREFIX = "ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP_";
+	private static final String RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP = "ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP.";
 
 	/**
 	 * Runtime property prefix defining an ArtifactVersion to Version mapping. The
@@ -102,14 +102,14 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	 * regular expression cannot contain ":". The replacement can contain references
 	 * to captured groups within the regular expression.
 	 */
-	private static final String RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_PREFIX = "ARTIFACT_VERSION_TO_VERSION_MAPPING_";
+	private static final String RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING = "ARTIFACT_VERSION_TO_VERSION_MAPPING.";
 
 	/**
 	 * Runtime property prefix indicating if the existence of the Version obtained
 	 * from an ArtifactVersion to Version mapping must be verified. The suffix is the
 	 * mapping key.
 	 */
-	private static final String RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE_PREFIX = "ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE_";
+	private static final String RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE = "ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE.";
 
 	/**
 	 * Runtime property defining the Version to ArtifactVersion mapping keys.
@@ -126,7 +126,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	 * The mapping keys are separated by ",". A mapping key can refer to another
 	 * mapping group by prefixing the group name with "$".
 	 */
-	private static final String RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP_PREFIX = "VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP_";
+	private static final String RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP = "VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP.";
 
 	/**
 	 * Runtime property prefix defining a Version to ArtifactVersion mapping. The
@@ -137,13 +137,13 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	 * to captured groups within the regular expression. It can also contain "@PHASE"
 	 * to refer to the current phase.
 	 */
-	private static final String RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_PREFIX = "VERSION_TO_ARTIFACT_VERSION_MAPPING_";
+	private static final String RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING = "VERSION_TO_ARTIFACT_VERSION_MAPPING.";
 
 	/**
 	 * Runtime property prefix indicating to replace "@PHASE" with the current phase
 	 * within the ArtifactVersion obtained from the mapping.
 	 */
-	private static final String RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE_PREFIX = "VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE_";
+	private static final String RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE = "VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE.";
 
 	/**
 	 * Runtime property holding the current phase.
@@ -355,14 +355,14 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 		listVersionMapping = new ArrayList<VersionMapping>();
 
-		listMappingKey = this.getListMappingKey(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPINGS, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP_PREFIX);
+		listMappingKey = this.getListMappingKey(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPINGS, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING_GROUP);
 
 		for (String mappingKey: listMappingKey) {
 			String property;
 			String[] arrayMappingComponent;
 			VersionMapping versionMapping;
 
-			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_PREFIX + mappingKey);
+			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
 				throw new RuntimeException("The runtime property ARTIFACT_VERSION_TO_VERSION_MAPPING_ " + mappingKey + " is not defined for module " + module + '.');
@@ -379,7 +379,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			versionMapping.patternSrcVersion = Pattern.compile(arrayMappingComponent[0]);
 			versionMapping.destinationVersion = arrayMappingComponent[1];
 
-			property = module.getProperty(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE_PREFIX + mappingKey);
+			property = module.getProperty(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING_TEST_EXISTENCE + mappingKey);
 
 			versionMapping.indTestExistence = Util.isNotNullAndTrue(property);
 
@@ -406,14 +406,14 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 		listVersionMapping = new ArrayList<VersionMapping>();
 
-		listMappingKey = this.getListMappingKey(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPINGS, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP_PREFIX);
+		listMappingKey = this.getListMappingKey(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPINGS, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING_GROUP);
 
 		for (String mappingKey: listMappingKey) {
 			String property;
 			String[] arrayMappingComponent;
 			VersionMapping versionMapping;
 
-			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_PREFIX + mappingKey);
+			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
 				throw new RuntimeException("The runtime property VERSION_TO_ARTIFACT_VERSION_MAPPING_ " + mappingKey + " is not defined for module " + module + '.');
@@ -430,7 +430,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			versionMapping.patternSrcVersion = Pattern.compile(arrayMappingComponent[0]);
 			versionMapping.destinationVersion = arrayMappingComponent[1];
 
-			property = module.getProperty(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE_PREFIX + mappingKey);
+			property = module.getProperty(ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING_ADD_PHASE + mappingKey);
 
 			versionMapping.indAddPhase = Util.isNotNullAndTrue(property);
 

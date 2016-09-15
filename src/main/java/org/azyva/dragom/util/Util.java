@@ -415,7 +415,8 @@ public final class Util {
 	}
 
 	/**
-	 * Sets system properties from the META-INF/dragom.properties classpath resource.
+	 * Applies system properties from the META-INF/dragom.properties classpath
+	 * resource.
 	 * <p>
 	 * This method can be called from many places where it is expected that Dragom
 	 * properties be available as system properties. This class ensures that loading
@@ -423,7 +424,7 @@ public final class Util {
 	 * <p>
 	 * System properties take precedence over Dragom properties.
 	 */
-	public static void setDragomSystemProperties() {
+	public static void applyDragomSystemProperties() {
 		Properties propertiesDragom;
 
 		// Ideally this should be synchronized. But since it is expected that this method

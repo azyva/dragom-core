@@ -21,6 +21,7 @@ package org.azyva.dragom.execcontext.plugin.impl;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.Console;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -50,6 +51,14 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	 * Runtime property specifying the indentation for each bracket level.
 	 */
 	private static final String RUNTIME_PROPERTY_BRACKET_INDENT = "BRACKET_INDENT";
+
+	/**
+	 * Runtime property indicating to treat password input as normal.
+	 * <p>
+	 * This can be useful for tests where user responses are written to a mock
+	 * InputStream, but cannot be written to the console.
+	 */
+	private static final String RUNTIME_PROPERTY_IND_PASSWORD_INPUT_NORMAL = "IND_PASSWORD_INPUT_NORMAL";
 
 	/**
 	 * Default indentation for each bracket level when the runtime property
@@ -335,6 +344,53 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	}
 
 	@Override
+	public String getInfoPassword(String prompt) {
+		Console console;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		char[] arrayCharInfo;
+		String info;
+
+		console = System.console();
+
+		// This can happen in IDE such as Eclipse.
+		if (console == null) {
+			return this.getInfo(prompt);
+		}
+
+		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+		if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_IND_PASSWORD_INPUT_NORMAL))) {
+			return this.getInfo(prompt);
+		}
+
+		if (this.writerInfoActive != null) {
+			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
+		}
+
+		this.validateBatchMode(prompt);
+
+		System.out.println();
+		System.out.println();
+		this.printWithIndent("##### Information request #####");
+		this.printWithIndent(prompt);
+		DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + prompt);
+
+		arrayCharInfo = console.readPassword();
+
+		if (arrayCharInfo == null) {
+			throw new RuntimeException("Unexpected end of stream reading from stdin.");
+		}
+
+		info = new String(arrayCharInfo);
+
+		System.out.println();
+
+		DefaultUserInteractionCallbackPluginImpl.logger.info("Information returned by user: " + info);
+
+		return info;
+	}
+
+	@Override
 	public String getInfoWithDefault(String prompt, String defaultValue) {
 		String info;
 
@@ -407,5 +463,10 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
 			System.out.println(arrayLine[i]);
 		}
+	}
+
+	@Override
+	public boolean isBatchMode() {
+		return this.indBatchMode;
 	}
 }
