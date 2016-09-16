@@ -20,6 +20,7 @@
 package org.azyva.dragom.execcontext.plugin.impl;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,6 +35,8 @@ import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.ResourceBundle;
@@ -62,6 +65,14 @@ import org.azyva.dragom.util.Util;
  * This default implementation of {@link CredentialStorePlugin} manages the
  * credentials in a credentials.properties file in the workspace metadata
  * directory.
+ * <p>
+ * This file is a Java Properties file which contains 2 types of entries:
+ * <p>
+ * <li>{@code <REALM>.<user>.password=<encrypted-password>}</li>
+ * <li>{@code <REALM>.defaultUser=<default-user>}</li>
+ * <p>
+ * The first defines a password for a user in a realm. The second defines a
+ * default user for a realm. See below for more information about realms.
  * <p>
  * The passwords are encrypted using a key that is constructed from three parts
  * of key material:
@@ -94,9 +105,25 @@ import org.azyva.dragom.util.Util;
  * <a href="https://docs.oracle.com/javase/7/docs/api/java/util/regex/package-summary.html" target="_blank">
  * java.util.regex</a> for information about regular expressions in Java.
  * <p>
- * The first mapping whose resource Pattern matches the resource is used. A mapping
- * must correspond to a resource. A catch-all mapping can be used if necessary.
- *
+ * When a method takes a resource, it maps this resource to a realm using these
+ * mappings. The first mapping whose resource Pattern matches the resource is
+ * used. A mapping must correspond to a resource. A catch-all mapping can be used
+ * if necessary.
+ * <p>
+ * If a resource starts with "REALM:", the realm is explicitly what follows this
+ * prefix, provided it exists in the mappings. This is useful mostly for the
+ * public methods that are not part of CredentialStorePlugin and that are intended
+ * to be used by a tool which allows the user to manage the credential store.
+ * <p>
+ * If {@link UserInteractionCallbackPlugin#isBatchMode} returns true, this class
+ * interacts with the user when appropriate to obtain missing passwords, as
+ * recommended in CredentialStorePlugin.
+ * <p>
+ * In addition to implementing CredentialStorePlugin, this class exposes other
+ * public methods allowing to obtain information about realms and explicitly
+ * modify the passwords, operations which are not supported by the interface. This
+ * is meant to be used by a tool that would assume this specific implementation of
+ * the CredentialStorePlugin to allow the user to manage the credential store.
  *
  * @author David Raymond
  */
@@ -178,8 +205,14 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
 	/**
 	 * Mapping from a resource Pattern to a realm and user.
+	 * <p>
+	 * Also used as the return type for some methods that need to return a realm and
+	 * a user, even if not related to a mapping from a resource.
+	 * <p>
+	 * This class is not part of {@link CredentialStorePlugin}. It is still public
+	 * since it also exposes implementation-specific public methods that use it.
 	 */
-	private static class ResourcePatternRealmUser {
+	public static class ResourcePatternRealmUser {
 		/**
 		 * Pattern to match a resource.
 		 */
@@ -209,6 +242,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	public DefaultCredentialStorePluginImpl(ExecContext execContext) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		String stringRuntimeProperty;
+		String stringMasterPasswordFile;
 		Path pathMasterPasswordFile;
 		byte[] arrayByteMasterPassword;
 
@@ -249,7 +283,10 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
 		Util.applyDragomSystemProperties();
 
-		pathMasterPasswordFile = Paths.get(System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_MASTER_PASSWORD_FILE));
+		stringMasterPasswordFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_MASTER_PASSWORD_FILE);
+		stringMasterPasswordFile = stringMasterPasswordFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+		pathMasterPasswordFile = Paths.get(stringMasterPasswordFile);
+
 		arrayByteMasterPassword = new byte[16];
 
 		if (!pathMasterPasswordFile.toFile().isFile()) {
@@ -263,6 +300,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 			}
 
 			try {
+				pathMasterPasswordFile.getParent().toFile().mkdirs();
 				outputStreamMasterPasswordFile = new FileOutputStream(pathMasterPasswordFile.toFile());
 				outputStreamMasterPasswordFile.write(arrayByteMasterPassword);
 				outputStreamMasterPasswordFile.close();
@@ -436,34 +474,55 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	 *
 	 * @param resource Resource.
 	 * @return ResourcePatternRealmUser. We reuse this type, but in fact only the
-	 *   realm and user fields are returned.
+	 *   realm and user fields are used.
 	 */
 	private ResourcePatternRealmUser getRealmUserForResource(String resource) {
-		for (ResourcePatternRealmUser resourcePatternRealmUser: this.listResourcePatternRealmUser) {
-			Matcher matcher;
+		ResourcePatternRealmUser resourcePatternRealmUserReturn;
 
-			matcher = resourcePatternRealmUser.patternResource.matcher(resource);
+		resourcePatternRealmUserReturn = new ResourcePatternRealmUser();
 
-			if (matcher.matches()) {
-				StringBuffer stringBuffer;
-				ResourcePatternRealmUser resourcePatternRealmUserReturn;
+		if (resource == null) {
+			resource = "";
+		}
 
-				stringBuffer = new StringBuffer();
-				resourcePatternRealmUserReturn = new ResourcePatternRealmUser();
+		if (resource.startsWith("REALM:")) {
+			String realm;
 
-				matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.realm);
-				resourcePatternRealmUserReturn.realm = stringBuffer.toString();
+			realm = resource.substring(6);
 
-				if (resourcePatternRealmUser.user != null) {
-					// We need to reexecute the match since the call to appendReplacement above has
-					// moved the append position in the input sequence.
-					matcher.matches();
-
-					matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.user);
-					resourcePatternRealmUserReturn.user = stringBuffer.toString();
+			for (ResourcePatternRealmUser resourcePatternRealmUser: this.listResourcePatternRealmUser){
+				if (resourcePatternRealmUser.realm.equals(realm)) {
+					resourcePatternRealmUserReturn.realm = realm;
+					return resourcePatternRealmUserReturn;
 				}
+			}
 
-				return resourcePatternRealmUserReturn;
+			throw new RuntimeException("The explicitly specified realm " + realm + " is not supported.");
+		} else {
+			for (ResourcePatternRealmUser resourcePatternRealmUser: this.listResourcePatternRealmUser) {
+				Matcher matcher;
+
+				matcher = resourcePatternRealmUser.patternResource.matcher(resource);
+
+				if (matcher.matches()) {
+					StringBuffer stringBuffer;
+
+					stringBuffer = new StringBuffer();
+
+					matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.realm);
+					resourcePatternRealmUserReturn.realm = stringBuffer.toString();
+
+					if (resourcePatternRealmUser.user != null) {
+						// We need to reexecute the match since the call to appendReplacement above has
+						// moved the append position in the input sequence.
+						matcher.matches();
+
+						matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.user);
+						resourcePatternRealmUserReturn.user = stringBuffer.toString();
+					}
+
+					return resourcePatternRealmUserReturn;
+				}
 			}
 		}
 
@@ -484,6 +543,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
 		try {
 			propertiesCredentials.load(new FileInputStream(pathCredentialFile.toFile()));
+		} catch (FileNotFoundException fnfe) {
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
 		}
@@ -579,5 +639,48 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		return salt;
 	}
 
+	/**
+	 * @return List of {@link ResourcePatternRealmUser}.
+	 */
+	public List<ResourcePatternRealmUser> getListResourcePatternRealmUser() {
+		return Collections.unmodifiableList(this.listResourcePatternRealmUser);
+	}
+
+	/**
+	 * @return List of ResourcePatternRealmUser representing the realms and users for
+	 *   which a password is defined.. We reused this type for only the realm and user
+	 *   fields are used.
+	 */
+	public List<ResourcePatternRealmUser> getListRealmUser() {
+		Properties propertiesCredentials;
+		Enumeration<Object> enumKeys;
+		List<ResourcePatternRealmUser> listResourcePatternRealmUsers;
+
+		propertiesCredentials = this.readPropertiesCredentials();
+		enumKeys = propertiesCredentials.keys();
+		listResourcePatternRealmUsers = new ArrayList<ResourcePatternRealmUser>();
+
+		while (enumKeys.hasMoreElements()) {
+			String key;
+
+			key = (String)enumKeys.nextElement();
+
+			if (key.endsWith(".password")) {
+				String[] tabKeyComponent;
+				ResourcePatternRealmUser resourcePatternRealmUser;
+
+				resourcePatternRealmUser = new ResourcePatternRealmUser();
+
+				tabKeyComponent = key.split("\\.");
+
+				resourcePatternRealmUser.realm = tabKeyComponent[0];
+				resourcePatternRealmUser.user = tabKeyComponent[1];
+
+				listResourcePatternRealmUsers.add(resourcePatternRealmUser);
+			}
+		}
+
+		return listResourcePatternRealmUsers;
+	}
 
 }

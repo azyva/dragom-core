@@ -44,6 +44,11 @@ public class SetupJenkinsJobs {
 	private ReferenceGraph referenceGraph;
 
 	/**
+	 * Path to the file containing the items created.
+	 */
+	private Path pathItemsCreatedFile;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param referenceGraph ReferenceGraph.
