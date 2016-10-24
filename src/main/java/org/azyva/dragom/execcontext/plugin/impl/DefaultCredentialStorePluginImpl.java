@@ -59,17 +59,20 @@ import org.azyva.dragom.execcontext.plugin.CredentialStorePlugin;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 
 /**
  * This default implementation of {@link CredentialStorePlugin} manages the
  * credentials in a credentials.properties file in the workspace metadata
- * directory.
+ * directory, unless the system property org.azyva.dragom.CredentialFile is
+ * defined, in which case it specifies the path to the file containing the
+ * credentials.
  * <p>
  * This file is a Java Properties file which contains 2 types of entries:
  * <p>
- * <li>{@code <REALM>.<user>.password=<encrypted-password>}</li>
- * <li>{@code <REALM>.defaultUser=<default-user>}</li>
+ * <li>{@code <REALM>.<user>.Password=<encrypted-password>}</li>
+ * <li>{@code <REALM>.DefaultUser=<default-user>}</li>
  * <p>
  * The first defines a password for a user in a realm. The second defines a
  * default user for a realm. See below for more information about realms.
@@ -93,7 +96,7 @@ import org.azyva.dragom.util.Util;
  *     resource-realm-user mapping names</li>
  * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.&ltname&gt;: Resource
  *     Pattern for &lt;name&gt. This is a regular expression which can contain
- *     captured groups that can be referenced by the other properries below;</li>
+ *     captured groups that can be referenced by the other properties below;</li>
  * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.&ltname&gt;: Realm for
  *     &lt;name&gt;. Can contain references to captured groups using $g syntax;</li>
  * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_USER.&ltname&gt;: User for
@@ -115,7 +118,7 @@ import org.azyva.dragom.util.Util;
  * public methods that are not part of CredentialStorePlugin and that are intended
  * to be used by a tool which allows the user to manage the credential store.
  * <p>
- * If {@link UserInteractionCallbackPlugin#isBatchMode} returns true, this class
+ * If {@link UserInteractionCallbackPlugin#isBatchMode} returns false, this class
  * interacts with the user when appropriate to obtain missing passwords, as
  * recommended in CredentialStorePlugin.
  * <p>
@@ -124,10 +127,23 @@ import org.azyva.dragom.util.Util;
  * modify the passwords, operations which are not supported by the interface. This
  * is meant to be used by a tool that would assume this specific implementation of
  * the CredentialStorePlugin to allow the user to manage the credential store.
+ * {@link CredentialManagerTool} is such a CLI tool.
  *
  * @author David Raymond
  */
 public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
+	/**
+	 * System property that specifies the file containing the credentials. "~" in the
+	 * value of this property is replaced by the user home directory.
+	 */
+	private static final String SYS_PROP_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
+
+	/**
+	 * Default credential file (within the workspace metadata directory) when the
+	 * org.azyva.dragom.CredentialFile system property is not defined.
+	 */
+	private static final String DEFAULT_CREDENTIAL_FILE = "credentials.properties";
+
 	/**
 	 * Hardcoded password generated using
 	 * https://lastpass.com/generatepassword.php.
@@ -179,9 +195,39 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	private static final String MSG_PATTERN_KEY_USER_PASSWORD_INVALID = "USER_PASSWORD_INVALID";
 
 	/**
-	 * Credential file (within the workspace metadata directory).
+	 * See description in ResourceBundle.
 	 */
-	public static final String CREDENTIAL_FILE = "credentials.properties";
+	private static final String MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE = "USER_NOT_SAME_AS_RESOURCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_EXPLICITLY_SPECIFED_REALM_NOT_SUPPORTED = "EXPLICITLY_SPECIFED_REALM_NOT_SUPPORTED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND = "NO_RESOURCE_REALM_MAPPING_FOUND";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_USER_NOT_SPECIFIED = "USER_NOT_SPECIFIED";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE = "PASSWORD_NOT_AVAILABLE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_NO_DEFAULT_USER_FOR_RESOURCE = "NO_DEFAULT_USER_FOR_RESOURCE";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
+	private static final String MSG_PATTERN_KEY_RESOURCE_SPECIFIES_USER = "RESOURCE_SPECIFIES_USER";
 
 	/**
 	 * Property suffix for the default user. The prefix is the realm.
@@ -189,7 +235,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	public static final String PROPERTY_SUFFIX_DEFAULT_USER = ".DefaultUser";
 
 	/**
-	 * Property suffix for a password. The prefix &lt;realm&gt;.&lt;user&gt;.
+	 * Property suffix for a password. The prefix is &lt;realm&gt;.&lt;user&gt;.
 	 */
 	public static final String PROPERTY_SUFFIX_PASSWORD = ".Password.";
 
@@ -237,7 +283,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	/**
 	 * Constructor.
 	 *
-	 * @param execContext
+	 * @param execContext ExecContext.
 	 */
 	public DefaultCredentialStorePluginImpl(ExecContext execContext) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
@@ -329,90 +375,23 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
 	@Override
 	public boolean isCredentialsExist(String resource, String user, CredentialValidator credentialValidator) {
-		ResourcePatternRealmUser resourcePatternRealmUser;
-		Properties propertiesCredentials;
-		boolean indUserInput;
-		boolean indPasswordInput;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		String passwordEncrypted;
-		String password;
-
-		resourcePatternRealmUser = this.getRealmUserForResource(resource);
-
-		if ((user != null) && !user.equals(resourcePatternRealmUser.user)) {
-			throw new RuntimeException("User " + user + " does not correspond to the one specified within the resource " + resourcePatternRealmUser.user + '.');
-		}
-
-		propertiesCredentials = this.readPropertiesCredentials();
-
-		if (user == null) {
-			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
-		}
-
-		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
-		indUserInput = (user == null);
-		indPasswordInput = false;
-
-		do {
-			if (indUserInput) {
-				if (userInteractionCallbackPlugin.isBatchMode()) {
-					return false;
-				} else {
-					user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourcePatternRealmUser.realm, System.getProperty("user.name")), System.getProperty("user.name"));
-				}
-			}
-
-			passwordEncrypted = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD);
-
-			if (passwordEncrypted == null) {
-				if (userInteractionCallbackPlugin.isBatchMode()) {
-					return false;
-				} else {
-					password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourcePatternRealmUser.realm));
-					passwordEncrypted = this.encryptPassword(user, password);
-					indPasswordInput = true;
-				}
-			} else {
-				password = this.decryptPassword(user, passwordEncrypted);
-			}
-
-			if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), resource));
-				continue;
-			}
-
-			if (indUserInput) {
-				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER, user);
-			}
-
-			if (indPasswordInput) {
-				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD, passwordEncrypted);
-			}
-
-			if (indUserInput || indPasswordInput) {
-				this.savePropertiesCredentials(propertiesCredentials);
-			}
-
-			return true;
-		} while (true);
+		return this.isCredentialsExist(resource, user, credentialValidator, false);
 	}
 
 	@Override
 	public Credentials getCredentials(String resource, String user, CredentialValidator credentialValidator) {
+		return this.getCredentials(resource, user, credentialValidator, false);
+	}
+
+	@Override
+	public void resetCredentials(String resource, String user) {
 		ResourcePatternRealmUser resourcePatternRealmUser;
 		Properties propertiesCredentials;
-		boolean indUserInput;
-		boolean indPasswordInput;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		String passwordEncrypted;
-		String password;
-		CredentialStorePlugin.Credentials credentials;
 
 		resourcePatternRealmUser = this.getRealmUserForResource(resource);
 
-		if ((user != null) && !user.equals(resourcePatternRealmUser.user)) {
-			throw new RuntimeException("User " + user + " does not correspond to the one specified within the resource " + resourcePatternRealmUser.user + '.');
+		if ((user != null) && (resourcePatternRealmUser.user != null) && !user.equals(resourcePatternRealmUser.user)) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourcePatternRealmUser.user, resource));
 		}
 
 		propertiesCredentials = this.readPropertiesCredentials();
@@ -421,52 +400,12 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
 		}
 
-		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+		if (user == null) {
+			return;
+		}
 
-		indUserInput = (user == null);
-		indPasswordInput = false;
-
-		do {
-			if (indUserInput) {
-				user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourcePatternRealmUser.realm, System.getProperty("user.name")), System.getProperty("user.name"));
-			}
-
-			passwordEncrypted = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD);
-
-			if (passwordEncrypted == null) {
-				password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourcePatternRealmUser.realm));
-				passwordEncrypted = this.encryptPassword(user, password);
-				indPasswordInput = true;
-			} else {
-				password = this.decryptPassword(user, passwordEncrypted);
-			}
-
-			if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), resource));
-				continue;
-			}
-
-			if (indUserInput) {
-				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER, user);
-			}
-
-			if (indPasswordInput) {
-				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD, passwordEncrypted);
-			}
-
-			if (indUserInput || indPasswordInput) {
-				this.savePropertiesCredentials(propertiesCredentials);
-			}
-
-			credentials = new CredentialStorePlugin.Credentials();
-
-			credentials.resource = resource;
-			credentials.user = user;
-			credentials.password = password;
-			credentials.indUserSpecificResource = (resourcePatternRealmUser.user != null);
-
-			return credentials;
-		} while (true);
+		propertiesCredentials.remove(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD);
+		this.savePropertiesCredentials(propertiesCredentials);
 	}
 
 	/**
@@ -497,7 +436,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 				}
 			}
 
-			throw new RuntimeException("The explicitly specified realm " + realm + " is not supported.");
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_EXPLICITLY_SPECIFED_REALM_NOT_SUPPORTED), realm));
 		} else {
 			for (ResourcePatternRealmUser resourcePatternRealmUser: this.listResourcePatternRealmUser) {
 				Matcher matcher;
@@ -526,19 +465,17 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 			}
 		}
 
-		throw new RuntimeException("No ResourcePatternRealmUser mapping found for resource " + resource + '.');
+		throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND), resource));
 	}
 
 	/**
 	 * @return Properties for the credentials read from the credential file.
 	 */
 	private Properties readPropertiesCredentials() {
-		Path pathMetadataDir;
 		Path pathCredentialFile;
 		Properties propertiesCredentials;
 
-		pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
-		pathCredentialFile = pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.CREDENTIAL_FILE);
+		pathCredentialFile = this.getPathCredentialFile();
 		propertiesCredentials = new Properties();
 
 		try {
@@ -555,16 +492,34 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	 * Saves the properties for the credentials to the credential file.
 	 */
 	private void savePropertiesCredentials(Properties propertiesCredentials) {
-		Path pathMetadataDir;
 		Path pathCredentialFile;
 
-		pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
-		pathCredentialFile = pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.CREDENTIAL_FILE);
+		pathCredentialFile = this.getPathCredentialFile();
 
 		try {
 			propertiesCredentials.store(new FileOutputStream(pathCredentialFile.toFile()), null);
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
+		}
+	}
+
+	/**
+	 * @return Path to the credential file.
+	 */
+	private Path getPathCredentialFile() {
+		String stringCredentialFile;
+		Path pathMetadataDir;
+
+		Util.applyDragomSystemProperties();
+
+		stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_CREDENTIAL_FILE);
+
+		if (stringCredentialFile == null) {
+			pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
+			return pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.DEFAULT_CREDENTIAL_FILE);
+		} else {
+			stringCredentialFile = stringCredentialFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+			return Paths.get(stringCredentialFile);
 		}
 	}
 
@@ -648,24 +603,24 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
 	/**
 	 * @return List of ResourcePatternRealmUser representing the realms and users for
-	 *   which a password is defined.. We reused this type for only the realm and user
-	 *   fields are used.
+	 *   which a password is defined. We reuse this type with only the realm and user
+	 *   fields used.
 	 */
 	public List<ResourcePatternRealmUser> getListRealmUser() {
 		Properties propertiesCredentials;
 		Enumeration<Object> enumKeys;
-		List<ResourcePatternRealmUser> listResourcePatternRealmUsers;
+		List<ResourcePatternRealmUser> listResourcePatternRealmUser;
 
 		propertiesCredentials = this.readPropertiesCredentials();
 		enumKeys = propertiesCredentials.keys();
-		listResourcePatternRealmUsers = new ArrayList<ResourcePatternRealmUser>();
+		listResourcePatternRealmUser = new ArrayList<ResourcePatternRealmUser>();
 
 		while (enumKeys.hasMoreElements()) {
 			String key;
 
 			key = (String)enumKeys.nextElement();
 
-			if (key.endsWith(".password")) {
+			if (key.endsWith(DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD)) {
 				String[] tabKeyComponent;
 				ResourcePatternRealmUser resourcePatternRealmUser;
 
@@ -676,11 +631,355 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 				resourcePatternRealmUser.realm = tabKeyComponent[0];
 				resourcePatternRealmUser.user = tabKeyComponent[1];
 
-				listResourcePatternRealmUsers.add(resourcePatternRealmUser);
+				listResourcePatternRealmUser.add(resourcePatternRealmUser);
 			}
 		}
 
-		return listResourcePatternRealmUsers;
+		return listResourcePatternRealmUser;
 	}
 
+	/**
+	 * Implementation of {@link CredentialStorePlugin#isCredentialsExist}, but with an
+	 * extra parameter allowing to disable user interaction.
+	 * {@link #isCredentialsExist(String, String, CredentialStorePlugin.CredentialValidator)}
+	 * delegates to this method with this last parameter set to false.
+	 * <p>
+	 * A credential manager tool would generally specify true for this last parameter.
+	 *
+	 * @param resource Resource.
+	 * @param user User. Can be null.
+	 * @param credentialValidator CredentialValidator. Can be null.
+	 * @param indNoUserInteraction Indicates if user interaction is allowed.
+	 * @return See {@link CredentialStorePlugin#isCredentialsExist}.
+	 */
+	public boolean isCredentialsExist(String resource, String user, CredentialValidator credentialValidator, boolean indNoUserInteraction) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		Properties propertiesCredentials;
+		boolean indUserInput;
+		boolean indPasswordInput;
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		String passwordEncrypted;
+		String password;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		if ((user != null) && (resourcePatternRealmUser.user != null) && !user.equals(resourcePatternRealmUser.user)) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourcePatternRealmUser.user, resource));
+		}
+
+		propertiesCredentials = this.readPropertiesCredentials();
+
+		if (user == null) {
+			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
+		}
+
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+		indUserInput = (user == null);
+		indPasswordInput = false;
+
+		do {
+			if (indUserInput) {
+				if (indNoUserInteraction || userInteractionCallbackPlugin.isBatchMode()) {
+					return false;
+				} else {
+					user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourcePatternRealmUser.realm, System.getProperty("user.name")), System.getProperty("user.name"));
+				}
+			}
+
+			passwordEncrypted = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD);
+
+			if (passwordEncrypted == null) {
+				if (indNoUserInteraction || userInteractionCallbackPlugin.isBatchMode()) {
+					return false;
+				} else {
+					password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourcePatternRealmUser.realm));
+					passwordEncrypted = this.encryptPassword(user, password);
+					indPasswordInput = true;
+				}
+			} else {
+				password = this.decryptPassword(user, passwordEncrypted);
+			}
+
+			if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), resource));
+				continue;
+			}
+
+			if (indUserInput) {
+				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER, user);
+			}
+
+			if (indPasswordInput) {
+				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD, passwordEncrypted);
+			}
+
+			if (indUserInput || indPasswordInput) {
+				this.savePropertiesCredentials(propertiesCredentials);
+			}
+
+			return true;
+		} while (true);
+	}
+
+	/**
+	 * Implementation of {@link CredentialStorePlugin#getCredentials}, but with an
+	 * extra parameter allowing to disable user interaction.
+	 * {@link #getCredentials(String, String, CredentialStorePlugin.CredentialValidator)}
+	 * delegates to this method with this last parameter set to false.
+	 * <p>
+	 * A credential manager tool would generally specify true for this last parameter.
+	 *
+	 * @param resource Resource.
+	 * @param user User. Can be null.
+	 * @param credentialValidator CredentialValidator. Can be null.
+	 * @param indNoUserInteraction Indicates if user interaction is allowed.
+	 * @return Credentials. Cannot be null.
+	 */
+	public Credentials getCredentials(String resource, String user, CredentialValidator credentialValidator, boolean indNoUserInteraction) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		Properties propertiesCredentials;
+		boolean indUserInput;
+		boolean indPasswordInput;
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		String passwordEncrypted;
+		String password;
+		CredentialStorePlugin.Credentials credentials;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		if ((user != null) && (resourcePatternRealmUser.user != null) && !user.equals(resourcePatternRealmUser.user)) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourcePatternRealmUser.user, resource));
+		}
+
+		propertiesCredentials = this.readPropertiesCredentials();
+
+		if (user == null) {
+			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
+		}
+
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+		if ((user == null) && (indNoUserInteraction || userInteractionCallbackPlugin.isBatchMode())) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SPECIFIED), resource, resourcePatternRealmUser.realm));
+		}
+
+		indUserInput = (user == null);
+		indPasswordInput = false;
+
+		do {
+			if (indUserInput) {
+				user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourcePatternRealmUser.realm, System.getProperty("user.name")), System.getProperty("user.name"));
+			}
+
+			passwordEncrypted = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD);
+
+			if ((passwordEncrypted == null) && (indNoUserInteraction || userInteractionCallbackPlugin.isBatchMode())) {
+				throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE), user, resource, resourcePatternRealmUser.realm));
+			}
+
+			if (passwordEncrypted == null) {
+				password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourcePatternRealmUser.realm));
+				passwordEncrypted = this.encryptPassword(user, password);
+				indPasswordInput = true;
+			} else {
+				password = this.decryptPassword(user, passwordEncrypted);
+			}
+
+			if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), resource));
+				continue;
+			}
+
+			if (indUserInput) {
+				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER, user);
+			}
+
+			if (indPasswordInput) {
+				propertiesCredentials.setProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD, passwordEncrypted);
+			}
+
+			if (indUserInput || indPasswordInput) {
+				this.savePropertiesCredentials(propertiesCredentials);
+			}
+
+			credentials = new CredentialStorePlugin.Credentials();
+
+			credentials.resource = resource;
+			credentials.user = user;
+			credentials.password = password;
+			credentials.indUserSpecificResource = (resourcePatternRealmUser.user != null);
+
+			return credentials;
+		} while (true);
+	}
+
+	/**
+	 * Sets a password. The password is requested from the user.
+	 * <p>
+	 * If the user is not specified and the resource specifies the user, the password
+	 * for that user is set.
+	 * <p>
+	 * If the resource does not specify the user, the password for the default user of
+	 * the realm is set.
+	 * <p>
+	 * If no default user is set for the realm, an exception is thrown.
+	 * <p>
+	 * If a password is already set for the realm and the user, it is overwritten.
+	 * <p>
+	 * This method is to be used by a credential manager tool.
+	 *
+	 * @param resource Resource.
+	 * @param user User. Can be null.
+	 */
+	public void setPassword(String resource, String user) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		Properties propertiesCredentials;
+		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		String passwordEncrypted;
+		String password;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		if ((user != null) && (resourcePatternRealmUser.user != null) && !user.equals(resourcePatternRealmUser.user)) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourcePatternRealmUser.user, resource));
+		}
+
+		propertiesCredentials = this.readPropertiesCredentials();
+
+		if (user == null) {
+			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
+		}
+
+		if (user == null) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SPECIFIED), resource, resourcePatternRealmUser.realm));
+		}
+
+		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+		password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourcePatternRealmUser.realm));
+		passwordEncrypted = this.encryptPassword(user, password);
+		propertiesCredentials.setProperty(resourcePatternRealmUser.realm + '.' + user + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD, passwordEncrypted);
+		this.savePropertiesCredentials(propertiesCredentials);
+	}
+
+	/**
+	 * @return List of ResourcePatternRealmUser representing the realms and their
+	 * default users. We reuse this type with only the realm and user fields used.
+	 */
+	public List<ResourcePatternRealmUser> getListDefaultRealmUser() {
+		Properties propertiesCredentials;
+		Enumeration<Object> enumKeys;
+		List<ResourcePatternRealmUser> listResourcePatternRealmUser;
+
+		propertiesCredentials = this.readPropertiesCredentials();
+		enumKeys = propertiesCredentials.keys();
+		listResourcePatternRealmUser = new ArrayList<ResourcePatternRealmUser>();
+
+		while (enumKeys.hasMoreElements()) {
+			String key;
+
+			key = (String)enumKeys.nextElement();
+
+			if (key.endsWith(DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER)) {
+				String[] tabKeyComponent;
+				ResourcePatternRealmUser resourcePatternRealmUser;
+
+				resourcePatternRealmUser = new ResourcePatternRealmUser();
+
+				tabKeyComponent = key.split("\\.");
+
+				resourcePatternRealmUser.realm = tabKeyComponent[0];
+				resourcePatternRealmUser.user = propertiesCredentials.getProperty(key);
+
+				listResourcePatternRealmUser.add(resourcePatternRealmUser);
+			}
+		}
+
+		return listResourcePatternRealmUser;
+	}
+
+	/**
+	 * Returns the default user for a resource.
+	 * <p>
+	 * If the resource specifies a user, this user is returned.
+	 * <p>
+	 * Otherwise, the default user specified for the realm corresponding to the
+	 * resource is returned.
+	 * <p>
+	 * An exception is raised if there is no default user.
+	 *
+	 * @param resource Resource.
+	 * @return See description.
+	 */
+	public String getDefaultUser(String resource) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		String user;
+		Properties propertiesCredentials;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		user = resourcePatternRealmUser.user;
+
+		if (user == null) {
+			propertiesCredentials = this.readPropertiesCredentials();
+
+			user = propertiesCredentials.getProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
+		}
+
+		if (user == null) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_NO_DEFAULT_USER_FOR_RESOURCE), resource, resourcePatternRealmUser.realm));
+		}
+
+		return user;
+	}
+
+	/**
+	 * Sets the default user for the realm corresponding to a resource.
+	 * <p>
+	 * If the resource specifies a user, an exception is thrown.
+	 *
+	 * @param resource Resource.
+	 * @param user User.
+	 */
+	public void setDefaultUser(String resource, String user) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		Properties propertiesCredentials;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		if (resourcePatternRealmUser.user != null) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_RESOURCE_SPECIFIES_USER), resource, resourcePatternRealmUser.user));
+		}
+
+		propertiesCredentials = this.readPropertiesCredentials();
+
+		propertiesCredentials.setProperty(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER, user);
+
+		this.savePropertiesCredentials(propertiesCredentials);
+	}
+
+	/**
+	 * Removes the default user for the realm corresponding to a resource.
+	 * <p>
+	 * If the resource specifies a user, an exception is thrown.
+	 *
+	 * @param resource Resource.
+	 */
+	public void removeDefaultUser(String resource) {
+		ResourcePatternRealmUser resourcePatternRealmUser;
+		Properties propertiesCredentials;
+
+		resourcePatternRealmUser = this.getRealmUserForResource(resource);
+
+		if (resourcePatternRealmUser.user != null) {
+			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_RESOURCE_SPECIFIES_USER), resource, resourcePatternRealmUser.user));
+		}
+
+		propertiesCredentials = this.readPropertiesCredentials();
+
+		propertiesCredentials.remove(resourcePatternRealmUser.realm + DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER);
+
+		this.savePropertiesCredentials(propertiesCredentials);
+	}
 }
