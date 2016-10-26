@@ -20,6 +20,7 @@
 package org.azyva.dragom.security;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -133,7 +134,7 @@ public class CredentialStore {
 	 * The caller can use this constant to construct a master password file Path which
 	 * uses that same file name, but a different directory.
 	 */
-	public static final String DEFAULT_MASTER_PASSWORD_FILE = "dragom-master-password";
+	public static final String DEFAULT_MASTER_KEY_FILE = "dragom-master-key";
 
 	/**
 	 * Hardcoded password generated using
@@ -153,6 +154,20 @@ public class CredentialStore {
 	 * Property suffix for a password. The prefix is &lt;realm&gt;.&lt;user&gt;.
 	 */
 	public static final String PROPERTY_SUFFIX_PASSWORD = ".Password.";
+
+	/**
+	 * Because realms are used as property keys, the characters used must be
+	 * restricted so that parsing the keys is accurate. In particular, since "." is
+	 * used to separate elements of the keys (realm and user), the realms should not
+	 * contain ".".
+	 * <p>
+	 * It is OK for the user to contain "." however since if only the user can contain
+	 * ".", it is possible to accurately parse keys.
+	 * <p>
+	 * This regular expression is used to match non-allowed characters in realms so
+	 * that they can be converted to "_".
+	 */
+	private static final Pattern patternCleanRealm = Pattern.compile("[^A-Za-z0-9_\\-]");
 
 	/**
 	 * SecretKey for encrypting the passwords.
@@ -192,7 +207,8 @@ public class CredentialStore {
 		public String resource;
 
 		/**
-		 * Realm the resource corresponds to.
+		 * Realm the resource corresponds to. Cannot be null. At worst there must be a
+		 * mapping to a constant realm, or a realm that is the resource itself.
 		 */
 		public String realm;
 
@@ -225,7 +241,7 @@ public class CredentialStore {
 	/**
 	 * Path of the mater password file.
 	 */
-	private Path pathMasterPasswordFile;
+	private Path pathMasterKeyFile;
 
 	/**
 	 * List of ResourcePatternRealmUser mappings.
@@ -256,18 +272,18 @@ public class CredentialStore {
 	 * to this class and should not be modified by the caller. This ciass does not
 	 * make a copy for efficiency reasons.
 	 *
-	 * @param pathMasterPasswordFile Path of the master password file. Can be null.
+	 * @param pathMasterKeyFile Path of the master password file. Can be null.
 	 * @param pathCredentialFile Path of the credential file. Can be null.
 	 * @param listResourcePatternRealmUser List of {@link ResourcePatternRealmUser}.
 	 */
-	public CredentialStore(Path pathCredentialFile, Path pathMasterPasswordFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
-		byte[] arrayByteMasterPassword;
+	public CredentialStore(Path pathCredentialFile, Path pathMasterKeyFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
+		byte[] arrayByteMasterKey;
 
-		if (pathMasterPasswordFile == null) {
-			pathMasterPasswordFile = Paths.get(System.getProperty("user.home")).resolve(CredentialStore.DEFAULT_MASTER_PASSWORD_FILE);
+		if (pathMasterKeyFile == null) {
+			pathMasterKeyFile = Paths.get(System.getProperty("user.home")).resolve(CredentialStore.DEFAULT_MASTER_KEY_FILE);
 		}
 
-		this.pathMasterPasswordFile = pathMasterPasswordFile;
+		this.pathMasterKeyFile = pathMasterKeyFile;
 
 		if (pathCredentialFile == null) {
 			pathCredentialFile = Paths.get(System.getProperty("user.home")).resolve(CredentialStore.DEFAULT_CREDENTIAL_FILE);
@@ -277,33 +293,33 @@ public class CredentialStore {
 
 		this.listResourcePatternRealmUser = listResourcePatternRealmUser;
 
-		arrayByteMasterPassword = new byte[16];
+		arrayByteMasterKey = new byte[16];
 
-		if (!this.pathMasterPasswordFile.toFile().isFile()) {
+		if (!this.pathMasterKeyFile.toFile().isFile()) {
 			SecureRandom secureRandom;
-			OutputStream outputStreamMasterPasswordFile;
+			OutputStream outputStreamMasterKeyFile;
 
 			secureRandom = new SecureRandom();
 
 			for (int i = 0; i < 16; i++) {
-				arrayByteMasterPassword[i] = (byte)(33 + secureRandom.nextInt(94));
+				arrayByteMasterKey[i] = (byte)(33 + secureRandom.nextInt(94));
 			}
 
 			try {
-				this.pathMasterPasswordFile.getParent().toFile().mkdirs();
-				outputStreamMasterPasswordFile = new FileOutputStream(pathMasterPasswordFile.toFile());
-				outputStreamMasterPasswordFile.write(arrayByteMasterPassword);
-				outputStreamMasterPasswordFile.close();
+				this.pathMasterKeyFile.getParent().toFile().mkdirs();
+				outputStreamMasterKeyFile = new FileOutputStream(pathMasterKeyFile.toFile());
+				outputStreamMasterKeyFile.write(arrayByteMasterKey);
+				outputStreamMasterKeyFile.close();
 			} catch (IOException ioe) {
 				throw new RuntimeException(ioe);
 			}
 		} else {
-			InputStream inputStreamMasterPasswordFile;
+			InputStream inputStreamMasterKeyFile;
 
 			try {
-				inputStreamMasterPasswordFile = new FileInputStream(this.pathMasterPasswordFile.toFile());
-				inputStreamMasterPasswordFile.read(arrayByteMasterPassword);
-				inputStreamMasterPasswordFile.close();
+				inputStreamMasterKeyFile = new FileInputStream(this.pathMasterKeyFile.toFile());
+				inputStreamMasterKeyFile.read(arrayByteMasterKey);
+				inputStreamMasterKeyFile.close();
 			} catch (IOException ioe) {
 				throw new RuntimeException(ioe);
 			}
@@ -311,7 +327,7 @@ public class CredentialStore {
 
 		try {
 			this.secretKeyPasswordEncryption = SecretKeyFactory.getInstance("PBEWithMD5AndDES").generateSecret(
-					new PBEKeySpec((new String(arrayByteMasterPassword) + System.getProperty("user.name") + CredentialStore.HARDCODED_PASSWORD).toCharArray()));
+					new PBEKeySpec((new String(arrayByteMasterKey) + System.getProperty("user.name") + CredentialStore.HARDCODED_PASSWORD).toCharArray()));
 		} catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
 			throw new RuntimeException(e);
 		}
@@ -326,6 +342,7 @@ public class CredentialStore {
 
 			try {
 				this.propertiesCredentials.load(new FileInputStream(this.pathCredentialFile.toFile()));
+			} catch (FileNotFoundException fnfe) {
 			} catch (IOException ioe) {
 				throw new RuntimeException(ioe);
 			}
@@ -371,6 +388,7 @@ public class CredentialStore {
 			matcher = resourcePatternRealmUser.patternResource.matcher(resource);
 
 			if (matcher.matches()) {
+				Matcher matcherCleanRealm;
 				StringBuffer stringBuffer;
 
 				stringBuffer = new StringBuffer();
@@ -378,13 +396,35 @@ public class CredentialStore {
 				matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.realm);
 				resourceInfo.realm = stringBuffer.toString();
 
+				if ((resourceInfo.realm == null) || (resourceInfo.realm.length() == 0)) {
+					// If a resource matches, the mapping must extract a realm. If not, this is
+					// considered a configuration error in the mappings.
+					throw new RuntimeException("No realm extracted from resource " + resource + '.');
+				}
+
+				matcherCleanRealm = CredentialStore.patternCleanRealm.matcher(resourceInfo.realm);
+
+				resourceInfo.realm = matcherCleanRealm.replaceAll("_");
+
 				if (resourcePatternRealmUser.user != null) {
 					// We need to reexecute the match since the call to appendReplacement above has
-					// moved the append position in the input sequence.
+					// moved the append position in the input sequence. Unfortunately, there does not
+					// seem to be a method to simply evaluate an expression containing captured group
+					// references, which is what we would ideally need.
+					matcher.reset();
 					matcher.matches();
+
+					stringBuffer.setLength(0);
 
 					matcher.appendReplacement(stringBuffer, resourcePatternRealmUser.user);
 					resourceInfo.user = stringBuffer.toString();
+
+					if ((resourceInfo.user != null) && (resourceInfo.user.length() == 0)) {
+						// The user may not be specified in the resource and in that case the captured
+						// group by be empty. This is reported as the empty string and not null. But in
+						// the code, we represent a non-specified user as null.
+						resourceInfo.user = null;
+					}
 				}
 
 				return resourceInfo;
@@ -595,7 +635,7 @@ public class CredentialStore {
 			arrayBytePasswordEncrypted = new byte[arrayBytePasswordEncryptedAndSalt.length - 8];
 			System.arraycopy(arrayBytePasswordEncryptedAndSalt, 0, arrayBytePasswordEncrypted, 0, arrayBytePasswordEncrypted.length);
 			arrayByteSalt = new byte[8];
-			System.arraycopy(arrayBytePasswordEncryptedAndSalt, arrayBytePasswordEncrypted.length, arrayBytePasswordEncrypted, 0, 8);
+			System.arraycopy(arrayBytePasswordEncryptedAndSalt, arrayBytePasswordEncrypted.length, arrayByteSalt, 0, 8);
 
 			cipherPbe.init(Cipher.DECRYPT_MODE, this.secretKeyPasswordEncryption, new PBEParameterSpec(arrayByteSalt, 8));
 
@@ -662,17 +702,16 @@ public class CredentialStore {
 	}
 
 	/**
-	 * @return List of ResourcePatternRealmUser representing the realms and users for
-	 *   which a password is defined. We reuse this type with only the realm and user
-	 *   fields used.
+	 * @return List of RealmUser representing the realms and users for which a
+	 *   password is defined.
 	 */
-	public List<ResourcePatternRealmUser> getListRealmUser() {
+	public List<RealmUser> getListRealmUser() {
 		Enumeration<Object> enumKeys;
-		List<ResourcePatternRealmUser> listResourcePatternRealmUser;
+		List<RealmUser> listRealmUser;
 
 		this.readPropertiesCredentials();
 		enumKeys = this.propertiesCredentials.keys();
-		listResourcePatternRealmUser = new ArrayList<ResourcePatternRealmUser>();
+		listRealmUser = new ArrayList<RealmUser>();
 
 		while (enumKeys.hasMoreElements()) {
 			String key;
@@ -680,21 +719,21 @@ public class CredentialStore {
 			key = (String)enumKeys.nextElement();
 
 			if (key.endsWith(CredentialStore.PROPERTY_SUFFIX_PASSWORD)) {
-				String[] tabKeyComponent;
-				ResourcePatternRealmUser resourcePatternRealmUser;
+				int indexDot;
+				RealmUser realmUser;
 
-				resourcePatternRealmUser = new ResourcePatternRealmUser();
+				realmUser = new RealmUser();
 
-				tabKeyComponent = key.split("\\.");
+				indexDot = key.lastIndexOf('.', key.length() - CredentialStore.PROPERTY_SUFFIX_PASSWORD.length() - 1);
 
-				resourcePatternRealmUser.realm = tabKeyComponent[0];
-				resourcePatternRealmUser.user = tabKeyComponent[1];
+				realmUser.realm = key.substring(0, indexDot);
+				realmUser.user = key.substring(indexDot + 1, key.length() - CredentialStore.PROPERTY_SUFFIX_PASSWORD.length());
 
-				listResourcePatternRealmUser.add(resourcePatternRealmUser);
+				listRealmUser.add(realmUser);
 			}
 		}
 
-		return listResourcePatternRealmUser;
+		return listRealmUser;
 	}
 
 
@@ -715,14 +754,11 @@ public class CredentialStore {
 			key = (String)enumKeys.nextElement();
 
 			if (key.endsWith(CredentialStore.PROPERTY_SUFFIX_DEFAULT_USER)) {
-				String[] tabKeyComponent;
 				RealmUser realmUser;
 
 				realmUser = new RealmUser();
 
-				tabKeyComponent = key.split("\\.");
-
-				realmUser.realm = tabKeyComponent[0];
+				realmUser.realm = key.substring(0, key.length() - CredentialStore.PROPERTY_SUFFIX_DEFAULT_USER.length());
 				realmUser.user = this.propertiesCredentials.getProperty(key);
 
 				listRealmUser.add(realmUser);
@@ -737,7 +773,7 @@ public class CredentialStore {
 	 * <p>
 	 * If no resourcePattern mapping to a realm and user is found, null is returned.
 	 * <p>
-	 * If the resource specifies a user, this user is returned.
+	 * If the resource specifies a user, null is returned.
 	 * <p>
 	 * Otherwise, the default user specified for the realm corresponding to the
 	 * resource is returned.
@@ -749,7 +785,6 @@ public class CredentialStore {
 	 */
 	public String getDefaultUser(String resource) {
 		ResourceInfo resourceInfo;
-		String user;
 
 		resourceInfo = this.getResourceInfo(resource);
 
@@ -757,15 +792,13 @@ public class CredentialStore {
 			return null;
 		}
 
-		user = resourceInfo.user;
-
-		if (user == null) {
-			this.readPropertiesCredentials();
-
-			user = this.propertiesCredentials.getProperty(resourceInfo.realm + CredentialStore.PROPERTY_SUFFIX_DEFAULT_USER);
+		if (resourceInfo.user != null) {
+			return null;
 		}
 
-		return user;
+		this.readPropertiesCredentials();
+
+		return this.propertiesCredentials.getProperty(resourceInfo.realm + CredentialStore.PROPERTY_SUFFIX_DEFAULT_USER);
 	}
 
 	/**

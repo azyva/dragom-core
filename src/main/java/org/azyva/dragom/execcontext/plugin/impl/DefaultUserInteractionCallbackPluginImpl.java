@@ -61,6 +61,14 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	private static final String RUNTIME_PROPERTY_IND_PASSWORD_INPUT_NORMAL = "IND_PASSWORD_INPUT_NORMAL";
 
 	/**
+	 * Runtime property indicating to echo information input by the user.
+	 * <p>
+	 * This can be useful for tests where user responses are written to a mock
+	 * InputStream and are not shown alongside the prompts in the console.
+	 */
+	private static final String RUNTIME_PROPERTY_IND_ECHO_INFO = "IND_ECHO_INFO";
+
+	/**
 	 * Default indentation for each bracket level when the runtime property
 	 * BRACKET_INDENT is not defined.
 	 */
@@ -313,6 +321,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 	@Override
 	public String getInfo(String prompt) {
 		String info;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
 
 		if (this.writerInfoActive != null) {
 			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
@@ -334,6 +343,12 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
 		if (info == null) {
 			throw new RuntimeException("Unexpected end of stream reading from stdin.");
+		}
+
+		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+		if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_IND_ECHO_INFO))) {
+			System.out.println("Information returned by user: " + info);
 		}
 
 		System.out.println();
@@ -385,14 +400,13 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
 		System.out.println();
 
-		DefaultUserInteractionCallbackPluginImpl.logger.info("Information returned by user: " + info);
-
 		return info;
 	}
 
 	@Override
 	public String getInfoWithDefault(String prompt, String defaultValue) {
 		String info;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
 
 		if (this.writerInfoActive != null) {
 			throw new RuntimeException("A WriterInfo is already active and has not been closed.");
@@ -415,6 +429,12 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
 		if (info == null) {
 			throw new RuntimeException("Unexpected end of stream reading from stdin.");
+		}
+
+		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+		if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_IND_ECHO_INFO))) {
+			System.out.println("Information returned by user: " + info);
 		}
 
 		System.out.println();

@@ -45,8 +45,8 @@ import org.azyva.dragom.util.Util;
  * <p>
  * The default master password file is that defined by CredentialStore, namely
  * dragom-master-password in the user home directory. If the
- * org.azyva.dragom.MasterPasswordFile system property is defined, it specifies
- * the Path of the master password file.
+ * org.azyva.dragom.MasterKeyFile system property is defined, it specifies the
+ * Path of the master password file.
  * <p>
  * The default credential file is credentials.properties in the workspace metadata
  * directory. If the org.azyva.dragom.CredentialFile is defined, it specifies the
@@ -96,7 +96,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	 * System property that specifies the master password file. "~" in the
 	 * value of this property is replaced by the user home directory.
 	 */
-	public static final String SYS_PROP_MASTER_PASSWORD_FILE = "org.azyva.dragom.MasterPasswordFile";
+	public static final String SYS_PROP_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
 
 	/**
 	 * Runtime property for the list of resource-pattern-realm-user mappings.
@@ -170,8 +170,8 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		String stringCredentialFile;
 		Path pathMetadataDir;
 		Path pathCredentialFile;
-		String stringMasterPasswordFile;
-		Path pathMasterPasswordFile;
+		String stringMasterKeyFile;
+		Path pathMasterKeyFile;
 		List<CredentialStore.ResourcePatternRealmUser> listResourcePatternRealmUser;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		String stringRuntimeProperty;
@@ -196,13 +196,13 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		 * Compute the Path to the master password file.
 		 */
 
-		stringMasterPasswordFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_MASTER_PASSWORD_FILE);
+		stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_MASTER_KEY_FILE);
 
-		if (stringMasterPasswordFile == null) {
-			pathMasterPasswordFile = null;
+		if (stringMasterKeyFile == null) {
+			pathMasterKeyFile = null;
 		} else {
-			stringMasterPasswordFile = stringMasterPasswordFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
-			pathMasterPasswordFile = Paths.get(stringMasterPasswordFile);
+			stringMasterKeyFile = stringMasterKeyFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+			pathMasterKeyFile = Paths.get(stringMasterKeyFile);
 		}
 
 		/*
@@ -240,7 +240,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		 * Construct CredentialStore.
 		 */
 
-		this.credentialStore = new CredentialStore(pathCredentialFile, pathMasterPasswordFile, listResourcePatternRealmUser);
+		this.credentialStore = new CredentialStore(pathCredentialFile, pathMasterKeyFile, listResourcePatternRealmUser);
 	}
 
 	/**
@@ -336,7 +336,11 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 				if (userInteractionCallbackPlugin.isBatchMode()) {
 					return null;
 				} else {
-					user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourceInfo.realm, System.getProperty("user.name")), System.getProperty("user.name"));
+					String defaultUser;
+
+					defaultUser = System.getProperty("user.name");
+
+					user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourceInfo.realm, defaultUser), defaultUser);
 				}
 			}
 
