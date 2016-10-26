@@ -164,17 +164,20 @@ public class CredentialStore {
 	 */
 	public static class ResourcePatternRealmUser {
 		/**
-		 * Pattern to match a resource.
+		 * Pattern to match a resource. Can contain captured groups which can be
+		 * referenced by {@link #realm} and {@link #user}.
 		 */
 		public Pattern patternResource;
 
 		/**
-		 * Realm. Can contain references to captured groups.
+		 * Realm. Can contain references to captured groups defined in
+		 * {@link #patternResource}.
 		 */
 		public String realm;
 
 		/**
-		 * User. Can contain references to captured groups. Can be null.
+		 * User. Can contain references to captured groups defined in
+		 * {@link #patternResource}. Can be null.
 		 */
 		public String user;
 	}
@@ -215,14 +218,14 @@ public class CredentialStore {
 	}
 
 	/**
-	 * Path of the mater password file.
-	 */
-	private Path pathMasterPasswordFile;
-
-	/**
 	 * Path of the credential file.
 	 */
 	private Path pathCredentialFile;
+
+	/**
+	 * Path of the mater password file.
+	 */
+	private Path pathMasterPasswordFile;
 
 	/**
 	 * List of ResourcePatternRealmUser mappings.
@@ -257,7 +260,7 @@ public class CredentialStore {
 	 * @param pathCredentialFile Path of the credential file. Can be null.
 	 * @param listResourcePatternRealmUser List of {@link ResourcePatternRealmUser}.
 	 */
-	public CredentialStore(Path pathMasterPasswordFile, Path pathCredentialFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
+	public CredentialStore(Path pathCredentialFile, Path pathMasterPasswordFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
 		byte[] arrayByteMasterPassword;
 
 		if (pathMasterPasswordFile == null) {
@@ -409,10 +412,10 @@ public class CredentialStore {
 	 *
 	 * @param resource Resource.
 	 * @param user User. Can be null.
-	 * @return Credentials. null if requested credentials are not defined in the
+	 * @return Password. null if requested credentials are not defined in the
 	 *   store.
 	 */
-	public String getCredentials(String resource, String user) {
+	public String getPassword(String resource, String user) {
 		ResourceInfo resourceInfo;
 		String passwordEncrypted;
 
@@ -676,7 +679,7 @@ public class CredentialStore {
 
 			key = (String)enumKeys.nextElement();
 
-			if (key.endsWith(DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_PASSWORD)) {
+			if (key.endsWith(CredentialStore.PROPERTY_SUFFIX_PASSWORD)) {
 				String[] tabKeyComponent;
 				ResourcePatternRealmUser resourcePatternRealmUser;
 
@@ -711,7 +714,7 @@ public class CredentialStore {
 
 			key = (String)enumKeys.nextElement();
 
-			if (key.endsWith(DefaultCredentialStorePluginImpl.PROPERTY_SUFFIX_DEFAULT_USER)) {
+			if (key.endsWith(CredentialStore.PROPERTY_SUFFIX_DEFAULT_USER)) {
 				String[] tabKeyComponent;
 				RealmUser realmUser;
 
