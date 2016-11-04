@@ -105,11 +105,11 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 
 	/**
 	 * Runtime property that specifies the delay between build monitoring cycles, in
-	 * milliseconds. This property is accessed in the context of the root NodePath.
+	 * milliseconds. Accessed on the root NodePath.
 	 * <p>
 	 * When the RemoteBuilderPlugin is invoked to submit a build, the monitoring of
 	 * the build status is performed by querying the RemoteBuildHandle object that
-	 * the plugin returned. This typically involved communication with the remote
+	 * the plugin returned. This typically involves communication with the remote
 	 * build system and must be paced correctly to balance the need for fast feedback
 	 * and the desire to avoid overwhelming the remote build system with requests.
 	 */
@@ -317,18 +317,16 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 			referenceGraph.traverseReferenceGraph(
 					null, // Traverse all root ModuleVersion's.
 					true, // Depth first.
-					true, // Avoid reentry.
+					ReferenceGraph.ReentryMode.NO_REENTRY,
 					new ReferenceGraph.Visitor() {
 						@Override
-						public void visit(ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
+						public ReferenceGraph.VisitControl visit(ReferenceGraph referenceGraph, ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
 							ModuleVersion moduleVersion;
 							Module module;
 							boolean indBuildReferencePath;
 
-							// Reentry in the references is avoided, but not in the ModuleVersion's themselves
-							// and we do not want to handle the same ModuleVersion twice.
-							if (!enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT) || enumSetVisitAction.contains(ReferenceGraph.VisitAction.REPEATED)) {
-								return;
+							if (!enumSetVisitAction.contains(ReferenceGraph.VisitAction.VISIT)) {
+								return ReferenceGraph.VisitControl.CONTINUE;
 							}
 
 							moduleVersion = referencePath.getLeafModuleVersion();
@@ -346,7 +344,7 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 							// builds? Removing them can create holes in the ReferenceGraph. Maybe that is not
 							// a problem.
 							if (mapRemoteBuildWrapper.containsKey(moduleVersion)) {
-								return;
+								return ReferenceGraph.VisitControl.CONTINUE;
 							}
 
 							indBuildReferencePath = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_IND_BUILD_REFERENCE_PATH));
@@ -436,6 +434,8 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 								// built.
 								mapRemoteBuildWrapper.put(moduleVersion,  null);
 							}
+
+							return ReferenceGraph.VisitControl.CONTINUE;
 						}
 					});
 

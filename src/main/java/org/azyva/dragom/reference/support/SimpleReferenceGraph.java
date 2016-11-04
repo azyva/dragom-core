@@ -183,15 +183,11 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	}
 
 	@Override
-	public void traverseReferenceGraph(ModuleVersion moduleVersion, boolean indDepthFirst, boolean indAvoidReentry, Visitor visitor) {
+	public boolean traverseReferenceGraph(ModuleVersion moduleVersion, boolean indDepthFirst, ReentryMode reentryMode, Visitor visitor) {
 		ModuleReentryAvoider moduleReentryAvoider;
 		ReferenceGraphNode referenceGraphNode;
 
-		if (indAvoidReentry) {
-			moduleReentryAvoider = new ModuleReentryAvoider();
-		} else {
-			moduleReentryAvoider = null;
-		}
+		moduleReentryAvoider = new ModuleReentryAvoider();
 
 		if (moduleVersion == null) {
 			ReferencePath referencePath;
@@ -199,8 +195,15 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			referencePath = new ReferencePath();
 
 			for (ModuleVersion moduleVersion2: this.setModuleVersionRoot) {
-				this.traverseReferenceGraph(referencePath, new Reference(moduleVersion2), indDepthFirst, moduleReentryAvoider, visitor);
+				if (this.traverseReferenceGraph(referencePath, new Reference(moduleVersion2), indDepthFirst, reentryMode, moduleReentryAvoider, visitor) == VisitControl.ABORT) {
+					return true;
+				}
+
+				// traverseReferenceGraph can return VisitControl.SKIP_CURRENT_ROOT, but we do not
+				// care since we are done with the current root anyways.
 			}
+
+			return false;
 		} else {
 			referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
 
@@ -208,7 +211,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 				throw new RuntimeException("ModuleVersion " + moduleVersion + " not in ReferenceGraph.");
 			}
 
-			this.traverseReferenceGraph(new ReferencePath(), new Reference(referenceGraphNode.moduleVersion), indDepthFirst, moduleReentryAvoider, visitor);
+			return (this.traverseReferenceGraph(new ReferencePath(), new Reference(referenceGraphNode.moduleVersion), indDepthFirst, reentryMode, moduleReentryAvoider, visitor) == VisitControl.ABORT);
 		}
 	}
 
@@ -220,13 +223,19 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	 * @param reference Visited Reference.
 	 * @param indDepthFirst Indicates that the traversal is depth-first, as opposed to
 	 *   parent-first.
-	 * @param moduleReentryAvoider ModuleReentryAvoider to be used to avoid reentry.
-	 *   null if reentry is not to be avoided.
+	 * @param moduleReentryAvoider ModuleReentryAvoider to be used to avoid reentry or
+	 *   to simply know if a {@link ModuleVersion} is being reentered. Used for all
+	 *   {@link ReentryMode}.
+	 * @param reentryMode ReentryMode.
 	 * @param visitor Visitor.
+	 * @return VisitControl. Value returned by {@link ReferenceGraph.Visitor#visit}
+	 *   used to control recursion. {@link VisitControl#SKIP_CHILDREN} cannot be
+	 *   returned as this situation is handled internally in this method.
 	 */
-	private void traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean indDepthFirst, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
+	private VisitControl traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean indDepthFirst, ReentryMode reentryMode, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
 		boolean isAlreadyProcessed;
 		boolean isMatched;
+		VisitControl visitControl;
 		ReferenceGraphNode referenceGraphNode;
 
 		isAlreadyProcessed = (moduleReentryAvoider != null) && !moduleReentryAvoider.processModule(reference.getModuleVersion());
@@ -238,34 +247,68 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 			isMatched = this.setModuleVersionMatched.contains(referencePath.getLeafModuleVersion());
 
-			if (!indDepthFirst) {
-				visitor.visit(referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
-			}
+			visitControl = VisitControl.CONTINUE;
 
-			if (!isAlreadyProcessed) {
-				referenceGraphNode = this.mapReferenceGraphNode.get(reference.getModuleVersion());
+			if (!indDepthFirst && (!isAlreadyProcessed || (reentryMode != ReentryMode.NO_REENTRY))) {
+				visitControl = visitor.visit(this, referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
 
-				if (referenceGraphNode.listReference != null) {
-					visitor.visit(referencePath, VisitAction.ENUM_SET_STEP_IN);
-
-					for (Reference reference2: referenceGraphNode.listReference) {
-						this.traverseReferenceGraph(referencePath, reference2, indDepthFirst, moduleReentryAvoider, visitor);
-					}
-
-					visitor.visit(referencePath, VisitAction.ENUM_SET_STEP_OUT);
+				if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+					return visitControl;
 				}
 			}
 
-			if (indDepthFirst) {
-				visitor.visit(referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
+			if (!isAlreadyProcessed && (visitControl != VisitControl.SKIP_CHILDREN)) {
+				referenceGraphNode = this.mapReferenceGraphNode.get(reference.getModuleVersion());
+
+				if (referenceGraphNode.listReference != null) {
+					visitControl = visitor.visit(this, referencePath, VisitAction.ENUM_SET_STEP_IN);
+
+					if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+						return visitControl;
+					}
+
+					if (visitControl != VisitControl.SKIP_CHILDREN) {
+						for (Reference reference2: referenceGraphNode.listReference) {
+							visitControl = this.traverseReferenceGraph(referencePath, reference2, indDepthFirst, reentryMode, moduleReentryAvoider, visitor);
+
+							if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+								return visitControl;
+							}
+						}
+					}
+
+					visitControl = visitor.visit(this, referencePath, VisitAction.ENUM_SET_STEP_OUT);
+
+					if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+						return visitControl;
+					}
+
+					if (visitControl == VisitControl.SKIP_CHILDREN) {
+						throw new RuntimeException("VisitControl.SKIP_CHILDREN not allowed for VisitAction.STEP_OUT.");
+					}
+				}
 			}
+
+			if (indDepthFirst && (!isAlreadyProcessed || (reentryMode != ReentryMode.NO_REENTRY))) {
+				visitControl = visitor.visit(this, referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
+
+				if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+					return visitControl;
+				}
+
+				if (visitControl == VisitControl.SKIP_CHILDREN) {
+					throw new RuntimeException("VisitControl.SKIP_CHILDREN not allowed for VisitAction.STEP_OUT.");
+				}
+			}
+
+			return VisitControl.CONTINUE;
 		} finally {
 			referencePath.removeLeafReference();
 		}
 	}
 
 	@Override
-	public void visitLeafModuleVersionReferencePaths(ModuleVersion moduleVersion, Visitor visitor) {
+	public boolean visitLeafModuleVersionReferencePaths(ModuleVersion moduleVersion, Visitor visitor) {
 		ReferenceGraphNode referenceGraphNode;
 
 		referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
@@ -274,7 +317,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			throw new RuntimeException("ModuleVersion " + moduleVersion + " not in ReferenceGraph.");
 		}
 
-		this.traverseReferenceGraphForLeafModuleVersionReferencePaths(new ReferencePath(), moduleVersion, visitor);
+		return (this.traverseReferenceGraphForLeafModuleVersionReferencePaths(new ReferencePath(), moduleVersion, visitor) == VisitControl.ABORT);
 	}
 
 	/**
@@ -287,16 +330,28 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 	 *   {@link ModuleVersion}.
 	 * @param moduleVersion Visited ModuleVersion.
 	 * @param visitor Visitor.
+	 * @return VisitControl. Either {@link VisitControl.CONTINUE} or
+	 *   {@link VisitControl.ABORT} depending on the value returned by
+	 *   {@link ReferenceGraph.Visitor#visit}.
 	 */
-	private void traverseReferenceGraphForLeafModuleVersionReferencePaths(ReferencePath referencePath, ModuleVersion moduleVersion, Visitor visitor) {
+	private VisitControl traverseReferenceGraphForLeafModuleVersionReferencePaths(ReferencePath referencePath, ModuleVersion moduleVersion, Visitor visitor) {
 		ReferencePath referencePathIncludingParent;
+		VisitControl visitControl;
 		ReferenceGraphNode referenceGraphNode;
 
 		if (this.setModuleVersionRoot.contains(moduleVersion)) {
 			referencePathIncludingParent = new ReferencePath();
 			referencePathIncludingParent.add(new Reference(moduleVersion));
 			referencePathIncludingParent.add(referencePath);
-			visitor.visit(referencePathIncludingParent, this.setModuleVersionMatched.contains(referencePathIncludingParent.getLeafModuleVersion()) ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT);
+			visitControl = visitor.visit(this, referencePathIncludingParent, this.setModuleVersionMatched.contains(referencePathIncludingParent.getLeafModuleVersion()) ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT);
+
+			if ((visitControl == VisitControl.SKIP_CHILDREN) || (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+				throw new RuntimeException("VisitControl.SKIP_CHILDREN and VisitControl.SKIP_CURRENT_ROOT not allowed with visitLeafModuleVersionReferencePaths.");
+			}
+
+			if (visitControl == VisitControl.ABORT) {
+				return VisitControl.ABORT;
+			}
 		}
 
 		referenceGraphNode = this.mapReferenceGraphNode.get(moduleVersion);
@@ -307,9 +362,13 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 				referencePathIncludingParent.add(referrer.getReference());
 				referencePathIncludingParent.add(referencePath);
 
-				this.traverseReferenceGraphForLeafModuleVersionReferencePaths(referencePathIncludingParent, referrer.getModuleVersion(), visitor);
+				if (this.traverseReferenceGraphForLeafModuleVersionReferencePaths(referencePathIncludingParent, referrer.getModuleVersion(), visitor) == VisitControl.ABORT) {
+					return VisitControl.ABORT;
+				}
 			}
 		}
+
+		return VisitControl.CONTINUE;
 	}
 
 	@Override

@@ -309,7 +309,7 @@ public class ReferenceGraphReport {
 		}
 
 		@Override
-		public void visit(ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
+		public ReferenceGraph.VisitControl visit(ReferenceGraph referenceGraph, ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
 			/* *******************************************************************************
 			 * Reference graph report.
 			 * *******************************************************************************/
@@ -413,7 +413,7 @@ public class ReferenceGraphReport {
 					 * *******************************************************************************/
 
 					if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.REPEATED)) {
-						return;
+						return ReferenceGraph.VisitControl.CONTINUE;
 					}
 
 					moduleVersion = referencePath.getLeafModuleVersion();
@@ -441,6 +441,8 @@ public class ReferenceGraphReport {
 					reportModule.listReportVersion.add(reportVersion);
 				}
 			}
+
+			return ReferenceGraph.VisitControl.CONTINUE;
 		}
 	}
 
@@ -458,7 +460,7 @@ public class ReferenceGraphReport {
 		// this.referenceGraphMode is TREE_NO_REDUNDANCY, existing
 		// ReportReferenceGraphNode are reused. It is just that ReportReference with
 		// jumpToReferenceGraphNodeBookmark are generated when appropriate.
-		this.referenceGraph.traverseReferenceGraph(null, false, true, referenceGraphVisitorReport);
+		this.referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.ONLY_PARENT, referenceGraphVisitorReport);
 
 		// The reference graph report has been created by including all ReportModule's,
 		// regardless of the ModuleFilter since it is not possible to perform the
@@ -546,8 +548,9 @@ public class ReferenceGraphReport {
 								new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
 								new ReferenceGraph.Visitor() {
 									@Override
-									public void visit(ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
+									public ReferenceGraph.VisitControl visit(ReferenceGraph referenceGraph, ReferencePath referencePath, EnumSet<ReferenceGraph.VisitAction> enumSetVisitAction) {
 										reportVersion.listReferencePathLiteral.add(referencePath.toString());
+										return ReferenceGraph.VisitControl.CONTINUE;
 									}
 								});
 					}

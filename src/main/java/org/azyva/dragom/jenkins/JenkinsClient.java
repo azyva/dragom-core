@@ -21,8 +21,10 @@ package org.azyva.dragom.jenkins;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -169,6 +171,13 @@ public class JenkinsClient {
 		String buildName;
 
 		/**
+		 * Next console start index. Used by {@link #getNextConsoleChunk} for progressive
+		 * console output. -1 if no more data is available and build is (supposed to be)
+		 * completed.
+		 */
+		int nextConsoleStart;
+
+		/**
 		 * Constructor.
 		 *
 		 * @param jobUrl Job URL.
@@ -294,26 +303,116 @@ public class JenkinsClient {
 		 * Cancels or aborts the build, depending on whether its {@link BuildState} is
 		 * {@link BuildState#QUEUED} or {@link BuildState#RUNNING}.
 		 * <p>
-		 * A build in any other BuildState cannot be cancelled.
+		 * A build in any other BuildState cannot be cancelled and false is returned.
+		 *
+		 * @return Indicates if the build has been aborted or cancelled successfully.
+		 *   Generally this can be assumed to be true since if an error occurs, an
+		 *   exception is thrown.
 		 */
-		public void cancel() {
-???
+		public boolean cancel() {
+			BuildState buildState;
+
+			buildState = this.getBuildState();
+
+			if (buildState == BuildState.QUEUED) {
+				int indexSlash;
+
+				// The queue item URL looks like "https://server/jenkins/queue/item/####/" and we
+				// need to generate a URL such as
+				// "https://server/jenkins/queue/cancelItem?id=####".
+				indexSlash = this.queueItemUrl.lastIndexOf('/', this.queueItemUrl.length() - 2);
+
+//??? Probably returns a 404 due to bug https://issues.jenkins-ci.org/browse/JENKINS-21311. Need to ignore.
+				JenkinsClient.this.post(this.queueItemUrl.substring(0, indexSlash - 4) + "cancelItem?id=" + this.queueItemUrl.substring(indexSlash + 1, this.queueItemUrl.length() - 1));
+
+				return this.getBuildState() == BuildState.CANCELLED;
+			} else if (buildState == BuildState.RUNNING) {
+				JenkinsClient.this.post(this.buildUrl + "stop");
+
+				return this.getBuildState() == BuildState.ABORTED;
+			}
+
+			return false;
 		}
 
 		/**
 		 * @return Returns the next chunk of console output or null if not
-		 *   {@link BuildState#isOutOfQueue}.
+		 *   {@link BuildState#isOutOfQueue} or if no more data is available.
 		 */
 		public String getNextConsoleChunk() {
-			return null;
+			URL url;
+			HttpURLConnection httpUrlConnection;
+			int responseCode;
+
+			if (!this.buildStatePrevious.isOutOfQueue() && !this.getBuildState().isOutOfQueue()) {
+				return null;
+			}
+
+			if (this.nextConsoleStart == -1) {
+				return null;
+			}
+
+			// Because we need to handle the special headers X-Text-Size and X-More-Data, we
+			// cannot use the generic methods in JenkinsClient.
+
+			try {
+				url = new URL(this.buildUrl + "logText/progressiveText?start=" + this.nextConsoleStart);
+
+				httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + JenkinsClient.this.basicAuthBase64);
+				httpUrlConnection.setRequestMethod("GET");
+				httpUrlConnection.setInstanceFollowRedirects(false);
+
+				httpUrlConnection.connect();
+
+				responseCode = httpUrlConnection.getResponseCode();
+
+				if (responseCode == 200) {
+					StringBuilder stringBuilderOutput;
+					Reader reader;
+					char[] arrayCharOutput;
+					int nbCharOutputRead;
+
+					stringBuilderOutput = new StringBuilder();
+					reader = new InputStreamReader(httpUrlConnection.getInputStream(), "UTF-8");
+					arrayCharOutput = new char[1024];
+
+					while ((nbCharOutputRead = reader.read(arrayCharOutput)) != -1) {
+						stringBuilderOutput.append(arrayCharOutput, 0, nbCharOutputRead);
+					}
+
+					reader.close();
+
+					if (httpUrlConnection.getHeaderField("X-More-Data").equals("false")) {
+						this.nextConsoleStart = -1;
+					} else {
+						this.nextConsoleStart = Integer.parseInt(httpUrlConnection.getHeaderField("X-Text-Size"));
+					}
+
+					return stringBuilderOutput.toString();
+				} else {
+					JenkinsClient.flushInputErrorStreams(httpUrlConnection);
+
+					throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				}
+			} catch (RuntimeException re) {
+				throw re;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		/**
-		 * @return Complete console output.
-		 * @return
+		 * @return Complete console output or null if not {@link BuildState#isOutOfQueue}.
 		 */
 		public String getFullConsole() {
-			return null;
+			if (!this.buildStatePrevious.isOutOfQueue() && !this.getBuildState().isOutOfQueue()) {
+				return null;
+			}
+
+
+			return JenkinsClient.this.getForText(this.buildUrl + "consoleText");
 		}
 	}
 
@@ -328,7 +427,11 @@ public class JenkinsClient {
 		this.baseUrl = baseUrl;
 		this.user = user;
 		this.password = password;
-		this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes());
+		try {
+			this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes("US_ASCII"));
+		} catch (UnsupportedEncodingException usee) {
+			throw new RuntimeException(usee);
+		}
 	}
 
 	/**
@@ -372,9 +475,9 @@ public class JenkinsClient {
 	 *
 	 * @param template Template (full name).
 	 * @param job New job (full name).
-	 * @param mapParams Template parameters.
+	 * @param mapTemplateParam Template parameters.
 	 */
-	public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapParams) {
+	public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
 		URL url;
 		HttpURLConnection httpUrlConnection;
 		OutputStream outputStream;
@@ -394,22 +497,22 @@ public class JenkinsClient {
 
 			outputStream = httpUrlConnection.getOutputStream();
 
-			outputStream.write("<values>".getBytes());
+			outputStream.write("<values>".getBytes("US-ASCII"));
 
-			for (Map.Entry<String, String> mapEntry: mapParams.entrySet()) {
+			for (Map.Entry<String, String> mapEntry: mapTemplateParam.entrySet()) {
 				byte[] arrayByteKey;
 
-				arrayByteKey = mapEntry.getKey().getBytes();
+				arrayByteKey = mapEntry.getKey().getBytes("US-ASCII");
 				outputStream.write('<');
 				outputStream.write(arrayByteKey);
 				outputStream.write('>');
-				outputStream.write(mapEntry.getValue().getBytes());
-				outputStream.write("</".getBytes());
+				outputStream.write(mapEntry.getValue().getBytes("US-ASCII"));
+				outputStream.write("</".getBytes("US-ASCII"));
 				outputStream.write(arrayByteKey);
 				outputStream.write('>');
 			}
 
-			outputStream.write("</values>".getBytes());
+			outputStream.write("</values>".getBytes("US-ASCII"));
 
 			outputStream.close();
 
@@ -469,7 +572,7 @@ public class JenkinsClient {
 			arrayCharConfig = new char[1024];
 
 			while ((nbCharConfigRead = readerConfig.read(arrayCharConfig)) != -1) {
-				outputStream.write((new String(arrayCharConfig, 0, nbCharConfigRead)).getBytes());
+				outputStream.write((new String(arrayCharConfig, 0, nbCharConfigRead)).getBytes("UTF-8"));
 			}
 
 			outputStream.close();
@@ -517,7 +620,7 @@ public class JenkinsClient {
 			arrayCharConfig = new char[1024];
 
 			while ((nbCharConfigRead = readerConfig.read(arrayCharConfig)) != -1) {
-				outputStream.write((new String(arrayCharConfig, 0, nbCharConfigRead)).getBytes());
+				outputStream.write((new String(arrayCharConfig, 0, nbCharConfigRead)).getBytes("UTF-8"));
 			}
 
 			outputStream.close();
@@ -590,10 +693,10 @@ public class JenkinsClient {
 	 * Triggers a build for a job.
 	 *
 	 * @param job Job (full name).
-	 * @param mapParams Build parameters. Can be null.
+	 * @param mapBuildParam Build parameters. Can be null.
 	 * @return Build.
 	 */
-	public Build build(String job, Map<String, String> mapParams) {
+	public Build build(String job, Map<String, String> mapBuildParam) {
 		boolean indParams;
 		URL url;
 		HttpURLConnection httpUrlConnection;
@@ -601,14 +704,14 @@ public class JenkinsClient {
 		int responseCode;
 
 		try {
-			indParams = ((mapParams != null) && !mapParams.isEmpty());
+			indParams = ((mapBuildParam != null) && !mapBuildParam.isEmpty());
 
 			if (indParams) {
 				url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/buildWithParameters");
 
 				stringBuilderParams = new StringBuilder();
 
-				for (Map.Entry<String, String> mapEntry: mapParams.entrySet()) {
+				for (Map.Entry<String, String> mapEntry: mapBuildParam.entrySet()) {
 					stringBuilderParams.append(mapEntry.getKey());
 					stringBuilderParams.append('=');
 					stringBuilderParams.append(URLEncoder.encode(mapEntry.getValue(), "UTF-8"));
@@ -698,6 +801,95 @@ public class JenkinsClient {
 				JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
 				throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+			}
+		} catch (RuntimeException re) {
+			throw re;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Convenience method to issue a GET request on a URL, expect text output and
+	 * return it.
+	 *
+	 * @param stringUrl URL.
+	 * @return String.
+	 */
+	private String getForText(String stringUrl) {
+		URL url;
+		HttpURLConnection httpUrlConnection;
+		int responseCode;
+
+		try {
+			url = new URL(stringUrl);
+
+			httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			httpUrlConnection.setRequestMethod("GET");
+			httpUrlConnection.setInstanceFollowRedirects(false);
+
+			httpUrlConnection.connect();
+
+			responseCode = httpUrlConnection.getResponseCode();
+
+			if (responseCode == 200) {
+				StringBuilder stringBuilderOutput;
+				Reader reader;
+				char[] arrayCharOutput;
+				int nbCharOutputRead;
+
+				stringBuilderOutput = new StringBuilder();
+				reader = new InputStreamReader(httpUrlConnection.getInputStream(), "UTF-8");
+				arrayCharOutput = new char[1024];
+
+				while ((nbCharOutputRead = reader.read(arrayCharOutput)) != -1) {
+					stringBuilderOutput.append(arrayCharOutput, 0, nbCharOutputRead);
+				}
+
+				reader.close();
+
+				return stringBuilderOutput.toString();
+			} else {
+				JenkinsClient.flushInputErrorStreams(httpUrlConnection);
+
+				throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+			}
+		} catch (RuntimeException re) {
+			throw re;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * Convenience method to ussue a POST request on a URL, with no expected output.
+	 *
+	 * @param stringUrl URL.
+	 */
+	private void post(String stringUrl) {
+		URL url;
+		HttpURLConnection httpUrlConnection;
+		int responseCode;
+
+		try {
+			url = new URL(stringUrl);
+
+			httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			httpUrlConnection.setRequestMethod("POST");
+			httpUrlConnection.setInstanceFollowRedirects(false);
+
+			httpUrlConnection.connect();
+
+			responseCode = httpUrlConnection.getResponseCode();
+
+			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
+
+			if (responseCode != 200) {
+				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
 			}
 		} catch (RuntimeException re) {
 			throw re;
