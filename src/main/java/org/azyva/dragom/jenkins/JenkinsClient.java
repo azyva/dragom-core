@@ -420,18 +420,26 @@ public class JenkinsClient {
 	 * Constructor.
 	 *
 	 * @param baseUrl Base URL of Jenkins.
-	 * @param user User to use to connect to Jenkins.
-	 * @param password Password.
+	 * @param user User to use to connect to Jenkins. Can be null if Jenkins is to be
+	 *   accessed anonymously.
+	 * @param password Password. Can be null if user is null.
 	 */
 	public JenkinsClient(String baseUrl, String user, String password) {
 		this.baseUrl = baseUrl;
 		this.user = user;
 		this.password = password;
-		try {
-			this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes("US_ASCII"));
-		} catch (UnsupportedEncodingException usee) {
-			throw new RuntimeException(usee);
+
+		if (this.user != null) {
+			try {
+				this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes("US_ASCII"));
+			} catch (UnsupportedEncodingException usee) {
+				throw new RuntimeException(usee);
+			}
 		}
+	}
+
+	public boolean validateCredentials() {
+
 	}
 
 	/**
@@ -449,7 +457,10 @@ public class JenkinsClient {
 			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/config.xml");
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("GET");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 
@@ -487,7 +498,10 @@ public class JenkinsClient {
 			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(template) + "/instantiate?job=" + URLEncoder.encode(job, "UTF-8"));
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 			httpUrlConnection.setDoOutput(true);
@@ -559,7 +573,10 @@ public class JenkinsClient {
 			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(folderName) + "/createItem?name=" + URLEncoder.encode(jobName, "UTF-8"));
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 			httpUrlConnection.setDoOutput(true);
@@ -607,7 +624,10 @@ public class JenkinsClient {
 			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/config.xml");
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 			httpUrlConnection.setDoOutput(true);
@@ -666,7 +686,10 @@ public class JenkinsClient {
 			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/doDelete");
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 
@@ -725,7 +748,10 @@ public class JenkinsClient {
 
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 
@@ -760,6 +786,22 @@ public class JenkinsClient {
 		}
 	}
 
+	public boolean isFolderExist(String folder) {
+
+	}
+
+	public boolean isFolderEmpty(String folder) {
+
+	}
+
+	public boolean createSimpleFolder(String folder) {
+
+	}
+
+	public boolean deleteFolder(String folder) {
+
+	}
+
 	/**
 	 * Convenience method to issue a GET request on a URL, expect an XML document and
 	 * return it.
@@ -777,7 +819,10 @@ public class JenkinsClient {
 
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("GET");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 
@@ -826,7 +871,10 @@ public class JenkinsClient {
 
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("GET");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 
@@ -878,7 +926,10 @@ public class JenkinsClient {
 
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
-			httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
 			httpUrlConnection.setRequestMethod("POST");
 			httpUrlConnection.setInstanceFollowRedirects(false);
 

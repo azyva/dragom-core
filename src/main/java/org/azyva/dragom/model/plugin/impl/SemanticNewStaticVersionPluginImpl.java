@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseImpl implements NewStaticVersionPlugin {
-	private static Logger logger = LoggerFactory.getLogger(SemanticNewStaticVersionPluginImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(SemanticNewStaticVersionPluginImpl.class);
 
 	/**
 	 * Model property specifying the prefix for semantic Version's. Static Versions

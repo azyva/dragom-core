@@ -62,7 +62,7 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public final class Util {
-	private static Logger logger = LoggerFactory.getLogger(Util.class);
+	private static final Logger logger = LoggerFactory.getLogger(Util.class);
 
 	/**
 	 * Runtime property specifying whether confirmation is required.

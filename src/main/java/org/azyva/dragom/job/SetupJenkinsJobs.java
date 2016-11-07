@@ -25,6 +25,8 @@ import java.util.Map;
 
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.WorkspaceExecContext;
+import org.azyva.dragom.execcontext.plugin.CredentialStorePlugin;
+import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.jenkins.JenkinsClient;
 import org.azyva.dragom.model.Model;
@@ -45,16 +47,16 @@ import org.azyva.dragom.reference.ReferencePath;
  * deemed pertinent to undertake such a task.
  * <p>
  * Note however that although this class is specific to Jenkins, it still makes
- * use of {@link JenkinsJobCreationPlugin} to abstract the actual job creation
+ * use of {@link JenkinsJobInfoPlugin} to abstract the actual job creation
  * details, namely the config.xml file or the template parameters.
  * <p>
- * Jobs created by this class are recorded in the jobs created file, whose content
- * is also used as input if it already exists, in conjunction with a
- * {@link JobsCreatedFileMode}. The default jobs created file, if
- * {@link #setPathJobsCreatedFile} is not called, is jenkins-jobs-created.txt in
- * the metadata directory of the workspace. The default JobsCreatedFileMode, if
- * {@link #setJobsCreatedFileMode} is not called, is
- * {@link JobsCreatedFileMode#MERGE}.
+ * Jobs and folders created by this class are recorded in an items created file,
+ * whose content is also used as input if it already exists, in conjunction with a
+ * {@link ItemsCreatedFileMode}. The default items created file, if
+ * {@link #setPathItemsCreatedFile} is not called, is jenkins-items-created.txt in
+ * the metadata directory of the workspace. The default ItemsCreatedFileMode, if
+ * {@link #setItemsCreatedFileMode} is not called, is
+ * {@link ItemsCreatedFileMode#MERGE}.
  * <p>
  * While most job classes derive from {@link RootModuleVersionJobAbstractImpl},
  * this class works with a {@link ReferenceGraph} which was presumably created
@@ -68,60 +70,23 @@ public class SetupJenkinsJobs {
 	 * Runtime property specifying the Jenkins base URL (e.g.:
 	 * https://acme.com/jenkins). Accessed on the root {@link NodePath}.
 	 */
-	private static String RUNTIME_PROPERTY_JENKINS_BASE_URL = "JENKINS_BASE_URL";
+	private static final String RUNTIME_PROPERTY_JENKINS_BASE_URL = "JENKINS_BASE_URL";
 
 	/**
-	 * Runtime property specifying the root folder where jobs are created (e.g.:
-	 * "build/ci"). Concatenated with the Jenkins base URL
-	 * ({@link #RUNTIME_PROPERTY_JENKINS_BASE_URL}) with "/" as separator. Accessed
-	 * on the root {@link NodePath}.
+	 * Runtime property specifying the user to use to access Jenkins.
+	 * <p>
+	 * The corresponding password is obtained from {@link CredentialStorePlugin}.
+	 * <p>
+	 * If not specified, null is passed as the user to CredentialStorePlugin.
+	 * <p>
+	 * If the value is "" (the empty string), Jenkins is accessed anonymously.
 	 */
-	private static String RUNTIME_PROPERTY_JOBS_ROOT_FOLDER = "JENKINS_JOBS_ROOT_FOLDER";
+	private static final String RUNTIME_PROPERTY_JENKINS_USER = "JENKINS_USER";
 
 	/**
-	 * Runtime property specifying the {@link Module}-specific subfolder where the job
-	 * for the Module is created.
-	 * <p>
-	 * If not defined, the parent {@link NodePath} of the Module is used. For example,
-	 * if the NodePath of the module is Domain/SubDomain/module, the subfolder used is
-	 * Domain/Subdomain.
-	 * <p>
-	 * Concatenated with the Jenkins base URL
-	 * ({@link #RUNTIME_PROPERTY_JENKINS_BASE_URL}) and root folder
-	 * ({@link #RUNTIME_PROPERTY_JOBS_ROOT_FOLDER}) with "/" as separator.
-	 * <p>
-	 * Accessed on the NodePath of the Module for which a job is to be created.
+	 * Default file in the workspace metadata directory containing the items created.
 	 */
-	private static String RUNTIME_PROPERTY_JOB_SUBFOLDER = "JENKINS_MODULE_SUBFOLDER";
-
-	/**
-	 * Runtime property specifying a project name to include in the path of the job.
-	 * Can be not specified.
-	 * <p>
-	 * If it ends with "/", it is considered to be a subfolder.
-	 * <p>
-	 * Accessed on the NodePath of the Module for which a job is to be created.
-	 */
-	private static String RUNTIME_PROPERTY_PROJECT = "JENKINS_PROJECT";
-
-	/**
-	 * Runtime property indicating to include the {@link Vesion} of the {@link Module}
-	 * as a subfolder. The possible values are "true" and "false". If not defined,
-	 * "false" is assumed.
-	 * <p>
-	 * If {@link #RUNTIME_PROPERTY_PROJECT} defines a folder (ends with "/"), the
-	 * Version is a subfolder of that subfolder. Otherwise, it is concatenated. If
-	 * the runtime property "JENKINS_PROJECT" is not defined, the Version is a
-	 * subfolder of the path being built.
-	 * <p>
-	 * Accessed on the NodePath of the Module for which a job is to be created.
-	 */
-	private static String RUNTIME_PROPERTY_IND_INCLUDE_VERSION_AS_SUBFOLDER = "JENKINS_IND_INCLUDE_VERSION_AS_SUBFOLDER";
-
-	/**
-	 * Default file in the workspace metadata directory containing the jobs created.
-	 */
-	private static String DEFAULT_JOBS_CREATED_FILE = "jenkins-jobs-created.txt";
+	private static final String DEFAULT_ITEMS_CREATED_FILE = "jenkins-items-created.txt";
 
 	/**
 	 * {@link ReferenceGraph}.
@@ -129,50 +94,51 @@ public class SetupJenkinsJobs {
 	private ReferenceGraph referenceGraph;
 
 	/**
-	 * Path to the file containing the jobs created.
+	 * Path to the file containing the items created.
 	 * <p>
-	 * If null, a default file "jenkins-jobs-created.txt" in the workspace metadata
+	 * If null, a default file "jenkins-items-created.txt" in the workspace metadata
 	 * directory is used.
 	 */
-	private Path pathJobsCreatedFile;
+	private Path pathItemsCreatedFile;
 
 	/**
-	 * Modes for handling the jobs created file if it already exists.
+	 * Modes for handling the items created file if it already exists.
 	 */
-	private enum JobsCreatedFileMode {
+	private enum ItemsCreatedFileMode {
 		/**
-		 * Add new jobs, replace existing.
+		 * Replace items created file, ignoring its current contents.
+		 */
+		IGNORE,
+
+		/**
+		 * Add new items, replace existing jobs. Existing folders are not touched, other
+		 * than manipulating the jobs within them.
 		 */
 		MERGE,
 
 		/**
-		 * Delete previous jobs before adding new ones.
-		 * <p>
-		 * Complete cleanup can be performed with this mode and specifying a non-matching
-		 * {@link ReferencePathMatcher).
+		 * Add new items, replace existing jobs, delete items (folders and jobs) which do
+		 * not exist anymore. Existing folders are not touched, other than manipulating
+		 * the jobs within them.
 		 */
-		DELETE_REPLACE,
+		SYNC,
 
 		/**
-		 * Similar to {@link #DELETE_REPLACE}, but also deletes empty subfolders
-		 * introduced from {@link SetupJenkinsJobs#RUNTIME_PROPERTY_PROJECT} and
-		 * {@link SetupJenkinsJobs#RUNTIME_PROPERTY_IND_INCLUDE_VERSION_AS_SUBFOLDER}.
-		 * <p>
-		 * No distinction is made between whether such a subfolder initially existed or
-		 * not. They are always deleted (if empty).
+		 * Similar to {@link #SYNC}, but folders which do not exist anymore are deleted
+		 * only if empty (after having deleted the jobs which do not exist anymore).
 		 */
-		DELETE_EMPTY_REPLACE,
+		SYNC_DELETE_FOLDER_ONLY_IF_EMPTY,
 
 		/**
-		 * Replace jobs created file, ignoring its current contents.
+		 * Similar to {@link #SYNC}, but folders are not deleted.
 		 */
-		REPLACE
+		SYNC_NO_DELETE_FOLDER,
 	}
 
 	/**
-	 * Jobs created file mode.
+	 * Items created file mode.
 	 */
-	private JobsCreatedFileMode jobsCreatedFileMode;
+	private ItemsCreatedFileMode itemsCreatedFileMode;
 
 	/**
 	 * JenkinsClient.
@@ -184,32 +150,66 @@ public class SetupJenkinsJobs {
 	 * @param referenceGraph ReferenceGraph.
 	 */
 	public SetupJenkinsJobs(ReferenceGraph referenceGraph) {
+		ExecContext execContext;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		CredentialStorePlugin credentialStorePlugin;
+		String jenkinsBaseUrl;
+		String user;
+		String password;
+
 		this.referenceGraph = referenceGraph;
-		this.pathJobsCreatedFile = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir().resolve(SetupJenkinsJobs.DEFAULT_JOBS_CREATED_FILE);
-		this.jobsCreatedFileMode = JobsCreatedFileMode.MERGE;
+		this.pathItemsCreatedFile = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir().resolve(SetupJenkinsJobs.DEFAULT_ITEMS_CREATED_FILE);
+		this.itemsCreatedFileMode = ItemsCreatedFileMode.MERGE;
 
-		??? get base URL from runtime properties.
-		??? get user,password from CredentialStorePlugin.
-		??? should user be the default from CredentialStorePlugin?
-		??? or should we have a RT prop? RT prop would be more flexible, but if not defined, use default.
-		this.jenkinsClient = new JenkinsClient(url, user, password);
+		execContext = ExecContextHolder.get();
+		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+		credentialStorePlugin = execContext.getExecContextPlugin(CredentialStorePlugin.class);
+
+		jenkinsBaseUrl = runtimePropertiesPlugin.getProperty(null,  SetupJenkinsJobs.RUNTIME_PROPERTY_JENKINS_BASE_URL);
+		user = runtimePropertiesPlugin.getProperty(null,  SetupJenkinsJobs.RUNTIME_PROPERTY_JENKINS_USER);
+
+		if ((user != null) && user.isEmpty()) {
+			user = null;
+			password = null;
+		} else {
+			CredentialStorePlugin.Credentials credentials;
+
+			credentials = credentialStorePlugin.getCredentials(
+					jenkinsBaseUrl,
+					user,
+					new CredentialStorePlugin.CredentialValidator() {
+						@Override
+						public boolean validateCredentials(String resource, String user, String password) {
+							JenkinsClient jenkinsClient;
+
+							jenkinsClient = new JenkinsClient(resource, user, password);
+
+							return jenkinsClient.validateCredentials();
+						}
+					});
+
+			user = credentials.user;
+			password = credentials.password;
+		}
+
+		this.jenkinsClient = new JenkinsClient(jenkinsBaseUrl, user, password);
 	}
 
 	/**
-	 * @param pathJobsCreatedFile Path to the jobs created file. Can be null to
-	 *   disable jobs created file handling. If not called, the default jobs created
-	 *   file is jenkins-jobs-created.txt in the metadata directory of the workspace.
+	 * @param pathItemsCreatedFile Path to the items created file. Can be null to
+	 *   disable items created file handling. If not called, the default items created
+	 *   file is jenkins-items-created.txt in the metadata directory of the workspace.
 	 */
-	public void setPathJobsCreatedFile(Path pathJobsCreatedFile) {
-		this.pathJobsCreatedFile = pathJobsCreatedFile;
+	public void setPathItemsCreatedFile(Path pathItemsCreatedFile) {
+		this.pathItemsCreatedFile = pathItemsCreatedFile;
 	}
 
 	/**
-	 * @param jobsCreatedFileMode JobsCreatedFileMode. If not called, the default
-	 *   JobsCreatedFileMode is JobsCreatedFileMode.MERGE.
+	 * @param itemsCreatedFileMode ItemsCreatedFileMode. If not called, the default
+	 *   ItemsCreatedFileMode is {@link ItemsCreatedFileMode#MERGE}.
 	 */
-	public void setJobsCreatedFileMode(JobsCreatedFileMode jobsCreatedFileMode) {
-		this.jobsCreatedFileMode = jobsCreatedFileMode;
+	public void setItemsCreatedFileMode(ItemsCreatedFileMode itemsCreatedFileMode) {
+		this.itemsCreatedFileMode = itemsCreatedFileMode;
 	}
 
 	/**
@@ -244,7 +244,7 @@ public class SetupJenkinsJobs {
 				??? probably the plugin must anticipate these downstream references and accept a map of ModuleVersion to job names.
 				SetupJenkinsJobs.this.jenkinsClient.createUpdateJobFromTemplate(template, job, mapTemplateParam);
 
-				??? append to jobs created file
+				??? append to items created file
 			}
 		}
 	}
@@ -255,7 +255,7 @@ public class SetupJenkinsJobs {
 	public void performJob() {
 		SetupJenkinsJobs.ReferenceGraphVisitorSetupJob referenceGraphVisitorSetupJob;
 
-		??? handle already existing jobs created file.
+		??? handle already existing items created file.
 		??? may need to delete jobs and folders.
 
 		referenceGraphVisitorSetupJob = new SetupJenkinsJobs.ReferenceGraphVisitorSetupJob();

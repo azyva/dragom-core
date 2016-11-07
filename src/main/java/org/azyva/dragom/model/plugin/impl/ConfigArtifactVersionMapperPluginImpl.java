@@ -75,7 +75,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	/**
 	 * Logger for the class.
 	 */
-	private static Logger logger = LoggerFactory.getLogger(ConfigArtifactVersionMapperPluginImpl.class);
+	private static final Logger logger = LoggerFactory.getLogger(ConfigArtifactVersionMapperPluginImpl.class);
 
 	/**
 	 * Runtime property defining the ArtifactVersion to Version mapping keys.
