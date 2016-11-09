@@ -33,10 +33,12 @@ import java.util.Map;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 
 /**
@@ -69,9 +71,63 @@ public class JenkinsClient {
 	private String basicAuthBase64;
 
 	/**
+	 * Exception that wraps an HTTP status code.
+	 * <p>
+	 * Similar classes exist in different framework, but such frameworks are not used
+	 * here and introducing an otherwise useless dependency is not desirable.
+	 * <p>
+	 * javax.xml.ws.http.HTTPException might have been a good fit, but it does not
+	 * allow providing a description of the context, which is required here.
+	 */
+	public class HttpStatusException extends RuntimeException {
+		// To keep the compiler from complaining.
+		private static final long serialVersionUID = 0;
+
+		/**
+		 * Status code.
+		 */
+		private int statusCode;
+
+		/**
+		 * Constructor.
+		 *
+		 * @param message Message.
+		 * @param statusCode Status code.
+		 */
+		public HttpStatusException(String message, int statusCode) {
+			super(message);
+
+			this.statusCode = statusCode;
+		}
+
+		/**
+		 * @return Status code.
+		 */
+		public int getStatusCode() {
+			return this.statusCode;
+		}
+	}
+
+	/**
+	 * Types of items.
+	 */
+	public enum ItemType {
+		/**
+		 * Item is a folder.
+		 */
+		FOLDER,
+
+		/**
+		 * Item is not a folder. It is probably a job, but could be anything among the set
+		 * of item types supported by Jenkins (job template, job, etc.).
+		 */
+		NOT_FOLDER
+	}
+
+	/**
 	 * Build states.
 	 */
-	enum BuildState {
+	public enum BuildState {
 		/**
 		 * Build is queued and not running yet.
 		 */
@@ -394,12 +450,10 @@ public class JenkinsClient {
 				} else {
 					JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
-					throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+					throw new HttpStatusException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 				}
-			} catch (RuntimeException re) {
-				throw re;
-			} catch (Exception e) {
-				throw new RuntimeException(e);
+			} catch (IOException ioe) {
+				throw new RuntimeException(ioe);
 			}
 		}
 
@@ -410,7 +464,6 @@ public class JenkinsClient {
 			if (!this.buildStatePrevious.isOutOfQueue() && !this.getBuildState().isOutOfQueue()) {
 				return null;
 			}
-
 
 			return JenkinsClient.this.getForText(this.buildUrl + "consoleText");
 		}
@@ -438,46 +491,76 @@ public class JenkinsClient {
 		}
 	}
 
+	/**
+	 * @return Indicates if the credentials provided are valid.
+	 */
 	public boolean validateCredentials() {
+		try {
+			// XML is actually returned, but we are not interested in the output. We therefore
+			// avoid parsing it as XML.
+			this.getForText(this.baseUrl + "/api/xml");
 
+			return true;
+		} catch (HttpStatusException hse) {
+			// 401 means "invalid credentials".
+			if (hse.getStatusCode() == 401) {
+				return false;
+			} else {
+				throw hse;
+			}
+		}
 	}
 
 	/**
-	 * Verifies if a job exists.
+	 * Returns the {@link ItemType}.
+	 * <p>
+	 * Returns null if the item does not exist.
 	 *
-	 * @param job Job (full name).
+	 * @param item Item (full name).
 	 * @return See description.
 	 */
-	public boolean isJobExist(String job) {
-		URL url;
-		HttpURLConnection httpUrlConnection;
-		int responseCode;
+	public ItemType getItemType(String item) {
+		Document document;
 
 		try {
-			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/config.xml");
-			httpUrlConnection = (HttpURLConnection)url.openConnection();
+			document = this.getForXml(this.baseUrl + JenkinsClient.convertItemToPath(item) + "/api/xml");
 
-			if (this.basicAuthBase64 != null) {
-				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			return document.getDocumentElement().getNodeName().equals("folder") ? ItemType.FOLDER : ItemType.NOT_FOLDER;
+		} catch (HttpStatusException hse) {
+			if (hse.getStatusCode() == 404) {
+				return null;
 			}
 
-			httpUrlConnection.setRequestMethod("GET");
-			httpUrlConnection.setInstanceFollowRedirects(false);
+			throw hse;
+		}
+	}
 
-			httpUrlConnection.connect();
-			responseCode = httpUrlConnection.getResponseCode();
+	/**
+	 * Deletes an item.
+	 *
+	 * @param item Item (full name).
+	 * @return Indicates if the item existed and was deleted.
+	 */
+	public boolean deleteItem(String item) {
+		try {
+			this.post(this.baseUrl + JenkinsClient.convertItemToPath(item) + "/doDelete");
 
-			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
+			// It seems like Jenkins returns 302 (found) when the job is properly deleted.
+			// this is handled below. We therefore should never get here (2xx status codes).
+			// But we avoid being too strict.
+			return true;
+		} catch (HttpStatusException hse) {
+			int statusCode;
 
-			if (responseCode == 200) {
+			statusCode = hse.getStatusCode();
+
+			if (statusCode == 302) {
 				return true;
-			} else if (responseCode == 404) {
+			} else if (statusCode == 404) {
 				return false;
 			} else {
-				throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw hse;
 			}
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
 		}
 	}
 
@@ -495,7 +578,7 @@ public class JenkinsClient {
 		int responseCode;
 
 		try {
-			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(template) + "/instantiate?job=" + URLEncoder.encode(job, "UTF-8"));
+			url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(template) + "/instantiate?job=" + URLEncoder.encode(job, "UTF-8"));
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
 			if (this.basicAuthBase64 != null) {
@@ -535,7 +618,7 @@ public class JenkinsClient {
 			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
 			if (responseCode != 200) {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
@@ -570,7 +653,7 @@ public class JenkinsClient {
 				jobName = job.substring(indexJobName + 1);
 			}
 
-			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(folderName) + "/createItem?name=" + URLEncoder.encode(jobName, "UTF-8"));
+			url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(folderName) + "/createItem?name=" + URLEncoder.encode(jobName, "UTF-8"));
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
 			if (this.basicAuthBase64 != null) {
@@ -599,7 +682,7 @@ public class JenkinsClient {
 			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
 			if (responseCode != 200) {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
@@ -621,7 +704,7 @@ public class JenkinsClient {
 		int responseCode;
 
 		try {
-			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/config.xml");
+			url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(job) + "/config.xml");
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
 
 			if (this.basicAuthBase64 != null) {
@@ -650,7 +733,7 @@ public class JenkinsClient {
 			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
 			if (responseCode != 200) {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
@@ -664,51 +747,18 @@ public class JenkinsClient {
 	 * @param readerConfig Reader providing the configuration of the job.
 	 */
 	public void createUpdateJob(String job, Reader readerConfig) {
-		if (this.isJobExist(job)) {
+		ItemType itemType;
+
+		itemType = this.getItemType(job);
+
+		if (itemType != null) {
+			if (itemType == ItemType.FOLDER) {
+				throw new RuntimeException("Item " + job + " exists and is a folder. It cannot be updated as a job.");
+			}
+
 			this.updateJob(job, readerConfig);
 		} else {
 			this.createJob(job, readerConfig);
-		}
-	}
-
-	/**
-	 * Deletes a job.
-	 *
-	 * @param job Job (full name).
-	 * @return Indicates if the job existed and was deleted.
-	 */
-	public boolean deleteJob(String job) {
-		URL url;
-		HttpURLConnection httpUrlConnection;
-		int responseCode;
-
-		try {
-			url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/doDelete");
-			httpUrlConnection = (HttpURLConnection)url.openConnection();
-
-			if (this.basicAuthBase64 != null) {
-				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
-			}
-
-			httpUrlConnection.setRequestMethod("POST");
-			httpUrlConnection.setInstanceFollowRedirects(false);
-
-			httpUrlConnection.connect();
-			responseCode = httpUrlConnection.getResponseCode();
-
-			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
-
-			// It seems like Jenkins returns 302 (found) when the job is properly deleted. We
-			// test for 200 also to be clean.
-			if ((responseCode == 200) || (responseCode == 302)) {
-				return true;
-			} else if (responseCode == 404) {
-				return false;
-			} else {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
-			}
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
 		}
 	}
 
@@ -730,7 +780,7 @@ public class JenkinsClient {
 			indParams = ((mapBuildParam != null) && !mapBuildParam.isEmpty());
 
 			if (indParams) {
-				url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/buildWithParameters");
+				url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(job) + "/buildWithParameters");
 
 				stringBuilderParams = new StringBuilder();
 
@@ -743,7 +793,7 @@ public class JenkinsClient {
 
 				stringBuilderParams.setLength(stringBuilderParams.length() - 1);
 			} else {
-				url = new URL(this.baseUrl + JenkinsClient.convertJobToPath(job) + "/build");
+				url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(job) + "/build");
 			}
 
 			httpUrlConnection = (HttpURLConnection)url.openConnection();
@@ -777,29 +827,96 @@ public class JenkinsClient {
 			// It seems like Jenkins returns 302 (found) when the job is properly deleted. We
 			// test for 200 also to be clean.
 			if ((responseCode == 200) || (responseCode == 201)) {
-				return new Build(this.baseUrl + JenkinsClient.convertJobToPath(job), job, httpUrlConnection.getHeaderField("Location"));
+				return new Build(this.baseUrl + JenkinsClient.convertItemToPath(job), job, httpUrlConnection.getHeaderField("Location"));
 			} else {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
 		} catch (IOException ioe) {
 			throw new RuntimeException(ioe);
 		}
 	}
 
-	public boolean isFolderExist(String folder) {
-
-	}
-
 	public boolean isFolderEmpty(String folder) {
+		Document document;
+
+		document = this.getForXml(this.baseUrl + JenkinsClient.convertItemToPath(folder) + "/api/xml");
+
+		return document.getElementsByTagName("job").getLength() != 0;
 
 	}
 
+	/**
+	 * Creates a simple folder.
+	 *
+	 * @param folder Folder (full name).
+	 * @return Indicates if the folder was created. false is returned if it already
+	 *   exited.
+	 */
 	public boolean createSimpleFolder(String folder) {
+		ItemType itemType;
+		int indexFolderName;
+		String parentFolderName;
+		String folderName;
+		URL url;
+		HttpURLConnection httpUrlConnection;
+		OutputStream outputStream;
+		int responseCode;
 
-	}
+		itemType = this.getItemType(folder);
 
-	public boolean deleteFolder(String folder) {
+		if (itemType != null) {
+			if (itemType == ItemType.FOLDER) {
+				return false;
+			} else {
+				throw new RuntimeException("Item " + folder + " already exists but is not a folder.");
+			}
+		}
 
+		try {
+			indexFolderName = folder.lastIndexOf('/');
+
+			if (indexFolderName == -1) {
+				parentFolderName = "";
+				folderName = folder;
+			} else {
+				parentFolderName = folder.substring(0, indexFolderName);
+				folderName = folder.substring(indexFolderName + 1);
+			}
+
+			url = new URL(this.baseUrl + JenkinsClient.convertItemToPath(parentFolderName) + "/createItem?name=" + URLEncoder.encode(folderName, "UTF-8"));
+			httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+			if (this.basicAuthBase64 != null) {
+				httpUrlConnection.setRequestProperty("Authorization", "Basic " + this.basicAuthBase64);
+			}
+
+			httpUrlConnection.setRequestMethod("POST");
+			httpUrlConnection.setInstanceFollowRedirects(false);
+			httpUrlConnection.setDoOutput(true);
+			httpUrlConnection.setRequestProperty("Content-Type", "application/xml");
+
+			httpUrlConnection.connect();
+
+			outputStream = httpUrlConnection.getOutputStream();
+
+			// We try to provide an as simple as possible folder config.xml, expecting Jenkins
+			// to complete missing information with appropriate defaults.
+			outputStream.write("<com.cloudbees.hudson.plugins.folder.Folder plugin=\"cloudbees-folder\"/>".getBytes("UTF-8"));
+
+			outputStream.close();
+
+			responseCode = httpUrlConnection.getResponseCode();
+
+			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
+
+			if (responseCode != 200) {
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
+			}
+
+			return true;
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
+		}
 	}
 
 	/**
@@ -845,11 +962,9 @@ public class JenkinsClient {
 			} else {
 				JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
-				throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
-		} catch (RuntimeException re) {
-			throw re;
-		} catch (Exception e) {
+		} catch (IOException | ParserConfigurationException | SAXException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -902,12 +1017,10 @@ public class JenkinsClient {
 			} else {
 				JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
-				throw new RuntimeException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("GET " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
-		} catch (RuntimeException re) {
-			throw re;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
 		}
 	}
 
@@ -940,24 +1053,22 @@ public class JenkinsClient {
 			JenkinsClient.flushInputErrorStreams(httpUrlConnection);
 
 			if (responseCode != 200) {
-				throw new RuntimeException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.');
+				throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
 			}
-		} catch (RuntimeException re) {
-			throw re;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		} catch (IOException ioe) {
+			throw new RuntimeException(ioe);
 		}
 	}
 
 	/**
-	 * Converts a job (full name) to a job path within Jenkins (required to build
+	 * Converts an item (full name) to an item path within Jenkins (required to build
 	 * various URLs).
 	 *
-	 * @param job Job (full name).
-	 * @return Job path.
+	 * @param item Item (full name).
+	 * @return Item path.
 	 */
-	private static String convertJobToPath(String job) {
-		return "/job/" + job.replaceAll("/", "/job/");
+	private static String convertItemToPath(String item) {
+		return "/job/" + item.replaceAll("/", "/job/");
 	}
 
 	/**

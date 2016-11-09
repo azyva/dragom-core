@@ -30,9 +30,16 @@ public class IcJenkinsJobInfoPlugin extends SimpleJenkinsJobInfoPluginBaseImpl i
 	}
 
 	@Override
-	public Reader getConfig(ReferenceGraph referenceGraph, Version version) {
+	public Reader getReaderConfig(ReferenceGraph referenceGraph, Version version) {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
 }
+
+
+/*
+Take information from dragom.properties file in module (maven version, etc.)
+Need to have site-specific fonctionality
+- GroupId, artifactId is too specific to Desjardins.
+Maybe have some kind of simple plugin that simply builds the config.xml file.
+*/
