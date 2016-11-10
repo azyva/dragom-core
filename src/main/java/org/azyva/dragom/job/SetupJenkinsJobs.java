@@ -41,14 +41,15 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.jenkins.JenkinsClient;
+import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
-import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.JenkinsJobInfoPlugin;
 import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.reference.ReferencePath;
+import org.azyva.dragom.util.ServiceLocator;
 
 /**
  * Sets up jobs in Jenkins based on the {@link ModuleVersion's} in a
@@ -82,7 +83,7 @@ import org.azyva.dragom.reference.ReferencePath;
 public class SetupJenkinsJobs {
 	/**
 	 * Runtime property specifying the Jenkins base URL (e.g.:
-	 * https://acme.com/jenkins). Accessed on the root {@link NodePath}.
+	 * https://acme.com/jenkins). Accessed on the root {@link ClassificationNode}.
 	 */
 	private static final String RUNTIME_PROPERTY_JENKINS_BASE_URL = "JENKINS_BASE_URL";
 
@@ -302,6 +303,7 @@ public class SetupJenkinsJobs {
 
 					for (String job: this.setJobCreated) {
 						bufferedWriter.write(job);
+						bufferedWriter.write('\n');
 					}
 
 					bufferedWriter.close();
@@ -333,17 +335,18 @@ public class SetupJenkinsJobs {
 
 			indexJobName = job.lastIndexOf('/');
 
-			// When a job is marked as created, certainly its parent folder is implicitly
-			// referenced, but not necessarily created. Whether a folder is created or not is
-			// must be handled by the caller.
+			if (indexJobName != -1) {
+				// When a job is marked as created, certainly its parent folder is implicitly
+				// referenced, but not necessarily created. Whether a folder is created or not is
+				// must be handled by the caller.
 
-			// Whether the parent folder is created or not must be handled by the caller. That
-			// is why this.setFolderCreated is not modified. But when a job is marked as created
-			// its parent folder, if ever it was previously created and is present in
-			// this.setFolderNotReferencedSinceLoaded, it must be removed.
+				// Whether the parent folder is created or not must be handled by the caller. That
+				// is why this.setFolderCreated is not modified. But when a job is marked as created
+				// its parent folder, if ever it was previously created and is present in
+				// this.setFolderNotReferencedSinceLoaded, it must be removed.
 
-			this.setFolderNotReferencedSinceLoaded.remove(job.substring(0, indexJobName));
-
+				this.setFolderNotReferencedSinceLoaded.remove(job.substring(0, indexJobName));
+			}
 		}
 
 		/**
@@ -435,6 +438,7 @@ public class SetupJenkinsJobs {
 	 * JenkinsClient.
 	 */
 	private JenkinsClient jenkinsClient;
+
 	/**
 	 * Constructor.
 	 *
@@ -473,7 +477,10 @@ public class SetupJenkinsJobs {
 						public boolean validateCredentials(String resource, String user, String password) {
 							JenkinsClient jenkinsClient;
 
-							jenkinsClient = new JenkinsClient(resource, user, password);
+							jenkinsClient = ServiceLocator.getService(JenkinsClient.class);
+							jenkinsClient.setBaseUrl(jenkinsBaseUrl);
+							jenkinsClient.setUser(user);
+							jenkinsClient.setPassword(password);
 
 							return jenkinsClient.validateCredentials();
 						}
@@ -483,7 +490,10 @@ public class SetupJenkinsJobs {
 			password = credentials.password;
 		}
 
-		this.jenkinsClient = new JenkinsClient(jenkinsBaseUrl, user, password);
+		this.jenkinsClient = ServiceLocator.getService(JenkinsClient.class);
+		this.jenkinsClient.setBaseUrl(jenkinsBaseUrl);
+		this.jenkinsClient.setUser(user);
+		this.jenkinsClient.setPassword(password);
 	}
 
 	/**
@@ -556,23 +566,25 @@ public class SetupJenkinsJobs {
 
 				indexJobName = job.lastIndexOf('/');
 
-				folder = job.substring(0, indexJobName);
+				if (indexJobName != -1) {
+					folder = job.substring(0, indexJobName);
 
-				itemType = SetupJenkinsJobs.this.jenkinsClient.getItemType(folder);
+					itemType = SetupJenkinsJobs.this.jenkinsClient.getItemType(folder);
 
-				if ((itemType != null) && (itemType == JenkinsClient.ItemType.NOT_FOLDER)) {
-					// We really do not expect to get here since we took the parent path of a job,
-					// which is necessarily a folder.
-					throw new RuntimeException("Unexpected type for item " + folder + '.');
-				}
+					if ((itemType != null) && (itemType == JenkinsClient.ItemType.NOT_FOLDER)) {
+						// We really do not expect to get here since we took the parent path of a job,
+						// which is necessarily a folder.
+						throw new RuntimeException("Unexpected type for item " + folder + '.');
+					}
 
-				if (itemType == null) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_FOLDER_NEED_CREATING), referencePath.getLeafModuleVersion(), folder));
+					if (itemType == null) {
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_FOLDER_NEED_CREATING), referencePath.getLeafModuleVersion(), folder));
 
-					SetupJenkinsJobs.this.jenkinsClient.createSimpleFolder(folder);
+						SetupJenkinsJobs.this.jenkinsClient.createSimpleFolder(folder);
 
-					if (SetupJenkinsJobs.this.itemsCreatedFileManager != null) {
-						SetupJenkinsJobs.this.itemsCreatedFileManager.folderCreated(folder);
+						if (SetupJenkinsJobs.this.itemsCreatedFileManager != null) {
+							SetupJenkinsJobs.this.itemsCreatedFileManager.folderCreated(folder);
+						}
 					}
 				}
 			}
@@ -604,10 +616,9 @@ public class SetupJenkinsJobs {
 	 */
 	public void performJob() {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+		SetupJenkinsJobs.ReferenceGraphVisitorSetupJob referenceGraphVisitorSetupJob;
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
-		SetupJenkinsJobs.ReferenceGraphVisitorSetupJob referenceGraphVisitorSetupJob;
 
 		if (this.itemsCreatedFileManager != null) {
 			if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.IGNORE) {
@@ -662,9 +673,9 @@ public class SetupJenkinsJobs {
 						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_FOLDER), folder));
 
 						this.jenkinsClient.deleteItem(folder);
+						this.itemsCreatedFileManager.folderDeleted(folder);
 					}
 
-					this.itemsCreatedFileManager.folderDeleted(folder);
 				}
 			} else if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE_NO_DELETE_FOLDER) {
 				for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {

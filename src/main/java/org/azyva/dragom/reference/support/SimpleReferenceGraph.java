@@ -32,6 +32,7 @@ import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
+import org.azyva.dragom.reference.ReferenceGraph.VisitControl;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.ModuleReentryAvoider;
 
@@ -252,7 +253,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			if (!indDepthFirst && (!isAlreadyProcessed || (reentryMode != ReentryMode.NO_REENTRY))) {
 				visitControl = visitor.visit(this, referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
 
-				if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+				if ((visitControl == VisitControl.ABORT) || (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
 					return visitControl;
 				}
 			}
@@ -263,7 +264,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 				if (referenceGraphNode.listReference != null) {
 					visitControl = visitor.visit(this, referencePath, VisitAction.ENUM_SET_STEP_IN);
 
-					if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+					if ((visitControl == VisitControl.ABORT) || (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
 						return visitControl;
 					}
 
@@ -279,7 +280,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 
 					visitControl = visitor.visit(this, referencePath, VisitAction.ENUM_SET_STEP_OUT);
 
-					if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+					if ((visitControl == VisitControl.ABORT) || (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
 						return visitControl;
 					}
 
@@ -292,12 +293,12 @@ public class SimpleReferenceGraph implements ReferenceGraph {
 			if (indDepthFirst && (!isAlreadyProcessed || (reentryMode != ReentryMode.NO_REENTRY))) {
 				visitControl = visitor.visit(this, referencePath, isAlreadyProcessed ? (isMatched ? VisitAction.ENUM_SET_REPEATED_VISIT_MATCHED : VisitAction.ENUM_SET_REPEATED_VISIT) : (isMatched ? VisitAction.ENUM_SET_VISIT_MATCHED : VisitAction.ENUM_SET_VISIT));
 
-				if ((visitControl == VisitControl.ABORT) && (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
+				if ((visitControl == VisitControl.ABORT) || (visitControl == VisitControl.SKIP_CURRENT_ROOT)) {
 					return visitControl;
 				}
 
 				if (visitControl == VisitControl.SKIP_CHILDREN) {
-					throw new RuntimeException("VisitControl.SKIP_CHILDREN not allowed for VisitAction.STEP_OUT.");
+					throw new RuntimeException("VisitControl.SKIP_CHILDREN not allowed for depth-first traversal.");
 				}
 			}
 

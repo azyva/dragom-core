@@ -288,6 +288,11 @@ public final class Util {
 	/**
 	 * See description in ResourceBundle.
 	 */
+	public static final String MSG_PATTERN_KEY_STARTING_JOB = "STARTING_JOB";
+
+	/**
+	 * See description in ResourceBundle.
+	 */
 	public static final String MSG_PATTERN_KEY_JOB_COMPLETED = "JOB_COMPLETED";
 
 	/**

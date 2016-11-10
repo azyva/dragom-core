@@ -365,7 +365,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
-				throw new RuntimeException("The runtime property ARTIFACT_VERSION_TO_VERSION_MAPPING_ " + mappingKey + " is not defined for module " + module + '.');
+				throw new RuntimeException("The runtime property ARTIFACT_VERSION_TO_VERSION_MAPPING." + mappingKey + " is not defined for module " + module + '.');
 			}
 
 			arrayMappingComponent = property.split(":");
@@ -416,7 +416,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
-				throw new RuntimeException("The runtime property VERSION_TO_ARTIFACT_VERSION_MAPPING_ " + mappingKey + " is not defined for module " + module + '.');
+				throw new RuntimeException("The runtime property VERSION_TO_ARTIFACT_VERSION_MAPPING." + mappingKey + " is not defined for module " + module + '.');
 			}
 
 			arrayMappingComponent = property.split(":");
