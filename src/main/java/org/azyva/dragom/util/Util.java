@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
@@ -334,6 +335,13 @@ public final class Util {
 	 * A Boolean is used in order to have 3 states and implement a cache.
 	 */
 	private static Boolean indWindows;
+
+	/**
+	 * Indicates that we are running on a Posix-compliant system.
+	 * <p>
+	 * A Boolean is used in order to have 3 states and implement a cache.
+	 */
+	private static Boolean indPosix;
 
 	/**
 	 * Used by {@link #spaces}.
@@ -1504,5 +1512,17 @@ public final class Util {
 		Util.readWriteLockStringBuilderSpaces.readLock().unlock();
 
 		return spaces;
+	}
+
+	/**
+	 * @return Indicates if the system is Posix compliant, for file operations at
+	 *   least.
+	 */
+	public static boolean isPosix() {
+		if (Util.indPosix == null) {
+			Util.indPosix = Boolean.valueOf(FileSystems.getDefault().supportedFileAttributeViews().contains("posix"));
+		}
+
+		return Util.indPosix.booleanValue();
 	}
 }
