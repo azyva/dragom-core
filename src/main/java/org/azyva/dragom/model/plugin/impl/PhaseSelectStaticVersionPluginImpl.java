@@ -30,11 +30,11 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ArtifactVersionManagerPlugin;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
-import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 
 /**
- * Factory for NewStaticVersionPlugin that implements a strategy for a development
+ * Factory for SelectStaticVersionPlugin that implements a strategy for a development
  * workflow that uses development phases.
  *
  * The idea is as follows. When a (development) project starts, a new dynamic
@@ -48,13 +48,13 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
  * ArtifactVersion are therefore created (by continuous integration builds).
  *
  * At some point development for that project proceeds to a new phase
- * iteration02. CreateStaticVersion and this NewStaticVersionPlugin are used to
+ * iteration02. Release and this SelectStaticVersionPlugin are used to
  * freeze the previous phase iteration01 before making that transition. This
  * plugin is therefore invoked with the runtime property CURRENT_PHASE set to the
  * current phase iteration01 so that a new static Version
  * S/develop-myproject-iteration01 is created.
  *
- * During the creation of that Version, CreateStaticVersion attempts to adjust the
+ * During the creation of that Version, Release attempts to adjust the
  * ArtifactVersion within the module. But the ArtifactVersionMapperPlugin is
  * expected to be configured in such a way that the ArtifactVersion corresponding
  * to the new static Version is so that no adjustment is required. Here we
@@ -69,20 +69,20 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
  * SwitchToDynamicVersion and the NewDynamicVersionPhasePlugin sibling are used to
  * change the ArtifactVersion to develop-myproject-iteration02-SNAPSHOT (while
  * keeping the same dynamic Version D/develop-myproject). See
- * PhaseNewDynamicVersionPluginImpl for more information.
+ * PhaseSelectDynamicVersionPluginImpl for more information.
  *
  * @author David Raymond
  */
-public class PhaseNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseImpl implements NewStaticVersionPlugin {
+public class PhaseSelectStaticVersionPluginImpl extends SelectStaticVersionPluginBaseImpl implements SelectStaticVersionPlugin {
 	private static final String RUNTIME_PROPERTY_CURRENT_PHASE = "CURRENT_PHASE";
 
-	public PhaseNewStaticVersionPluginImpl(Module module) {
+	public PhaseSelectStaticVersionPluginImpl(Module module) {
 		super(module);
 	}
 
 	@Override
-	public Version getVersionNewStatic(Version versionDynamic) {
-		Version versionNewStatic;
+	public Version selectStaticVersion(Version versionDynamic) {
+		Version versionStaticSelected;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		String currentPhase;
 		ScmPlugin scmPlugin;
@@ -90,17 +90,17 @@ public class PhaseNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseI
 		this.validateVersionDynamic(versionDynamic);
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-		currentPhase = runtimePropertiesPlugin.getProperty(this.getModule(), PhaseNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE);
+		currentPhase = runtimePropertiesPlugin.getProperty(this.getModule(), PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE);
 
 		if (currentPhase == null) {
-			throw new RuntimeException("The property " + PhaseNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE + " must be defined in the context of module " + this.getModule() + '.');
+			throw new RuntimeException("The property " + PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE + " must be defined in the context of module " + this.getModule() + '.');
 		}
 
-		versionNewStatic = new Version(VersionType.STATIC, versionDynamic.getVersion() + '-' + currentPhase);
+		versionStaticSelected = new Version(VersionType.STATIC, versionDynamic.getVersion() + '-' + currentPhase);
 
 		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
-		if (!scmPlugin.isVersionExists(versionNewStatic)) {
+		if (!scmPlugin.isVersionExists(versionStaticSelected)) {
 			ArtifactVersionManagerPlugin artifactVersionManagerPlugin;
 
 			artifactVersionManagerPlugin = this.getModule().getNodePlugin(ArtifactVersionManagerPlugin.class, null);
@@ -108,7 +108,7 @@ public class PhaseNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseI
 			if (artifactVersionManagerPlugin != null) {
 				Path pathModuleWorkspace;
 				ArtifactVersion artifactVersion;
-				ArtifactVersion artifactVersionFromNewStaticVersion;
+				ArtifactVersion artifactVersionFromSelectedStaticVersion;
 				ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
 				WorkspacePlugin workspacePlugin;
 
@@ -117,14 +117,14 @@ public class PhaseNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseI
 				workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
 				artifactVersionMapperPlugin = this.getModule().getNodePlugin(ArtifactVersionMapperPlugin.class, null);
-				artifactVersionFromNewStaticVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(versionNewStatic);
+				artifactVersionFromSelectedStaticVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(versionStaticSelected);
 
-				if (!artifactVersion.equals(artifactVersionFromNewStaticVersion)) {
-					throw new RuntimeException("The current artifact version " + artifactVersion + " for the dynamic version " + versionDynamic + " of module " + this.getModule() + " does not correspond to the artifact version " + artifactVersionFromNewStaticVersion + " mapped from the new static version " + versionNewStatic + '.');
+				if (!artifactVersion.equals(artifactVersionFromSelectedStaticVersion)) {
+					throw new RuntimeException("The current artifact version " + artifactVersion + " for the dynamic version " + versionDynamic + " of module " + this.getModule() + " does not correspond to the artifact version " + artifactVersionFromSelectedStaticVersion + " mapped from the new static version " + versionStaticSelected + '.');
 				}
 			}
 		}
 
-		return versionNewStatic;
+		return versionStaticSelected;
 	}
 }

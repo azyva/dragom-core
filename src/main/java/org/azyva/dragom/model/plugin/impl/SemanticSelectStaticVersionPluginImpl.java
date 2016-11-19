@@ -31,8 +31,8 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
-import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Factory for NewStaticVersionPlugin that implements a strategy based on semantic
+ * Factory for SelectStaticVersionPlugin that implements a strategy based on semantic
  * versioning.
  *
  * Specific static Version and static Version prefix are also supported for maximum
@@ -56,8 +56,8 @@ import org.slf4j.LoggerFactory;
  *
  * @author David Raymond
  */
-public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBaseImpl implements NewStaticVersionPlugin {
-	private static final Logger logger = LoggerFactory.getLogger(SemanticNewStaticVersionPluginImpl.class);
+public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPluginBaseImpl implements SelectStaticVersionPlugin {
+	private static final Logger logger = LoggerFactory.getLogger(SemanticSelectStaticVersionPluginImpl.class);
 
 	/**
 	 * Model property specifying the prefix for semantic Version's. Static Versions
@@ -79,7 +79,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 
 	/**
 	 * Runtime property of type AlwaysNeverAskUserResponse that indicates if a
-	 * previously established semantic Version type can be reused.
+	 * previously selected semantic Version type can be reused.
 	 */
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE = "CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE";
 
@@ -132,7 +132,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SemanticNewStaticVersionPluginImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SemanticSelectStaticVersionPluginImpl.class.getName() + "ResourceBundle");
 
 	private enum NewSemanticVersionType {
 		MINOR,
@@ -144,17 +144,17 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 	 */
 	private String semanticVersionPrefix;
 
-	public SemanticNewStaticVersionPluginImpl(Module module) {
+	public SemanticSelectStaticVersionPluginImpl(Module module) {
 		super(module);
 
-		this.setInitialRevision(SemanticNewStaticVersionPluginImpl.INITIAL_REVISION);
-		this.setDefaultRevisionDecimalPositionCount(SemanticNewStaticVersionPluginImpl.DEFAULT_REVISION_DECIMAL_POSITION_COUNT);
+		this.setInitialRevision(SemanticSelectStaticVersionPluginImpl.INITIAL_REVISION);
+		this.setDefaultRevisionDecimalPositionCount(SemanticSelectStaticVersionPluginImpl.DEFAULT_REVISION_DECIMAL_POSITION_COUNT);
 
-		this.semanticVersionPrefix = module.getProperty(SemanticNewStaticVersionPluginImpl.MODEL_PROPERTY_SEMANTIC_VERSION_PREFIX);
+		this.semanticVersionPrefix = module.getProperty(SemanticSelectStaticVersionPluginImpl.MODEL_PROPERTY_SEMANTIC_VERSION_PREFIX);
 	}
 
 	@Override
-	public Version getVersionNewStatic(Version versionDynamic) {
+	public Version selectStaticVersion(Version versionDynamic) {
 		Version versionStaticPrefix;
 		Version versionNewStatic;
 
@@ -219,7 +219,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 		listVersionStatic = scmPlugin.getListVersionStatic();
 		Collections.sort(listVersionStatic, versionClassifierPlugin);
 
-		SemanticNewStaticVersionPluginImpl.logger.info("Sorted list of available static Version's for Module " + module + ": " + listVersionStatic);
+		SemanticSelectStaticVersionPluginImpl.logger.info("Sorted list of available static Version's for Module " + module + ": " + listVersionStatic);
 
 		do {
 			if (listVersionStatic.isEmpty()) {
@@ -228,7 +228,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 			} else {
 				versionStaticMax = listVersionStatic.get(listVersionStatic.size() - 1);
 
-				SemanticNewStaticVersionPluginImpl.logger.info("Largest available static Version for Module " + module + ": " + versionStaticMax);
+				SemanticSelectStaticVersionPluginImpl.logger.info("Largest available static Version for Module " + module + ": " + versionStaticMax);
 
 				// Using VersionClassifierPlugin above is a convenient way to find the largest
 				// static Version. But here we interpret Version's in a numeric semantic way and
@@ -238,7 +238,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 				arraySemanticVersionComponentMax = this.getArraySemanticVersionComponent(versionStaticMax);
 
 				if (arraySemanticVersionComponentMax == null) {
-					SemanticNewStaticVersionPluginImpl.logger.info("The largest available static Version " + versionStaticMax + " for Module " + module + " cannot be interpreted numerically and semantically. We do not use it and try the next one.");
+					SemanticSelectStaticVersionPluginImpl.logger.info("The largest available static Version " + versionStaticMax + " for Module " + module + " cannot be interpreted numerically and semantically. We do not use it and try the next one.");
 
 					versionStaticMax = null;
 
@@ -273,11 +273,11 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 
 				// First we check if a specific new semantic version type is specified for the module.
 
-				runtimeProperty = runtimePropertiesPlugin.getProperty(module, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_NEW_SEMANTIC_VERSION_TYPE);
+				runtimeProperty = runtimePropertiesPlugin.getProperty(module, SemanticSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_NEW_SEMANTIC_VERSION_TYPE);
 
 				if (runtimeProperty != null) {
 					newSemanticVersionType = NewSemanticVersionType.valueOf(runtimeProperty);
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_SPECIFIED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionType));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_SPECIFIED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionType));
 				} else {
 					String stringNewSemanticVersionType;
 					AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseNewSemanticVersionType;
@@ -285,9 +285,9 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 
 					// If not, we check for reusing a previously specified semantic version type.
 
-					alwaysNeverAskUserResponseCanReuseNewSemanticVersionType = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE));
+					alwaysNeverAskUserResponseCanReuseNewSemanticVersionType = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, SemanticSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE));
 
-					runtimeProperty = runtimePropertiesPlugin.getProperty(module, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE);
+					runtimeProperty = runtimePropertiesPlugin.getProperty(module, SemanticSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE);
 
 					if (runtimeProperty != null) {
 						newSemanticVersionTypeReuse = NewSemanticVersionType.valueOf(runtimeProperty);
@@ -304,14 +304,14 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 					}
 
 					if (alwaysNeverAskUserResponseCanReuseNewSemanticVersionType.isAlways()) {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_AUTOMATICALLY_REUSED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionTypeReuse));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_AUTOMATICALLY_REUSED), new ModuleVersion(module.getNodePath(), versionDynamic), newSemanticVersionTypeReuse));
 						newSemanticVersionType = newSemanticVersionTypeReuse;
 					} else {
 						do {
 							if (newSemanticVersionTypeReuse == null) {
-								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax));
+								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfo(MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax));
 							} else {
-								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE_WITH_DEFAULT), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax, newSemanticVersionTypeReuse), newSemanticVersionTypeReuse.toString());
+								stringNewSemanticVersionType = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_INPUT_NEW_SEMANTIC_VERSION_TYPE_WITH_DEFAULT), new ModuleVersion(module.getNodePath(), versionDynamic), versionStaticMax, newSemanticVersionTypeReuse), newSemanticVersionTypeReuse.toString());
 							}
 
 							stringNewSemanticVersionType = stringNewSemanticVersionType.toUpperCase().trim();
@@ -329,23 +329,23 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 							}
 
 							if (newSemanticVersionTypeReuse == null) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_INVALID), stringNewSemanticVersionType));
+								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_NEW_SEMANTIC_VERSION_TYPE_INVALID), stringNewSemanticVersionType));
 								continue;
 							}
 
 							break;
 						} while (true);
 
-						runtimePropertiesPlugin.setProperty(null, SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE, newSemanticVersionTypeReuse.toString());
+						runtimePropertiesPlugin.setProperty(null, SemanticSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE, newSemanticVersionTypeReuse.toString());
 						newSemanticVersionType = newSemanticVersionTypeReuse;
 
 						// The result is not useful. We only want to adjust the runtime property which
 						// will be reused the next time around.
 						Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
 								runtimePropertiesPlugin,
-								SemanticNewStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE,
+								SemanticSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CAN_REUSE_NEW_SEMANTIC_VERSION_TYPE,
 								userInteractionCallbackPlugin,
-								MessageFormat.format(SemanticNewStaticVersionPluginImpl.resourceBundle.getString(SemanticNewStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE), newSemanticVersionTypeReuse));
+								MessageFormat.format(SemanticSelectStaticVersionPluginImpl.resourceBundle.getString(SemanticSelectStaticVersionPluginImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_NEW_SEMANTIC_VERSION_TYPE), newSemanticVersionTypeReuse));
 					}
 				}
 
@@ -387,7 +387,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 			if (version.startsWith(this.semanticVersionPrefix)) {
 				version = version.substring(this.semanticVersionPrefix.length());
 			} else {
-				SemanticNewStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because it does not start with the prefix " + this.semanticVersionPrefix + ". It is ignored.");
+				SemanticSelectStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because it does not start with the prefix " + this.semanticVersionPrefix + ". It is ignored.");
 				return null;
 			}
 		}
@@ -395,7 +395,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 		arrayStringSemanticVersionComponent = version.split("\\.");
 
 		if ((arrayStringSemanticVersionComponent.length < 2) || (arrayStringSemanticVersionComponent.length > 3)) {
-			SemanticNewStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because it does not have 2 or 3 components. It is ignored.");
+			SemanticSelectStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because it does not have 2 or 3 components. It is ignored.");
 			return null;
 		}
 
@@ -408,7 +408,7 @@ public class SemanticNewStaticVersionPluginImpl extends NewStaticVersionPluginBa
 			try {
 				arraySemanticVersionComponent[i] = Integer.parseInt(arrayStringSemanticVersionComponent[i]);
 			} catch (NumberFormatException nfe) {
-				SemanticNewStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because component " + (i + 1) + " cannot be parsed into an integer. It is ignored.");
+				SemanticSelectStaticVersionPluginImpl.logger.info("Static version " + versionStatic + " of module " + this.getModule() + " cannot be parsed into a semantic version because component " + (i + 1) + " cannot be parsed into an integer. It is ignored.");
 				return null;
 			}
 		}

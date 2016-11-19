@@ -31,9 +31,9 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.ModulePlugin;
-import org.azyva.dragom.model.plugin.NewStaticVersionPlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.PluginFactory;
+import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 
@@ -46,7 +46,7 @@ import org.azyva.dragom.util.Util;
  * expected to be defined for a given {@link Node}.
  * <p>
  * However for some NodePlugin's this makes sense. For example different
- * {@link NewStaticVersionPlugin}'s can implement different algorithms for
+ * {@link SelectStaticVersionPlugin}'s can implement different algorithms for
  * selecting the new static Version (release Version, temporary development
  * Version, etc.) which need to be selected at runtime.
  * <p>
@@ -87,7 +87,7 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
 
 	/**
 	 * Prefix for the runtime property of type AlwaysNeverAskUserResponse that
-	 * indicates if a previously established plugin ID can be reused.
+	 * indicates if a previously selected plugin ID can be reused.
 	 */
 	private static final String RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID = "CAN_REUSE_PLUGIN_ID.";
 

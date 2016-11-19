@@ -184,7 +184,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
 	/**
 	 * Runtime property of type {@link AlwaysNeverAskUserResponse} that indicates if a
-	 * previously established source {@link Version} can be reused.
+	 * previously selected source {@link Version} can be reused.
 	 */
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_SRC_VERSION = "CAN_REUSE_SRC_VERSION";
 

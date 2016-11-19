@@ -23,19 +23,19 @@ import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
-import org.azyva.dragom.model.plugin.NewDynamicVersionPlugin;
+import org.azyva.dragom.model.plugin.SelectDynamicVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.ReferencePath;
 
 /**
- * Factory for NewDynamicVersionPlugin that implements a strategy for development
+ * Factory for SelectDynamicVersionPlugin that implements a strategy for development
  * workflow that uses development phases.
  *
- * See the PhaseNewStaticVersionPluginImpl sibling for general information about
+ * See the PhaseSelectStaticVersionPluginImpl sibling for general information about
  * the concept of development phases and about freezing the current phase.
  *
- * After having frozen the current phase using CreateStaticVersion and
- * PhaseNewStaticVersionPluginImpl, SwitchToDynamicVersion and this plugin
+ * After having frozen the current phase using Release and
+ * PhaseSelectStaticVersionPluginImpl, SwitchToDynamicVersion and this plugin
  * are used to change the ArtifactVersion to that corresponding to the new phase
  * while keeping the same original dynamic Version. This is done in a deceptively
  * simple manner by simply returning that the current dynamic Version must be kept
@@ -51,16 +51,16 @@ import org.azyva.dragom.reference.ReferencePath;
  *
  * @author David Raymond
  */
-public class PhaseNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl implements NewDynamicVersionPlugin {
+public class PhaseSelectDynamicVersionPluginImpl extends ModulePluginAbstractImpl implements SelectDynamicVersionPlugin {
 
-	public PhaseNewDynamicVersionPluginImpl(Module module) {
+	public PhaseSelectDynamicVersionPluginImpl(Module module) {
 		super(module);
 	}
 
 	@Override
-	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
+	public Version selectDynamicVersion(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
 		ScmPlugin scmPlugin;
-		Version versionNewDynamic;
+		Version versionDynamicSelected;
 		ScmPlugin.BaseVersion baseVersion;
 
 		if (version.getVersionType() == VersionType.DYNAMIC) {
@@ -75,12 +75,12 @@ public class PhaseNewDynamicVersionPluginImpl extends ModulePluginAbstractImpl i
 			throw new RuntimeException("Base version for version " + version + " of module " + this.getModule() + " could not be found.");
 		}
 
-		versionNewDynamic = baseVersion.versionBase;
+		versionDynamicSelected = baseVersion.versionBase;
 
-		if (versionNewDynamic.getVersionType() != VersionType.DYNAMIC) {
-			throw new RuntimeException("Base version " + versionNewDynamic + " of current version " + version + " of module " + this.getModule() + " is not dynamic.");
+		if (versionDynamicSelected.getVersionType() != VersionType.DYNAMIC) {
+			throw new RuntimeException("Base version " + versionDynamicSelected + " of current version " + version + " of module " + this.getModule() + " is not dynamic.");
 		}
 
-		return versionNewDynamic;
+		return versionDynamicSelected;
 	}
 }

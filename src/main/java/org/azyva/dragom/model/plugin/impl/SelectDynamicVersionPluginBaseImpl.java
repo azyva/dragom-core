@@ -29,17 +29,18 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
+import org.azyva.dragom.model.plugin.SelectDynamicVersionPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 
 /**
- * Base class for NewDynamicVersionPlugin that provide useful helper methods that
+ * Base class for SelectDynamicVersionPlugin that provide useful helper methods that
  * are common to many such plugins.
  *
  * @author David Raymond
  */
 
-public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
+public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl implements SelectDynamicVersionPlugin {
 	/**
 	 * Runtime property that spécifies the specific dynamic Version to use.
 	 */
@@ -47,7 +48,7 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 	/**
 	 * Runtime property of type AlwaysNeverAskUserResponse that indicates if a
-	 * previously established dynamic Version can be reused.
+	 * previously selected dynamic Version can be reused.
 	 */
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION = "CAN_REUSE_DYNAMIC_VERSION";
 
@@ -59,12 +60,12 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SPECIFIED = "NEW_DYNAMIC_VERSION_SPECIFIED";
+	private static final String MSG_PATTERN_KEY_DYNAMIC_VERSION_SPECIFIED = "DYNAMIC_VERSION_SPECIFIED";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT = "NEW_DYNAMIC_VERSION_SAME_AS_CURRENT";
+	private static final String MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_SAME_AS_CURRENT = "SELECTED_DYNAMIC_VERSION_SAME_AS_CURRENT";
 
 	/**
 	 * See description in ResourceBundle.
@@ -74,7 +75,7 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_INPUT_NEW_DYNAMIC_VERSION = "INPUT_NEW_DYNAMIC_VERSION";
+	private static final String MSG_PATTERN_KEY_INPUT_DYNAMIC_VERSION = "INPUT_DYNAMIC_VERSION";
 
 	/**
 	 * See description in ResourceBundle.
@@ -84,9 +85,9 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(NewDynamicVersionPluginBaseImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SelectDynamicVersionPluginBaseImpl.class.getName() + "ResourceBundle");
 
-	public NewDynamicVersionPluginBaseImpl(Module module) {
+	public SelectDynamicVersionPluginBaseImpl(Module module) {
 		super(module);
 	}
 
@@ -101,30 +102,30 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		String stringSpecificDynamicVersion;
-		Version versionNewDynamic;
+		Version versionDynamicSelected;
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		stringSpecificDynamicVersion = runtimePropertiesPlugin.getProperty(this.getModule(), NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION);
+		stringSpecificDynamicVersion = runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION);
 
 		if (stringSpecificDynamicVersion != null) {
-			versionNewDynamic = new Version(stringSpecificDynamicVersion);
+			versionDynamicSelected = new Version(stringSpecificDynamicVersion);
 
-			if (versionNewDynamic.getVersionType() != VersionType.DYNAMIC) {
-				throw new RuntimeException("Version " + versionNewDynamic + " must be dynamic.");
+			if (versionDynamicSelected.getVersionType() != VersionType.DYNAMIC) {
+				throw new RuntimeException("Version " + versionDynamicSelected + " must be dynamic.");
 			}
 
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), version), versionNewDynamic));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_DYNAMIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), version), versionDynamicSelected));
 
 			// After all this, the new version may be the same as the current version. In this
 			// case we expect the caller to automatically use this version. We simply inform
 			// the user here.
-			if (versionNewDynamic.equals(version)) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT), new ModuleVersion(this.getModule().getNodePath(), version), versionNewDynamic));
+			if (versionDynamicSelected.equals(version)) {
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_SAME_AS_CURRENT), new ModuleVersion(this.getModule().getNodePath(), version), versionDynamicSelected));
 			}
 
-			return versionNewDynamic;
+			return versionDynamicSelected;
 		} else {
 			return null;
 		}
@@ -141,7 +142,7 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	 * automatically reused, or if he should be asked again the next time.
 	 *
 	 * @param version Version to switch.
-	 * @return New dynamic Version to switch to.
+	 * @return Dynamic Version to switch to.
 	 */
 	protected Version handleReuseDynamicVersion(Version version) {
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
@@ -150,15 +151,15 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		String runtimeProperty;
 		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDynamicVersion;
 		Version versionReuseDynamic;
-		Version versionNewDynamic;
+		Version versionDynamicSelected;
 
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		module = this.getModule();
 
-		alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION));
+		alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION));
 
-		runtimeProperty = runtimePropertiesPlugin.getProperty(module, NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION);
+		runtimeProperty = runtimePropertiesPlugin.getProperty(module, SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION);
 
 		if (runtimeProperty != null) {
 			versionReuseDynamic = new Version(runtimeProperty);
@@ -179,35 +180,35 @@ public class NewDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		}
 
 		if (alwaysNeverAskUserResponseCanReuseDynamicVersion.isAlways()) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_DYNAMIC_VERSION_AUTOMATICALLY_REUSED), new ModuleVersion(module.getNodePath(), version), versionReuseDynamic));
-			versionNewDynamic = versionReuseDynamic;
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_DYNAMIC_VERSION_AUTOMATICALLY_REUSED), new ModuleVersion(module.getNodePath(), version), versionReuseDynamic));
+			versionDynamicSelected = versionReuseDynamic;
 		} else {
-			versionNewDynamic =
+			versionDynamicSelected =
 					Util.getInfoVersion(
 							VersionType.DYNAMIC,
 							null,
 							userInteractionCallbackPlugin,
-							MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_INPUT_NEW_DYNAMIC_VERSION), new ModuleVersion(module.getNodePath(), version)),
+							MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_INPUT_DYNAMIC_VERSION), new ModuleVersion(module.getNodePath(), version)),
 							versionReuseDynamic);
 
-			runtimePropertiesPlugin.setProperty(null, NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION, versionNewDynamic.toString());
+			runtimePropertiesPlugin.setProperty(null, SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION, versionDynamicSelected.toString());
 
 			// The result is not useful. We only want to adjust the runtime property which
 			// will be reused the next time around.
 			Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
 					runtimePropertiesPlugin,
-					NewDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION,
+					SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_DYNAMIC_VERSION,
 					userInteractionCallbackPlugin,
-					MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION), versionNewDynamic));
+					MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION), versionDynamicSelected));
 		}
 
 		// After all this, the new version may be the same as the current version. In this
 		// case we expect the caller to automatically use this version. We simply inform
 		// the user here.
-		if (versionNewDynamic.equals(version)) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewDynamicVersionPluginBaseImpl.resourceBundle.getString(NewDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_SAME_AS_CURRENT), new ModuleVersion(module.getNodePath(), version), versionNewDynamic));
+		if (versionDynamicSelected.equals(version)) {
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_SAME_AS_CURRENT), new ModuleVersion(module.getNodePath(), version), versionDynamicSelected));
 		}
 
-		return versionNewDynamic;
+		return versionDynamicSelected;
 	}
 }

@@ -39,18 +39,19 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 import org.azyva.dragom.util.YesAlwaysNoUserResponse;
 
 /**
- * Base class for NewStaticVersionPlugin that provide useful helper methods that
+ * Base class for SelectStaticVersionPlugin that provide useful helper methods that
  * are common to many such plugins.
  *
  * @author David Raymond
  */
-public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
+public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl implements SelectStaticVersionPlugin {
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION = "SPECIFIC_STATIC_VERSION";
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION = "CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION";
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX = "SPECIFIC_STATIC_VERSION_PREFIX";
@@ -59,7 +60,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED = "NEW_STATIC_VERSION_SPECIFIED";
+	private static final String MSG_PATTERN_KEY_STATIC_VERSION_SPECIFIED = "STATIC_VERSION_SPECIFIED";
 
 	/**
 	 * See description in ResourceBundle.
@@ -89,12 +90,12 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(NewStaticVersionPluginBaseImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SelectStaticVersionPluginBaseImpl.class.getName() + "ResourceBundle");
 
 	private int initialRevision;
 	private int defaultRevisionDecimalPositionCount;
 
-	public NewStaticVersionPluginBaseImpl(Module module) {
+	public SelectStaticVersionPluginBaseImpl(Module module) {
 		super(module);
 	}
 
@@ -142,7 +143,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 			throw new RuntimeException("Version " + versionDynamic + " of module " + this.getModule() + " is not dynamic.");
 		}
 
-		stringSpecificStaticVersion = runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION);
+		stringSpecificStaticVersion = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION);
 
 		if (stringSpecificStaticVersion != null) {
 			versionNewStatic = new Version(stringSpecificStaticVersion);
@@ -151,7 +152,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 				throw new RuntimeException("Version " + versionNewStatic + " must be static.");
 			}
 
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionNewStatic));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_STATIC_VERSION_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionNewStatic));
 			return versionNewStatic;
 		} else {
 			return null;
@@ -188,7 +189,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION));
+		alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION));
 
 		if (!alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion.isNever()) {
 			Version versionExistingEquivalentStatic;
@@ -197,7 +198,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 
 			if (versionExistingEquivalentStatic != null) {
 				if (alwaysNeverAskUserResponseCanReuseExistingEquivalentStaticVersion.isAlways()) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic));
+					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EQUIVALENT_STATIC_VERSION_AUTOMATICALLY_REUSED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic));
 					return versionExistingEquivalentStatic;
 				}
 
@@ -206,16 +207,16 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 				yesAlwaysNoUserResponse =
 						Util.getInfoYesNoUserResponse(
 								userInteractionCallbackPlugin,
-								MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic),
+								MessageFormat.format(SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_REUSE_EQUIVALENT_STATIC_VERSION), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), versionExistingEquivalentStatic),
 								YesAlwaysNoUserResponse.YES);
 
 				// The result is not useful. We only want to adjust the runtime property which
 				// will be reused the next time around.
 				Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
 						runtimePropertiesPlugin,
-						NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION,
+						SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION,
 						userInteractionCallbackPlugin,
-						NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION));
+						SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_EQUIVALENT_STATIC_VERSION));
 
 				// This is the user response from the first question above, not about
 				// automatically reusing the response.
@@ -243,10 +244,10 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		stringStaticVersionPrefix = runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX);
+		stringStaticVersionPrefix = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX);
 
 		if (stringStaticVersionPrefix != null) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), stringStaticVersionPrefix));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_NEW_STATIC_VERSION_PREFIX_SPECIFIED), new ModuleVersion(this.getModule().getNodePath(), versionDynamic), stringStaticVersionPrefix));
 			return new Version(stringStaticVersionPrefix);
 		}
 
@@ -274,7 +275,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
-		runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), NewStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT);
+		runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT);
 
 		if (runtimeProperty == null) {
 			revisionDecimalPositionCount = this.defaultRevisionDecimalPositionCount;
@@ -442,7 +443,7 @@ public class NewStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl {
 					if (listReferenceStaticVersion.equals(listReferenceDynamicVersion)) {
 						userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(NewStaticVersionPluginBaseImpl.resourceBundle.getString(NewStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EXISTING_EQUIVALENT_STATIC_VERSION_EXCLUDE_VESION_CHANGING_COMMITS), new ModuleVersion(module.getNodePath(), versionDynamic), versionStatic));
+						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectStaticVersionPluginBaseImpl.resourceBundle.getString(SelectStaticVersionPluginBaseImpl.MSG_PATTERN_KEY_EXISTING_EQUIVALENT_STATIC_VERSION_EXCLUDE_VESION_CHANGING_COMMITS), new ModuleVersion(module.getNodePath(), versionDynamic), versionStatic));
 						versionExistingEquivalentStatic = versionStatic;
 					}
 				}

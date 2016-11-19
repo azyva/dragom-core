@@ -29,23 +29,23 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
-import org.azyva.dragom.model.plugin.NewDynamicVersionPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.SelectDynamicVersionPlugin;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 
 /**
- * {@link NewDynamicVersionPlugin} that implements a strategy for hotfixes.
+ * {@link SelectDynamicVersionPlugin} that implements a strategy for hotfixes.
  * <p>
  * The current {@link Version} must be static.
  * <p>
- * The strategy is such that the new dynamic Version is created directly from the
- * current Version itself.
+ * The strategy is such that the a new dynamic Version is created directly from
+ * the current Version itself.
  *
  * @author David Raymond
  */
-public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBaseImpl implements NewDynamicVersionPlugin {
+public class HotfixSelectDynamicVersionPluginImpl extends SelectDynamicVersionPluginBaseImpl implements SelectDynamicVersionPlugin {
 	/**
 	 * See description in ResourceBundle.
 	 */
@@ -64,34 +64,34 @@ public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBa
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE = "NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE";
+	private static final String MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE = "SELECTED_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE = "NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE";
+	private static final String MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE = "SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE";
 
 	/**
 	 * See description in ResourceBundle.
 	 */
-	private static final String MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN = "NEW_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN";
+	private static final String MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN = "SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN";
 
 	/**
 	 * ResourceBundle specific to this class.
 	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(HotfixNewDynamicVersionPluginImpl.class.getName() + "ResourceBundle");
+	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(HotfixSelectDynamicVersionPluginImpl.class.getName() + "ResourceBundle");
 
-	public HotfixNewDynamicVersionPluginImpl(Module module) {
+	public HotfixSelectDynamicVersionPluginImpl(Module module) {
 		super(module);
 	}
 
 	@Override
-	public Version getVersionNewDynamic(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
+	public Version selectDynamicVersion(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		Module module;
 		ScmPlugin scmPlugin;
 		ScmPlugin.BaseVersion baseVersion;
-		Version versionNewDynamic;
+		Version versionDynamicSelected;
 
 		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 		module = this.getModule();
@@ -100,7 +100,7 @@ public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBa
 		// If the size of the ReferencePath is 1 it means the current ModuleVersion is the
 		// only one in the ReferenceGraph and the message would be redundant with the one below.
 		if ((referencePath.size() > 1) && (referencePath.get(0).getModuleVersion().getVersion().getVersionType() != VersionType.STATIC)) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_VERSIONS_REFERENCE_PATH_STATIC), new ModuleVersion(module.getNodePath(), version), referencePath));
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_VERSIONS_REFERENCE_PATH_STATIC), new ModuleVersion(module.getNodePath(), version), referencePath));
 
 			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH)) {
 				return null;
@@ -113,9 +113,9 @@ public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBa
 			baseVersion = scmPlugin.getBaseVersion(version);
 
 			if (baseVersion == null) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_USE_CURRENT_HOTFIX_VERSION_BASE_UNKNOWN), new ModuleVersion(module.getNodePath(), version)));
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_USE_CURRENT_HOTFIX_VERSION_BASE_UNKNOWN), new ModuleVersion(module.getNodePath(), version)));
 			} else {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_USE_CURRENT_HOTFIX_VERSION_FOR_BASE), new ModuleVersion(module.getNodePath(), version), baseVersion.versionBase));
+				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_USE_CURRENT_HOTFIX_VERSION_FOR_BASE), new ModuleVersion(module.getNodePath(), version), baseVersion.versionBase));
 			}
 
 			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION)) {
@@ -125,29 +125,29 @@ public class HotfixNewDynamicVersionPluginImpl extends NewDynamicVersionPluginBa
 			return version;
 		}
 
-		// versionNewDynamic is necessarily dynamic so no need to check if equal to
+		// versionDynamicSelected is necessarily dynamic so no need to check if equal to
 		// current Version which is necessarily static.
-		versionNewDynamic = this.handleReuseDynamicVersion(version);
+		versionDynamicSelected = this.handleReuseDynamicVersion(version);
 
 		// Here versionNew holds the new version to switch to. If it does not exist we
 		// specify to use the current Version as the base. If it does exist, we validate
 		// that its base Version is the current one.
 
-		if (!scmPlugin.isVersionExists(versionNewDynamic)) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE), module, versionNewDynamic, version));
+		if (!scmPlugin.isVersionExists(versionDynamicSelected)) {
+			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_DOES_NOT_EXIST_CURRENT_VERSION_BASE), module, versionDynamicSelected, version));
 			byReferenceVersionBase.object = version;
 		} else {
-			baseVersion = scmPlugin.getBaseVersion(versionNewDynamic);
+			baseVersion = scmPlugin.getBaseVersion(versionDynamicSelected);
 
 			if (baseVersion == null) {
-				throw new RuntimeExceptionUserError(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN), module, versionNewDynamic, version));
+				throw new RuntimeExceptionUserError(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_BASE_UNKNOWN), module, versionDynamicSelected, version));
 			}
 
 			if (!baseVersion.versionBase.equals(version)) {
-				throw new RuntimeExceptionUserError(MessageFormat.format(HotfixNewDynamicVersionPluginImpl.resourceBundle.getString(HotfixNewDynamicVersionPluginImpl.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE), module, versionNewDynamic, version));
+				throw new RuntimeExceptionUserError(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_ALREADY_EXISTS_CURRENT_VERSION_NOT_BASE), module, versionDynamicSelected, version));
 			}
 		}
 
-		return versionNewDynamic;
+		return versionDynamicSelected;
 	}
 }

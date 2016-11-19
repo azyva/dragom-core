@@ -58,7 +58,7 @@ import org.slf4j.LoggerFactory;
  * be used to build the resulting ArtifactVersion.
  * <p>
  * These dynamic behaviors, together with the use of
- * NewDynamicVersionPhasePluginFactory and NewStaticVersionPhasePluginFactory, are
+ * NewDynamicVersionPhasePluginFactory and PhaseSelectStaticVersionPluginImpl, are
  * useful for implementing phased development where the ArtifactVersion associated
  * with a Version changes from one phase to the next. And during such a phase
  * transition, a static Version is created to freeze the sources for the current

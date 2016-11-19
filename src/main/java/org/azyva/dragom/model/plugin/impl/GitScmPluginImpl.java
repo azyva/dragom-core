@@ -1276,7 +1276,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		this.getGit().checkout(pathModuleWorkspace, version);
 
-		// After switching to a new dynamic Version, the workspace may not be synchronized
+		// After switching to a dynamic Version, the workspace may not be synchronized
 		// since the corresponding branch may already be present locally in the workspace
 		// and changes may have been performed outside of the workspace. We therefore
 		// ensure that it is up to date.
