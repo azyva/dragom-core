@@ -60,32 +60,47 @@ public class DefaultGitImpl implements Git {
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(DefaultGitImpl.class);
 
-	private static final Pattern patternExtractCredentialsReposUrl = Pattern.compile("([a-zA-Z0-9\\-]+://)(?:([a-zA-Z0-9_\\.\\-]+)@)?([^/]+)/.*");
+	/**
+	 * Pattern to extract the user from a HTTP[S] repository URL.
+	 */
+	private static final Pattern patternExtractHttpReposUrlUser = Pattern.compile("([hH][tT][tT][pP][sS]?://)(?:([a-zA-Z0-9_\\.\\-]+)@)?([^/]+)/.*");
 
 	/**
 	 * Path to the git Executable.
 	 */
-	Path pathGitExecutable;
+	private Path pathExecutable;
 
 	/**
 	 * Repository URL.
 	 */
-	String reposUrl;
+	private String reposUrl;
 
 	/**
 	 * User.
 	 */
-	String user;
+	private String user;
 
 	/**
 	 * Password.
 	 */
-	String password;
+	private String password;
 
+	/**
+	 * HTTP credentials to include in the credentials file provided to git through the
+	 * "store" credential helper.
+	 * <p>
+	 * The fact that this is not null is also used as an indicator of if the user
+	 * specified in the repository URL, if any, has been validated against the user
+	 * provided with {@link #setUser}.
+	 * <p>
+	 * This is required only if the user is provided, in which case the protocol used
+	 * in the repository URL must be HTTP[S].
+	 */
+	private String httpCredentials;
 
 	@Override
-	public void setPathGitExecutable(Path pathGitExecutable) {
-		this.pathGitExecutable = pathGitExecutable;
+	public void setPathExecutable(Path pathExecutable) {
+		this.pathExecutable = pathExecutable;
 	}
 
 	@Override
@@ -115,23 +130,28 @@ public class DefaultGitImpl implements Git {
 		pathFileCredentials = null;
 
 		try {
-			commandLine = new CommandLine(this.pathGitExecutable.toString());
+			commandLine = new CommandLine(this.pathExecutable.toString());
 
-			if (indProvideCredentials) {
-				Matcher matcher;
-				String userFromReposUrl;
+			if (indProvideCredentials && (this.user != null)) {
 				Writer writer;
 
-				matcher = DefaultGitImpl.patternExtractCredentialsReposUrl.matcher(this.reposUrl);
+				if (this.httpCredentials == null) {
+					Matcher matcher;
+					String userFromReposUrl;
 
-				if (!matcher.matches()) {
-					throw new RuntimeException("Repository URL " + this.reposUrl + " does not match credential extraction pattern " + DefaultGitImpl.patternExtractCredentialsReposUrl.toString() + '.');
-				}
+					matcher = DefaultGitImpl.patternExtractHttpReposUrlUser.matcher(this.reposUrl);
 
-				userFromReposUrl = matcher.group(2);
+					if (!matcher.matches()) {
+						throw new RuntimeException("Repository URL " + this.reposUrl + " does not match credential extraction pattern " + DefaultGitImpl.patternExtractHttpReposUrlUser.toString() + '.');
+					}
 
-				if (!userFromReposUrl.equals(this.user)) {
-					throw new RuntimeException("User " + userFromReposUrl + " extracted from repository URL " + this.reposUrl + " does not correspond to user provided in credentials " + this.user + '.');
+					userFromReposUrl = matcher.group(2);
+
+					if ((userFromReposUrl != null) && !userFromReposUrl.equals(this.user)) {
+						throw new RuntimeException("User " + userFromReposUrl + " extracted from repository URL " + this.reposUrl + " does not correspond to user provided in credentials " + this.user + '.');
+					}
+
+					this.httpCredentials = matcher.group(1) + this.user + ':' + this.password + '@' + matcher.group(3);
 				}
 
 				try {
@@ -149,7 +169,7 @@ public class DefaultGitImpl implements Git {
 					}
 
 					writer = new FileWriter(pathFileCredentials.toFile());
-					writer.append(matcher.group(1) + this.user + ':' + this.password + '@' + matcher.group(3));
+					writer.append(this.httpCredentials);
 					writer.close();
 				} catch (IOException ioe) {
 					throw new RuntimeException(ioe);
@@ -197,6 +217,13 @@ public class DefaultGitImpl implements Git {
 
 			if (stringBuilderOutput != null) {
 				stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
+
+				// We concatenate stderr since in some cases it is of interest to the caller,
+				// such as in validateCredentials, where the text allowing the method to
+				// distinguish various cases is returned therein. For most cases the caller is
+				// interested in stdout only, and fortunately, when a command exists
+				// successfully with output to stdout, no output is sent to stderr.
+				stringBuilderOutput.append(byteArrayOutputStreamErr.toString().trim());
 			}
 
 			return exitCode;
@@ -204,6 +231,42 @@ public class DefaultGitImpl implements Git {
 			if (pathFileCredentials != null) {
 				pathFileCredentials.toFile().delete();
 			}
+		}
+	}
+
+	@Override
+	public boolean validateCredentials() {
+		StringBuilder stringBuilderOutput;
+
+		stringBuilderOutput = new StringBuilder();
+
+		// The most convenient way to validate the credentials is to use the ls-remote
+		// command. Unfortunately, if the remove repository does not exist, the command
+		// fails, which is expected. The only way to distinguish between the credentials
+		// not being valid and the repository not existing is to look for some pattern in
+		// the error message (which by the way is returned in stderr, which
+		// executeGitCommand does include in the output StreamBuilder). This is admittedly
+		// not robust, especially if the git client is configured to returned localized
+		// messages, but seems to be the only way to do it.
+		// The complete message returned when the credentials are not valid is:
+		//   remote: Invalid username or password. If you log in via a third party service you must ensure you have an account password set in your account profile.
+		//   fatal: Authentication failed for 'https://azyva@bitbucket.org/azyva/dragom-api.git/'
+		// And when the remote repository does not exist:
+		//   remote: Not Found
+		//   fatal: repository '<repository url>' not found
+
+		if (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, stringBuilderOutput) != 0) {
+			String error;
+
+			error = stringBuilderOutput.toString();
+
+			// We know "Authentication" is included in the English message. We attempt to
+			// cover the French case by testing for "Authentification" and "authentification"
+			// as well, but the behavior of the git client with French messages, if ever that
+			// exists, has not been tested.
+			return !(error.contains("Authentication") || error.contains("Authentification") || error.contains("authentification"));
+		} else {
+			return true;
 		}
 	}
 
@@ -252,10 +315,14 @@ public class DefaultGitImpl implements Git {
 
 	@Override
 	public void clone(String reposUrl, Version version, Path pathWorkspace) {
+		boolean isConfiguredReposUrl;
 		boolean isDetachedHead;
 
 		if (reposUrl == null) {
 			reposUrl = this.reposUrl;
+			isConfiguredReposUrl = true;
+		} else {
+			isConfiguredReposUrl = false;
 		}
 
 		// We always specify --no-local in order to prevent Git from implementing its
@@ -266,7 +333,7 @@ public class DefaultGitImpl implements Git {
 		if (version == null) {
 			this.executeGitCommand(
 					new String[] {"clone", "--no-local", "--no-checkout", reposUrl, pathWorkspace.toString()},
-					true,
+					isConfiguredReposUrl,
 					AllowExitCode.NONE,
 					null,
 					null);
@@ -276,7 +343,7 @@ public class DefaultGitImpl implements Git {
 			// straightforward to distinguish between branches and tags.
 			this.executeGitCommand(
 					new String[] {"clone", "--no-local", "-b", version.getVersion(), reposUrl, pathWorkspace.toString()},
-					true,
+					isConfiguredReposUrl,
 					AllowExitCode.NONE,
 					null,
 					null);
@@ -329,10 +396,8 @@ public class DefaultGitImpl implements Git {
 			listArg.add(refspec);
 		}
 
-		// We specify to provide credentials, but they may not be needed if the repository
-		// is another local one.
 		// The empty String[] argument to toArray is required for proper typing in Java.
-		this.executeGitCommand(listArg.toArray(new String[] {}), true, AllowExitCode.NONE, pathWorkspace, null);
+		this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null);
 	}
 
 	@Override

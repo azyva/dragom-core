@@ -51,7 +51,6 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 
 /**
- * {@link Model}.
  * Default {@link ExecContextFactory} implementation that manages
  * {@link ExecContext} using a workspace directory in the file system. Here the
  * term "workspace" is used to refer to the root workspace directory. Elsewhere
@@ -67,8 +66,8 @@ import org.azyva.dragom.util.Util;
  * This ExecContextFactory supports the workspace directory concept and therefore
  * implements {@link WorkspaceExecContextFactory}.
  * <p>
- * The ExecContext implementation implement {@link ToolLifeCycleExecContext} and
- * therefore honor {@link ToolLifeCycleExecContextPlugin} implemented by
+ * The ExecContext implementation implements {@link ToolLifeCycleExecContext} and
+ * therefore honors {@link ToolLifeCycleExecContextPlugin} implemented by
  * {@link ExecContextPlugin}'s.
  * <p>
  * When obtaining an ExecContext using

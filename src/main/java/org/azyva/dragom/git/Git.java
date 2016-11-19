@@ -38,8 +38,8 @@ import org.azyva.dragom.util.ServiceLocator;
  * Implementations of this interface are intended to be obtained using
  * {@link ServiceLocator} so they can easily be doubled for testing purposes. The
  * main implementation is {@link DefaultGitImpl} which therefore has a no-argument
- * constructor. This is why setup methods such as {@link #setPathGitExecutable}
- * are part of this interface.
+ * constructor. This is why setup methods such as {@link #setPathExecutable} are
+ * part of this interface.
  * <p>
  * Mainly used by {@link GitScmPluginImpl}. But also useful for Dragom test
  * scripts that need to act on repositories outside of Dragom tools themselves, to
@@ -89,7 +89,7 @@ public interface Git {
 	 *
 	 * @param pathGitExecutable See description.
 	 */
-	void setPathGitExecutable(Path pathGitExecutable);
+	void setPathExecutable(Path pathExecutable);
 
 	/**
 	 * Sets the repository URL.
@@ -126,7 +126,7 @@ public interface Git {
 	 *
 	 * @param arrayArg Command line arguments to Git.
 	 * @param indProvideCredentials Indicates to provide the user credentials to
-	 *   Git.
+	 *   Git, if available.
 	 * @param allowExitCode Specifies which exit codes are allowed and will not
 	 *   trigger an exception.
 	 * @param pathWorkingDirectory Path to the working directory. The command will be
@@ -137,6 +137,11 @@ public interface Git {
 	 * @return The exit code of the command.
 	 */
 	int executeGitCommand(String[] arrayArg, boolean provideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput);
+
+	/**
+	 * @return Indicates if the credentials provided are valid.
+	 */
+	boolean validateCredentials();
 
 	/**
 	 * @return Indicates if the Git repository exists.
@@ -168,7 +173,8 @@ public interface Git {
 	 *
 	 * @param reposUrl Repository URL. Can be null in which case the repository URL
 	 *   specified with {@link #setReposUrl} is used. Specifying the repository URL
-	 *   allows the caller to clone from a local repository.
+	 *   allows the caller to clone from a local repository. When reposUrl is
+	 *   specified it must use the file:// protocol.
 	 * @param version Version to checkout after clone. If null, no version is
 	 *   checked out, not even master.
 	 * @param pathWorkspace Path to the workspace.
@@ -180,11 +186,12 @@ public interface Git {
 	 *
 	 * @param path Path.
 	 * @param reposUrl. Repository URL. Can be null in which case fetch occurs from
-	 *   the remote named "origin" within the configuration of the workspace. Can be a
-	 *   repository URL in which case refspec should be specified otherwise Git will
-	 *   not know which refs to update. The repository URL specified with
-	 *   {@link #setReposUrl} is not used to allow the caller to fetch between
-	 *   local repositories.
+	 *   the remote named "origin" within the configuration of the workspace, and thus
+	 *   implicitly from the remote repository specified with {@link #setReposUrl}.
+	 *   Can be a repository URL in which case refspec should be specified otherwise
+	 *   Git will not know which refs to update. This allows the caller to fetch
+	 *   between local repositories. When reposUrl is specified, it must use the
+	 *   file:// protocol.
 	 * @param refspec The Git refspec to pass to git fetch. See the documentation for
 	 *   git fetch for more information. Can be null if no refspec is to be passed to
 	 *   git, letting git essentially use the default
