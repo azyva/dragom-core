@@ -228,6 +228,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	private static final String TRANSIENT_DATA_PREFIX_GIT = GitScmPluginImpl.class.getName() + ".Git.";
 
 	/**
+	 * Transient data prefix for keeping track of temporary dynamic Versions. The
+	 * suffix is the path to the module within the workspace. The value is the Version
+	 * based on which the temporary dynamic Version is created. The transient data is
+	 * not defined otherwise if there is no temporary dynamic Version.
+	 */
+	private static final String TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE = GitScmPluginImpl.class.getName() + ".TempDynamicVersionBase.";
+
+	/**
 	 * Default {@link Version}.
 	 */
 	private static final Version VERSION_DEFAULT = new Version(VersionType.DYNAMIC, "master");
@@ -307,7 +315,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		/**
 		 * Indicates to fetch, but not push. This implies working with the current state
 		 * of the remote repository, but not update it. Presumably the user will push
-		 * multiple changes after validated them.
+		 * multiple changes after validating them.
 		 */
 		FETCH_NO_PUSH,
 
@@ -636,6 +644,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		Path pathMainUserWorkspaceDir;
 		Path pathModuleWorkspaceRemote;
 
+		// pathModuleWorkspace should be empty here, so this is not really useful.
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 		nodePathModule = this.getModule().getNodePath();
 
@@ -710,11 +721,29 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
+			Version versionTempDynamicBase;
+
 			// If a system workspace directory already exists for the module, we reuse it.
 			// But it may not be up-to-date and may not have the requested version checked
 			// out.
 
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+
+			versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
+
+			// If a temporary dynamic Version is in effect in the module workspace directory,
+			// we return immediately that directory, provided the requested Version
+			// corresponds to the base Version of the temporary dynamic Version.
+			// We expect the caller to not need to be aware of temporary dynamic Version
+			// fact and not need use methods that are not allowed in which context, or
+			// be aware of that fact and behave accordingly.
+			if (versionTempDynamicBase != null) {
+				if (!versionTempDynamicBase.equals(version)) {
+					throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
+				}
+
+				return pathModuleWorkspace;
+			}
 
 			this.fetch(pathModuleWorkspace);
 			this.getGit().checkout(pathModuleWorkspace, version);
@@ -785,6 +814,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * Note also a fetch is performed by this method on the returned workspace
 	 * directory.
 	 *
+	 * TODO: Need to talk about temporary dynamic Version and its impact here.
+	 *
 	 * @return
 	 */
 	private Path getPathModuleWorkspace() {
@@ -799,7 +830,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		pathModuleWorkspace = this.getPathMainUserWorkspaceDir(nodePathModule);
 
 		if (pathModuleWorkspace != null) {
-			this.fetch(pathModuleWorkspace);
+			if (this.getVersionTempDynamicBase(pathModuleWorkspace) == null) {
+				this.fetch(pathModuleWorkspace);
+			}
+
 			return pathModuleWorkspace;
 		}
 
@@ -807,7 +841,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
 			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.PEEK);
-			this.fetch(pathModuleWorkspace);
+
+			if (this.getVersionTempDynamicBase(pathModuleWorkspace) == null) {
+				this.fetch(pathModuleWorkspace);
+			}
+
 			return pathModuleWorkspace;
 		}
 
@@ -925,12 +963,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	// case where there are unpushed local commits is to simply perform the push and
 	// return that the local repository is synchronized.
 	public boolean isSync(Path pathModuleWorkspace, EnumSet<IsSyncFlag> enumSetIsSyncFlag) {
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
 		return this.isSync(pathModuleWorkspace, enumSetIsSyncFlag, true);
 	}
 
 	@Override
 	public boolean update(Path pathModuleWorkspace) {
 		WorkspacePlugin workspacePlugin;
+
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
@@ -943,6 +985,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public Version getVersion(Path pathModuleWorkspace) {
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
 		return this.getGit().getVersion(pathModuleWorkspace);
 	}
 
@@ -1249,6 +1293,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		WorkspacePlugin workspacePlugin;
 		WorkspaceDir workspaceDir;
 
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
 		/* gitFetch will have been called by isSync.
 		 */
 		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
@@ -1295,15 +1341,24 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public void createVersion(Path pathModuleWorkspace, Version versionTarget, boolean indSwitch) {
+		Version versionTempDynamicBase;
 		WorkspacePlugin workspacePlugin;
 		Map<String, String> mapCommitAttr;
 		String message;
 		WorkspaceDir workspaceDir;
+		boolean indUserWorkspaceDir;
 
-		/* gitFetch will have been called by isSync.
-		 */
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
-			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before creating a new version.");
+		versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
+
+		// In the case of a temporary dynamic Version we do not check for synchronization
+		// since by definition the temporary dynamic Version is not synchronized with the
+		// remote.
+		if (versionTempDynamicBase == null) {
+			/* gitFetch will have been called by isSync.
+			 */
+			if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
+				throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before creating a new version.");
+			}
 		}
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
@@ -1312,12 +1367,24 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
 		}
 
+		workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
+		indUserWorkspaceDir = workspaceDir instanceof WorkspaceDirUserModuleVersion;
+
 		// We prepare the prefix commit or tag message specifying the base version since
 		// it is the same for both Version types.
 		// See commit() method for comments on commit message, more specifically the need
 		// to escape double quotes.
 		mapCommitAttr = new HashMap<String, String>();
-		mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_BASE_VERSION, this.getVersion(pathModuleWorkspace).toString());
+
+		// If there is a temporary dynamic Version, it's base it taken as the base of the
+		// new Version. Otherwise, the base of the new Version is the current Version
+		// itself.
+		if (versionTempDynamicBase == null) {
+			mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_BASE_VERSION, this.getVersion(pathModuleWorkspace).toString());
+		} else {
+			mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_BASE_VERSION, versionTempDynamicBase.toString());
+		}
+
 		message = (new JSONObject(mapCommitAttr)).toString();
 		message = message.replace("\"", "\\\"");
 
@@ -1329,9 +1396,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			this.getGit().createBranch(pathModuleWorkspace, branch, indSwitch);
 
-			if (indSwitch) {
-				workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
+			// In all cases, creating a new Version based on a tempoary dynamic Version
+			// releases it.
+			if (versionTempDynamicBase != null) {
+				ExecContextHolder.get().setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace, null);
+			}
 
+			if (indSwitch) {
 				/* If the WorkspaceDir belongs to the user, it is specific to a version and the
 				 * new version must be reflected in the workspace.
 				 */
@@ -1340,13 +1411,21 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				}
 			}
 
-			try {
-				if (!indSwitch) {
-					// If the caller did not ask to switch we must not. But we still need access to
-					// the new Version in order to introduce the dummy base-version commit.
-					pathModuleWorkspace = this.checkoutSystem(versionTarget);
+			if (!indSwitch) {
+				// If no switch was requested and we were on a temporary dynamic Version, we must
+				// revert back to the original Version, but this is pertinent only in the case of
+				// a user workspace directory since for a system workspace directory, the contents
+				// will be replaced anyways below.
+				if (versionTempDynamicBase != null && indUserWorkspaceDir) {
+					this.getGit().checkout(pathModuleWorkspace, versionTempDynamicBase);
 				}
 
+				// If the caller did not ask to switch we must not. But we still need access to
+				// the new Version in order to introduce the dummy base-version commit.
+				pathModuleWorkspace = this.checkoutSystem(versionTarget);
+			}
+
+			try {
 				message += " Dummy commit introduced to record the base version of the newly created version " + versionTarget + '.';
 
 				this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, true, AllowExitCode.NONE, pathModuleWorkspace, null);
@@ -1373,6 +1452,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			this.getGit().createTag(pathModuleWorkspace, tag, message);
 
+			// In all cases, creating a new Version based on a tempoary dynamic Version
+			// releases it.
+			if (versionTempDynamicBase != null) {
+				ExecContextHolder.get().setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace, null);
+			}
+
 			if (indSwitch) {
 				/* The following essentially performs the same thing as the method switchVersion,
 				 * but switchVersion calls isSync which fails when a new unpushed branch is
@@ -1381,14 +1466,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				 */
 				this.getGit().checkout(pathModuleWorkspace, versionTarget);
 
-				workspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace);
-
 				/* If the WorkspaceDir belongs to the user, it is specific to a version and the
 				 * new version must be reflected in the workspace.
 				 */
 				if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
 					workspacePlugin.updateWorkspaceDir(workspaceDir, new WorkspaceDirUserModuleVersion(new ModuleVersion(((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath(), versionTarget)));
 				}
+			} else if (versionTempDynamicBase != null) {
+				// If no switch was requested and we were on a temporary dynamic Version, we must
+				// revert back to the original Version.
+				this.getGit().checkout(pathModuleWorkspace, versionTempDynamicBase);
 			}
 
 			// To push the new tag.
@@ -1404,13 +1491,122 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	}
 
 	@Override
+	public void createTempDynamicVersion(Path pathModuleWorkspace) {
+		WorkspacePlugin workspacePlugin;
+		Version versionCurrent;
+
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+		}
+
+		versionCurrent = this.getVersion(pathModuleWorkspace);
+
+		this.getGit().executeGitCommand(new String[] {"checkout", "--detach"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+
+		ExecContextHolder.get().setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace, versionCurrent);
+	}
+
+	@Override
+	public void releaseTempDynamicVersion(Path pathModuleWorkspace) {
+		ExecContext execContext;
+		WorkspacePlugin workspacePlugin;
+		Version versionTempDynamicBase;
+
+		this.validateTempDynamicVersion(pathModuleWorkspace, true);
+
+		versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
+
+		execContext = ExecContextHolder.get();
+		workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
+
+		if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+			throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+		}
+
+		// Releasing the temporary dynamic Version implies switching batck to the original
+		// Version.
+		this.getGit().checkout(pathModuleWorkspace, versionTempDynamicBase);
+
+		execContext.setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace,  null);
+	}
+
+	/**
+	 * Returns the base of the temporary dynamic Version or null if there is no
+	 * temporary dynamic Version.
+	 *
+	 * @param pathModuleWorkspace Path to the module within the workspaace.
+	 * @return See description.
+	 */
+	private Version getVersionTempDynamicBase(Path pathModuleWorkspace) {
+		return (Version)ExecContextHolder.get().getTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace);
+	}
+
+	@Override
+	public boolean isTempDynamicVersion(Version versionBase) {
+		WorkspacePlugin workspacePlugin;
+		NodePath nodePathModule;
+		Path pathModuleWorkspace;
+		WorkspaceDirSystemModule workspaceDirSystemModule;
+
+		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+		nodePathModule = this.getModule().getNodePath();
+
+		pathModuleWorkspace = this.getPathMainUserWorkspaceDir(nodePathModule);
+
+		if ((pathModuleWorkspace != null) && (this.getVersionTempDynamicBase(pathModuleWorkspace) != null)) {
+			return true;
+		}
+
+		workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
+
+		if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
+			pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.PEEK);
+
+			return this.getVersionTempDynamicBase(pathModuleWorkspace) != null;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Validates the state of the temporary dynamic Version being created or not base
+	 * on a provided expected state.
+	 * <p>
+	 * An exception is thrown if the states do not match.
+	 *
+	 * @param pathModuleWorkspace Path to the module within the workspaace.
+	 * @param indTempDynamicVersionRequired Expected state.
+	 */
+	private void validateTempDynamicVersion(Path pathModuleWorkspace, boolean indTempDynamicVersionRequired) {
+		boolean indTempDynamicVersion;
+
+		indTempDynamicVersion = this.getVersionTempDynamicBase(pathModuleWorkspace) != null;
+
+		if (indTempDynamicVersion ^ indTempDynamicVersion) {
+			throw new RuntimeException("Mismatch between current temporary dynamic Version state " + indTempDynamicVersion + " and expected state " + indTempDynamicVersionRequired + " for workspace module path " + pathModuleWorkspace + '.');
+		}
+	}
+
+	@Override
 	//TODO Document Push as well...
 	// Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
 	public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
+		boolean indTempDynamicVersion;
 		WorkspacePlugin workspacePlugin;
 
-		if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
-			throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
+		indTempDynamicVersion = this.getVersionTempDynamicBase(pathModuleWorkspace) != null;
+
+		// In the case of a temporary dynamic Version we do not check for synchronization
+		// since by definition the temporary dynamic Version is not synchronized with the
+		// remote.
+		if (indTempDynamicVersion) {
+			if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
+				throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
+			}
 		}
 
 		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
@@ -1423,8 +1619,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// to handle the main workspace directory.
 		this.getGit().addCommit(pathModuleWorkspace, message, mapCommitAttr, false);
 
-		// TODO: Maybe we couild pass null for gitRef since the upstream may always already be set in the case of a commit. But not sure.
-		this.push(pathModuleWorkspace, "refs/heads/" + this.getGit().getBranch(pathModuleWorkspace));
+		// We push only if the version is not a temporay dynamic one.
+		if (!indTempDynamicVersion) {
+			// TODO: Maybe we couild pass null for gitRef since the upstream may always already be set in the case of a commit. But not sure.
+			this.push(pathModuleWorkspace, "refs/heads/" + this.getGit().getBranch(pathModuleWorkspace));
+		}
 	}
 
 
@@ -1433,6 +1632,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		Version versionDest;
 		WorkspacePlugin workspacePlugin;
 		String mergeMessage;
+
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
 
 		versionDest = this.getVersion(pathModuleWorkspace);
 
@@ -1486,6 +1687,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		String commitIdRangeStart;
 		Iterator<Commit> iteratorCommit;
 		int patchCount;
+
+		this.validateTempDynamicVersion(pathModuleWorkspace, false);
 
 		versionDest = this.getVersion(pathModuleWorkspace);
 

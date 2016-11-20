@@ -284,6 +284,24 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 		module = this.getModule();
 		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
+		// If there ia a temporary dynamic Version in effect which has the current Version
+		// as its base, we conclude there is no equivalent static Version.
+		// This is close to being a hack since the main reason for having added this
+		// verification is that the algorithm for discovering an equivalent static
+		// Version uses methods that are not allowed, or does not return the correct
+		// result when a temporary dynamic Version is in effect, and instead of finding a
+		// way to make the code work, we simply disable it.
+		// But if we think about it, it is not that much of a hack since when a temporary
+		// dynamic Version exists, and is kind of an extention to the base Version, it is
+		// very unlikely to have an equivalent static Version, unless it has just been
+		// created. But {@link Release} ensures that the temporary dynamic Version gets
+		// created only when necessary, and that is when at least one new commit needs to
+		// be introduced, negating the possibility of it having an equivalent static
+		// Version.
+		if (scmPlugin.isTempDynamicVersion(versionDynamic)) {
+			return null;
+		}
+
 		// In most cases we need only the current commit.
 		listCommit = scmPlugin.getListCommit(versionDynamic, new ScmPlugin.CommitPaging(1), EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_VERSION_STATIC));
 
@@ -296,8 +314,8 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 
 			// In order to check for an existing static version corresponding to the current
 			// dynamic version we consider the message of the last commit of the current
-			// dynamic version which, if there is a corresponding static version, it will
-			// contain the special attribute equivalent-static-version at the beginning. This
+			// dynamic version which, if there is a corresponding static version, will contain
+			// the special attribute equivalent-static-version at the beginning. This
 			// attribute will have been included when creating the static Version to revert
 			// the changes to the ArtifactVersion.
 			// This is necessary since an existing static version will generally not correspond
@@ -314,7 +332,7 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 
 			// If the equivalent-static-version attribute is not specified for the current
 			// commit, in most cases it means that other commits were performed between some
-			// previous commit which does have this attribute and the current commit, and in
+			// previous commit which do have this attribute and the current commit, and in
 			// such cases there is no static Version that is equivalent to the current dynamic
 			// Version. But in the exceptional case were these other intervening commits are
 			// only Version-changing commits introduced by Dragom, and the list of references
