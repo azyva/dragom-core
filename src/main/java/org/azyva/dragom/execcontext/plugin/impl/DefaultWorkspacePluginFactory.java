@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -50,6 +50,7 @@ import org.azyva.dragom.execcontext.plugin.WorkspaceDir;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirSystemModule;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
+import org.azyva.dragom.execcontext.plugin.support.GenericExecContextPluginFactory;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,10 @@ import org.slf4j.LoggerFactory;
  * Multiple Versions of the same Module are not supported in user workspace directories.
  * @author David Raymond
  *
+ * This class cannot be a simple {@link WorkspacePlugin} implementation to be used
+ * in conjunction with {@link GenericExecContextPluginFactory} since the creation
+ * of an instance may actually require unmarshalling existing workspace data from
+ * a file within the {@link ExecContext} workspace.
  */
 public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<WorkspacePlugin> {
 	private static final Logger logger = LoggerFactory.getLogger(DefaultWorkspacePluginFactory.class);
@@ -69,9 +74,9 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	private static final String WORKSPACE_LOCKED_INDICATOR_FILE = ".lock";
 
 	/**
-	 * Version of the workspace data.
+	 * Format of the workspace data.
 	 */
-	private static final String WORKSPACE_VERSION_PROPERTY = "workspace-version";
+	private static final String WORKSPACE_FORMAT = "multiple";
 
 	/**
 	 * Version of the workspace data.
@@ -98,54 +103,74 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	 */
 	private static final String MSG_PATTERN_KEY_SYSTEM_WORKSPACE_DIRECTORY_CONFLICT = "SYSTEM_WORKSPACE_DIRECTORY_CONFLICT";
 
-
 	/**
 	 * ResourceBundle specific to this class.
 	 */
 	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultWorkspacePluginFactory.class.getName() + "ResourceBundle");
 
 	/**
-	 * Default WorkspacePlugin implementation.
-	 * Simple workspace implementation.
-	 *
-	 * TODO: Reword. Not true anymore...
-	 * This implementation does not keep track of the modules created within the
-	 * workspace and simpl assumes the module path is a directory whose name is the
-	 * module name within the workspace directory, regardless of the version.
+	 * WorkspacePlugin implementation.
 	 */
 	@XmlAccessorType(XmlAccessType.NONE)
 	@XmlRootElement(name = "workspace-default-impl")
 	private static class DefaultWorkspaceImpl implements WorkspacePlugin, ToolLifeCycleExecContextPlugin {
-		Path pathWorkspace;
+		/**
+		 * Path to the workspace.
+		 */
+		private Path pathWorkspace;
 
-		Path pathDragomMetadataDir;
+		/**
+		 * Path to the Dragom metadata directory.
+		 */
+		private Path pathDragomMetadataDir;
 
-		/* We really need a bidirectional map. For now, simply use two regular maps to
-		 * avoid having to use a third party library.
-		 *
-		 * We map only one bidirectional map side and use the afterUnmarshal JAXB
-		 * callback to complete the other side.
-		 *
+		/**
+		 * Map of {@link WorkspaceDir}'s to workspace directory Path's.
+		 * <p>
+		 * What we really need is a bidirectional map. For now, we simply use two regular
+		 * Map to avoid having to use a third-party library.
 		 * For the actual marshalling/unmarshalling, a XmlAdapter is used so that within
 		 * the XML document the workspace directory to path information is represented as
-		 * a simple list of tuples, but within the Java class is becomes a Map.
+		 * a simple list of tuples, but within the Java class is becomes a Map (2 Map's
+		 * actually).
 		 */
 		@XmlElement(name = "workspace-dirs", type = MapWorkspaceDirPathXmlAdapter.ListWorkspaceDirPath.class)
 		@XmlJavaTypeAdapter(MapWorkspaceDirPathXmlAdapter.class)
-		Map<WorkspaceDir, Path> mapWorkspaceDirPath;
+		private Map<WorkspaceDir, Path> mapWorkspaceDirPath;
 
-		Map<Path, WorkspaceDir> mapPathWorkspaceDir;
+		/**
+		 * Map of workspace directory Path's to {@link WorkspaceDir}'s.
+		 * <p>
+		 * See comment for mapWorkspaceDirPath.
+		 */
+		private Map<Path, WorkspaceDir> mapPathWorkspaceDir;
 
-		// Key not present means no access. 0 means write. 1+ means read with read count.
-		Map<WorkspaceDir, Integer> mapWorkspaceDirAccessMode;
+		/**
+		 * Map {@link WorkspaceDir} access modes. The entries have the following meanings:
+		 * <p>
+		 * <li>Key not present: No access</li>
+		 * <li>0: Write access</li>
+		 * <li>1+: Read access with read count</li>
+		 */
+		private Map<WorkspaceDir, Integer> mapWorkspaceDirAccessMode;
 
-		// Constructor used by JAXB, when init.
+		/**
+		 * Default constructor.
+		 * <p>
+		 * Use by JAXB when unmarshalling.
+		 */
 		public DefaultWorkspaceImpl() {
 			this.mapWorkspaceDirPath = new HashMap<WorkspaceDir, Path>();
 			this.mapPathWorkspaceDir = new HashMap<Path, WorkspaceDir>();
 			this.mapWorkspaceDirAccessMode = new HashMap<WorkspaceDir, Integer>();
 		}
 
+		/**
+		 * Constructor.
+		 *
+		 * @param pathWorkspace Path to the workspace directory.
+		 * @param pathDragomMetadataDir Path to the Dragom metadata directory.
+		 */
 		public DefaultWorkspaceImpl(Path pathWorkspace, Path pathDragomMetadataDir) {
 			this();
 			this.pathWorkspace = pathWorkspace;
@@ -153,6 +178,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			this.save();
 		}
 
+		/**
+		 * Called by JAXB after unmarshalling.
+		 *
+		 * @param unmarshaller Unmarshaller.
+		 * @param parent Parent (not used).
+		 */
 		@SuppressWarnings("unused")
 		private void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
 			for (Map.Entry<WorkspaceDir, Path> mapEntry: this.mapWorkspaceDirPath.entrySet()) {
@@ -160,6 +191,9 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			}
 		}
 
+		/**
+		 * Saves the workspace data within the {@link ExecContext}.
+		 */
 		private void save() {
 			File fileWorkspaceMetadata;
 			JAXBContext jaxbContext;
@@ -216,17 +250,10 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			return this.mapWorkspaceDirPath.containsKey(workspaceDir);
 		}
 
-		//TODO if workspace dir cannot be created for whatever reason, exception, even if it is because of conflit.
-		//Fow now. Eventually, maybe the caller would be interested in knowing if fail because of conflict behave
-		//gracefully in that case. But for now, make it simple.
 		@Override
 		public Path getWorkspaceDir(WorkspaceDir workspaceDir, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode, WorkspaceDirAccessMode workspaceDirAccessMode) {
 			Integer readCount;
 			Path path;
-
-			/* Perform basic generic validation that is common to all workspace directory
-			 * types.
-			 */
 
 			if (workspaceDirAccessMode != WorkspaceDirAccessMode.PEEK) {
 				readCount = this.mapWorkspaceDirAccessMode.get(workspaceDir);
@@ -258,9 +285,6 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				throw new RuntimeException("WorkspacePlugin directory " + workspaceDir + " exists and mapped to " + path + " but is assumed to not exist.");
 			}
 
-			/* Get the workspace directory.
-			 */
-
 			if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
 				path = this.getWorkspaceDirUserModuleVersion((WorkspaceDirUserModuleVersion)workspaceDir, enumSetGetWorkspaceDirMode);
 			} else if (workspaceDir instanceof WorkspaceDirSystemModule) {
@@ -268,9 +292,6 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			} else {
 				throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDir.getClass().getName() + '.');
 			}
-
-			/* Generically ensure the path is created if the caller requests it.
-			 */
 
 			if ((path != null) && !path.toFile().isDirectory() && !enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.DO_NOT_CREATE_PATH)) {
 				if (!path.toFile().mkdir()) {
@@ -281,6 +302,13 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			return path;
 		}
 
+		/**
+		 * Returns the Path corresponding to a WorkspaceDirUserModuleVersion.
+		 *
+		 * @param workspaceDirUserModuleVersion WorkspaceDirUserModuleVersion.
+		 * @param enumSetGetWorkspaceDirMode EnumSet of {@link GetWorkspaceDirMode}.
+		 * @return Path
+		 */
 		private Path getWorkspaceDirUserModuleVersion(WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {
 			Path path;
 
@@ -321,6 +349,13 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			return path;
 		}
 
+		/**
+		 * Returns the Path corresponding to a WorkspaceDirSystemModule.
+		 *
+		 * @param workspaceDirSystemModule WorkspaceDirSystemModule.
+		 * @param enumSetGetWorkspaceDirMode EnumSet of {@link GetWorkspaceDirMode}.
+		 * @return Path
+		 */
 		private Path getWorkspaceDirSystemModule(WorkspaceDirSystemModule workspaceDirSystemModule, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {
 			Path path;
 
@@ -432,6 +467,20 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				if (!((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath().equals(((WorkspaceDirUserModuleVersion)workspaceDirNew).getModuleVersion().getNodePath())) {
 					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module node path as original workspace directory " + workspaceDir + '.');
 				}
+
+				if (this.mapWorkspaceDirPath.get(workspaceDirNew) != null) {
+					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must not exist.");
+				}
+
+				this.mapWorkspaceDirPath.remove(workspaceDir);
+				this.mapWorkspaceDirPath.put(workspaceDirNew,  path);
+
+				this.mapPathWorkspaceDir.put(path, workspaceDirNew);
+
+				this.mapWorkspaceDirAccessMode.remove(workspaceDir);
+				this.mapWorkspaceDirAccessMode.put(workspaceDirNew, 0);
+
+				this.save();
 			} else if (workspaceDir instanceof WorkspaceDirSystemModule) {
 				if (!(workspaceDirNew instanceof WorkspaceDirSystemModule)) {
 					throw new RuntimeException("New workspace directory " + workspaceDir + " must be of the same type as original one " + workspaceDirNew + '.');
@@ -440,23 +489,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 				if (!((WorkspaceDirSystemModule)workspaceDir).getNodePath().equals(((WorkspaceDirSystemModule)workspaceDirNew).getNodePath())) {
 					throw new RuntimeException("New workspace directory " + workspaceDirNew + " must refer to the same module node path as original workspace directory " + workspaceDir + '.');
 				}
+
+				// For a WorkspaceDirSystemModule there is in fact nothing to do since it is not
+				// specific to a Version and we do not allow changing the Module.
 			} else {
 				throw new RuntimeException("Invalid workspace directory type " + workspaceDir + '.');
 			}
-
-			if (this.mapWorkspaceDirPath.get(workspaceDirNew) != null) {
-				throw new RuntimeException("New workspace directory " + workspaceDirNew + " must not exist.");
-			}
-
-			this.mapWorkspaceDirPath.remove(workspaceDir);
-			this.mapWorkspaceDirPath.put(workspaceDirNew,  path);
-
-			this.mapPathWorkspaceDir.put(path, workspaceDirNew);
-
-			this.mapWorkspaceDirAccessMode.remove(workspaceDir);
-			this.mapWorkspaceDirAccessMode.put(workspaceDirNew, 0);
-
-			this.save();
 		}
 
 		@Override
@@ -520,8 +558,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 			setWorkspaceDir = new HashSet<WorkspaceDir>(this.mapWorkspaceDirPath.keySet());
 
 			if (workspaceDirIncomplete != null) {
+				WorkspaceDirUserModuleVersion workspaceDirUserModuleVersionIncomplete;
+				WorkspaceDirSystemModule workspaceDirSystemModuleIncomplete;
 				Iterator<WorkspaceDir> iteratorWorkspaceDir;
 
+				workspaceDirUserModuleVersionIncomplete = (WorkspaceDirUserModuleVersion)workspaceDirIncomplete;
+				workspaceDirSystemModuleIncomplete = (WorkspaceDirSystemModule)workspaceDirIncomplete;
 				iteratorWorkspaceDir = setWorkspaceDir.iterator();
 
 				while (iteratorWorkspaceDir.hasNext()) {
@@ -533,10 +575,8 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 						iteratorWorkspaceDir.remove();
 					} else if (workspaceDirIncomplete instanceof WorkspaceDirUserModuleVersion) {
 						WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
-						WorkspaceDirUserModuleVersion workspaceDirUserModuleVersionIncomplete;
 
 						workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)workspaceDir;
-						workspaceDirUserModuleVersionIncomplete = (WorkspaceDirUserModuleVersion)workspaceDirIncomplete;
 
 						if (   (workspaceDirUserModuleVersionIncomplete.getModuleVersion().getNodePath() != null)
 							&& !workspaceDirUserModuleVersionIncomplete.getModuleVersion().getNodePath().equals(workspaceDirUserModuleVersion.getModuleVersion().getNodePath())) {
@@ -549,10 +589,8 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 						}
 					} else if (workspaceDirIncomplete instanceof WorkspaceDirSystemModule) {
 						WorkspaceDirSystemModule workspaceDirSystemModule;
-						WorkspaceDirSystemModule workspaceDirSystemModuleIncomplete;
 
 						workspaceDirSystemModule = (WorkspaceDirSystemModule)workspaceDir;
-						workspaceDirSystemModuleIncomplete = (WorkspaceDirSystemModule)workspaceDirIncomplete;
 
 						if (   (workspaceDirSystemModuleIncomplete.getNodePath() != null)
 							&& !workspaceDirSystemModuleIncomplete.getNodePath().equals(workspaceDirSystemModule.getNodePath())) {
@@ -611,33 +649,12 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 	}
 
 	/**
-	 * TODO: Review
-	 * Create the WorkspacePlugin using the following strategy:
-	 *
-	 * - For the WorkspacePlugin, the workspace directory is considered. If the system
-	 *   property org.azyva.dragom.WorkspaceDir is defined, the path specified is
-	 *   taken as the workspace. Otherwise the current working directory is used.
-	 * - If the system property org.azyva.dragom.WorkspaceFactory is defined, the
-	 *   static method getWorkspaceInstance of the specified class is called to obtain
-	 *   the WorkspacePlugin instance to set in ExecContext.
-	 * - Otherwise if the workspace directory contains the
-	 *   .dragom/workspace-init.properties file, the class identified by the
-	 *   workspace.factory property is used as the factory.
-	 * - Otherwise (if the workspace directory does not contain the
-	 *   .dragom/workspace-init.properties file), if the system property
-	 *   org.azyva.dragom.DefaultWorkspaceFactory is defined, the specified class is
-	 *   used as the factory.
-	 * - Otherwise, DefaultWorkspaceFactory is used as the factory.
-	 * - In all cases once a WorkspacePlugin instance is obtained, it is initialized by
-	 *   calling either init or load depending on whether the workspace directory
-	 *   contained the .dragom/workspace-init.properties file.
-	 *
-	 * @return See description.
+	 * @return WorkspaePlugin.
 	 */
 	@Override
 	public WorkspacePlugin getExecContextPlugin(ExecContext execContext) {
 		WorkspaceExecContext workspaceExecContext;
-		String workspaceVersion;
+		WorkspaceExecContext.WorkspaceFormatVersion workspaceFormatVersion;
 		boolean indWorkspaceInit;
 		Path pathWorkspace;
 		Path pathDragomMetadataDir;
@@ -649,18 +666,14 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
 		workspaceExecContext = (WorkspaceExecContext)execContext;
 
-		workspaceVersion = execContext.getProperty(DefaultWorkspacePluginFactory.WORKSPACE_VERSION_PROPERTY);
+		workspaceFormatVersion = workspaceExecContext.getWorkspaceFormatVersion();
 
-		// We infer the fact that the workspace is initialized or not based on the
-		// presence of the workspace-version property. We do not take into consideration
-		// whether the workspace is empty or not. This allows for example initializing a
-		// Dragom workspace within an Eclipse workspace.
-		if (workspaceVersion == null) {
-			execContext.setProperty(DefaultWorkspacePluginFactory.WORKSPACE_VERSION_PROPERTY, DefaultWorkspacePluginFactory.WORKSPACE_VERSION);
+		if (workspaceFormatVersion == null) {
+			workspaceExecContext.setWorkspaceFormatVersion(new WorkspaceExecContext.WorkspaceFormatVersion(DefaultWorkspacePluginFactory.WORKSPACE_FORMAT, DefaultWorkspacePluginFactory.WORKSPACE_VERSION));
 			indWorkspaceInit = false;
 		} else {
-			if (!workspaceVersion.equals(DefaultWorkspacePluginFactory.WORKSPACE_VERSION)) {
-				throw new RuntimeException("Unsupported workspace version " + workspaceVersion + ". Only version " + DefaultWorkspacePluginFactory.WORKSPACE_VERSION + " is supported by this WorkspacePlugin factory.");
+			if (!workspaceFormatVersion.format.equals(DefaultWorkspacePluginFactory.WORKSPACE_FORMAT) || !workspaceFormatVersion.version.equals(DefaultWorkspacePluginFactory.WORKSPACE_VERSION)) {
+				throw new RuntimeException("Unsupported workspace format version " + workspaceFormatVersion + ". + Only format version " + new WorkspaceExecContext.WorkspaceFormatVersion(DefaultWorkspacePluginFactory.WORKSPACE_FORMAT, DefaultWorkspacePluginFactory.WORKSPACE_VERSION) + " is supported by this WorkspacePlugin factory.");
 			}
 
 			indWorkspaceInit = true;

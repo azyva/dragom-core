@@ -1,5 +1,5 @@
 /*
- * Copyright 2015, 2016 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -73,7 +73,7 @@ public class ModelFactoryHolder {
 	 * System property specifying the name of the default {@link ModelFactory}
 	 * implementation class to use.
 	 */
-	private static final String SYS_PROP_DEFAULT_MODEL_FACTORY = "org.azyva.dragom.DefaultModelFactory";
+	private static final String SYS_PROPERTY_DEFAULT_MODEL_FACTORY = "org.azyva.dragom.DefaultModelFactory";
 
 	/**
 	 * {@link ModelFactory} set with {@link #setModelFactory} which
@@ -133,7 +133,7 @@ public class ModelFactoryHolder {
 		} else {
 			String modelFactoryClass;
 
-			modelFactoryClass = System.getProperty(ModelFactoryHolder.SYS_PROP_DEFAULT_MODEL_FACTORY);
+			modelFactoryClass = System.getProperty(ModelFactoryHolder.SYS_PROPERTY_DEFAULT_MODEL_FACTORY);
 
 			if (modelFactoryClass != null) {
 				try {

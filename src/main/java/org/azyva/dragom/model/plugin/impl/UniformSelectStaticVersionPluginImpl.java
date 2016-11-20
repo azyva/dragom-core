@@ -1,5 +1,5 @@
 /*
- * Copyright 2015, 2016 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -48,7 +48,7 @@ import org.azyva.dragom.util.Util;
 public class UniformSelectStaticVersionPluginImpl extends SelectStaticVersionPluginBaseImpl implements SelectStaticVersionPlugin {
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_STATIC_VERSION_PREFIX = "CAN_REUSE_STATIC_VERSION_PREFIX";
 	private static final String RUNTIME_PROPERTY_REUSE_STATIC_VERSION_PREFIX = "REUSE_STATIC_VERSION_PREFIX";
-	private static final int INITIAL_REVISION = 1;
+	private static final int DEFAULT_INITIAL_REVISION = 1;
 	private static final int DEFAULT_REVISION_DECIMAL_POSITION_COUNT = 2;
 
 	/**
@@ -74,7 +74,7 @@ public class UniformSelectStaticVersionPluginImpl extends SelectStaticVersionPlu
 	public UniformSelectStaticVersionPluginImpl(Module module) {
 		super(module);
 
-		this.setInitialRevision(UniformSelectStaticVersionPluginImpl.INITIAL_REVISION);
+		this.setDefaultInitialRevision(UniformSelectStaticVersionPluginImpl.DEFAULT_INITIAL_REVISION);
 		this.setDefaultRevisionDecimalPositionCount(UniformSelectStaticVersionPluginImpl.DEFAULT_REVISION_DECIMAL_POSITION_COUNT);
 	}
 
@@ -113,7 +113,7 @@ public class UniformSelectStaticVersionPluginImpl extends SelectStaticVersionPlu
 			}
 		}
 
-		return this.getNewStaticVersionFromPrefix(versionDynamic, versionStaticPrefix);
+		return this.getNewStaticVersionFromPrefix(this.getVersionLatestMatchingVersionStaticPrefix(this.getListVersionStaticForDynamicVersion(versionDynamic), versionStaticPrefix), versionStaticPrefix);
 	}
 
 	/**

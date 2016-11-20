@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -85,14 +85,14 @@ public class ExecContextPluginFactoryHolder {
 	 * {@link ExecContextPluginFactory} implementation class to use for a given
 	 * {@link ExecContextPlugin} interface whose name is used as the suffix.
 	 */
-	private static final String SYS_PROP_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY = "org.azyva.dragom.DefaultExecContextPluginFactory.";
+	private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY = "org.azyva.dragom.DefaultExecContextPluginFactory.";
 
 	/**
 	 * Prefix of the system property specifying the default {@link ExecContextPlugin}
 	 * implementation class to use for a given ExecContextPlugin interface whose name
 	 * is used as the suffix.
 	 */
-	private static final String SYS_PROP_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL = "org.azyva.dragom.DefaultExecContextPluginImpl.";
+	private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL = "org.azyva.dragom.DefaultExecContextPluginImpl.";
 
 	private static Map<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>> mapExecContextPluginFactory = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>>();
 
@@ -130,14 +130,14 @@ public class ExecContextPluginFactoryHolder {
 
 				execContextPluginInterface = classExecContextPlugin.getName();
 
-				execContextPluginFactoryClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROP_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY + execContextPluginInterface);
+				execContextPluginFactoryClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY + execContextPluginInterface);
 
 				if (execContextPluginFactoryClass != null) {
 					classExecContextPluginFactory = (Class<ExecContextPluginFactory<ExecContextPluginClass>>)Class.forName(execContextPluginFactoryClass);
 
 					execContextPluginFactory = classExecContextPluginFactory.newInstance();
 				} else {
-					execContextPluginImplClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROP_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL + execContextPluginInterface);
+					execContextPluginImplClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL + execContextPluginInterface);
 
 					if (execContextPluginImplClass != null) {
 						classExecContextPluginImpl = (Class<ExecContextPluginClass>)Class.forName(execContextPluginImplClass);

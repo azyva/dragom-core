@@ -1,5 +1,5 @@
 /*
- * Copyright 2015, 2016 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -89,13 +89,13 @@ public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPl
 	private static final String RUNTIME_PROPERTY_REUSE_NEW_SEMANTIC_VERSION_TYPE = "REUSE_NEW_SEMANTIC_VERSION_TYPE";
 
 	/**
-	 * Initial value of the revision part of a new semantic Version.
+	 * Default initial value of the revision part of a new semantic Version.
 	 */
-	private static final int INITIAL_REVISION = 0;
+	private static final int DEFAULT_INITIAL_REVISION = 0;
 
 	/**
-	 * Number of decimal positions to use when generating the revision part of a new
-	 * semantic Version.
+	 * Default number of decimal positions to use when generating the revision part of
+	 * a new semantic Version.
 	 */
 	private static final int DEFAULT_REVISION_DECIMAL_POSITION_COUNT = 1;
 
@@ -147,7 +147,7 @@ public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPl
 	public SemanticSelectStaticVersionPluginImpl(Module module) {
 		super(module);
 
-		this.setInitialRevision(SemanticSelectStaticVersionPluginImpl.INITIAL_REVISION);
+		this.setDefaultInitialRevision(SemanticSelectStaticVersionPluginImpl.DEFAULT_INITIAL_REVISION);
 		this.setDefaultRevisionDecimalPositionCount(SemanticSelectStaticVersionPluginImpl.DEFAULT_REVISION_DECIMAL_POSITION_COUNT);
 
 		this.semanticVersionPrefix = module.getProperty(SemanticSelectStaticVersionPluginImpl.MODEL_PROPERTY_SEMANTIC_VERSION_PREFIX);
@@ -188,7 +188,7 @@ public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPl
 			}
 		}
 
-		return this.getNewStaticVersionFromPrefix(versionDynamic, versionStaticPrefix);
+		return this.getNewStaticVersionFromPrefix(this.getVersionLatestMatchingVersionStaticPrefix(this.getListVersionStaticForDynamicVersion(versionDynamic), versionStaticPrefix), versionStaticPrefix);
 	}
 
 	/**
@@ -259,7 +259,7 @@ public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPl
 			// We check if this static Version happens to be one on the current dynamic
 			// Version.
 
-			listVersionStatic = this.getListVersionStatic(versionDynamic);
+			listVersionStatic = this.getListVersionStaticForDynamicVersion(versionDynamic);
 
 			if (listVersionStatic.contains(versionStaticMax)) {
 				// If the max static Version is one on the current dynamic version we simply

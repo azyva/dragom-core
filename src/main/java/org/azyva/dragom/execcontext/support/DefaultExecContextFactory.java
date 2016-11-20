@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -80,12 +80,22 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	/**
 	 * Initialization property specifying the workspace directory.
 	 */
-	private static final String WORKSPACE_DIR_INIT_PROP = "org.azyva.dragom.WorkspacePath";
+	private static final String INIT_PROPERTY_WORKSPACE_DIR = "org.azyva.dragom.WorkspacePath";
 
 	/**
 	 * Metadata directory.
 	 */
 	private static final String DRAGOM_METADATA_DIR = ".dragom";
+
+	/**
+	 * {@link ExecContext} property specifying the format of the workspace data.
+	 */
+	private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_FORMAT = "workspace-format";
+
+	/**
+	 * {@link ExecContext} property specifying the version of the workspace data.
+	 */
+	private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_VERSION = "workspace-version";
 
 	/**
 	 * Properties file within the Dragom metadata directory.
@@ -98,7 +108,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	 * Initialization property indicating to ignore any cached {@link ExecContext} and
 	 * instantiate a new one.
 	 */
-	private static final String INIT_PROP_IND_IGNORE_CACHED_EXEC_CONTEXT = "org.azyva.dragom.IndIgnoreCachedExecContext";
+	private static final String INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT = "org.azyva.dragom.IndIgnoreCachedExecContext";
 
 	/**
 	 * Map of workspace Path to DefaultExecContextImpl.
@@ -409,6 +419,28 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		}
 
 		@Override
+		public WorkspaceFormatVersion getWorkspaceFormatVersion() {
+			String workspaceFormat;
+			WorkspaceFormatVersion workspaceFormatVersion;
+
+			workspaceFormat = this.getProperty(DefaultExecContextFactory.EXEC_CONTEXT_PROPERTY_WORKSPACE_FORMAT);
+
+			if (workspaceFormat == null) {
+				return null;
+			}
+
+			workspaceFormatVersion = new WorkspaceFormatVersion(workspaceFormat, this.getProperty(DefaultExecContextFactory.EXEC_CONTEXT_PROPERTY_WORKSPACE_VERSION));
+
+			return workspaceFormatVersion;
+		}
+
+		@Override
+		public void setWorkspaceFormatVersion(WorkspaceFormatVersion workspaceFormatVersion) {
+			this.setProperty(DefaultExecContextFactory.EXEC_CONTEXT_PROPERTY_WORKSPACE_FORMAT, workspaceFormatVersion.format);
+			this.setProperty(DefaultExecContextFactory.EXEC_CONTEXT_PROPERTY_WORKSPACE_VERSION, workspaceFormatVersion.version);
+		};
+
+		@Override
 		public void startTool(Properties propertiesTool) {
 			// Normally when a tool starts, the ExecContext should not have any transient
 			// ExecContextPlugin's since they should have been removed when endTool was
@@ -500,7 +532,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 		boolean indIgnoreCachedExecContext;
 		DefaultExecContextImpl defaultExecContextImpl;
 
-		workspaceDir = propertiesInit.getProperty(DefaultExecContextFactory.WORKSPACE_DIR_INIT_PROP);
+		workspaceDir = propertiesInit.getProperty(DefaultExecContextFactory.INIT_PROPERTY_WORKSPACE_DIR);
 
 		if (workspaceDir == null) {
 			workspaceDir = System.getProperty("user.dir");
@@ -518,7 +550,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 			}
 		}
 
-		indIgnoreCachedExecContext = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultExecContextFactory.INIT_PROP_IND_IGNORE_CACHED_EXEC_CONTEXT));
+		indIgnoreCachedExecContext = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultExecContextFactory.INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT));
 
 		if (indIgnoreCachedExecContext) {
 			DefaultExecContextFactory.mapPathWorkspaceDirDefaultExecContextImpl.remove(pathWorkspaceDir);
@@ -535,7 +567,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 	}
 
 	@Override
-	public String getWorkspaceDirInitProp() {
-		return DefaultExecContextFactory.WORKSPACE_DIR_INIT_PROP;
+	public String getWorkspaceDirInitProperty() {
+		return DefaultExecContextFactory.INIT_PROPERTY_WORKSPACE_DIR;
 	}
 }

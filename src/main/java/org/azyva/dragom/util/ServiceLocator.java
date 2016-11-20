@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -71,13 +71,13 @@ public class ServiceLocator {
 	 * Prefix of the system property specifying the default factory class for a
 	 * service interface whose name is used as the suffix.
 	 */
-	private static final String SYS_PROP_PREFIX_DEFAULT_SERVICE_FACTORY = "org.azyva.dragom.DefaultServiceFactory.";
+	private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY = "org.azyva.dragom.DefaultServiceFactory.";
 
 	/**
 	 * Prefix of the system property specifying the default service implementation
 	 * class for a service interface whose name is used as the suffix.
 	 */
-	private static final String SYS_PROP_PREFIX_DEFAULT_SERVICE_IMPL = "org.azyva.dragom.DefaultServiceImpl.";
+	private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL = "org.azyva.dragom.DefaultServiceImpl.";
 
 	/**
 	 * Interface which must be implemented by registered service factories.
@@ -123,7 +123,7 @@ public class ServiceLocator {
 			return serviceFactory.getService();
 		}
 
-		serviceFactoryClassName = System.getProperty(ServiceLocator.SYS_PROP_PREFIX_DEFAULT_SERVICE_FACTORY + classServiceInterface.getName());
+		serviceFactoryClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY + classServiceInterface.getName());
 
 		if (serviceFactoryClassName != null) {
 			try {
@@ -133,7 +133,7 @@ public class ServiceLocator {
 			}
 		}
 
-		serviceImplClassName = System.getProperty(ServiceLocator.SYS_PROP_PREFIX_DEFAULT_SERVICE_IMPL + classServiceInterface.getName());
+		serviceImplClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL + classServiceInterface.getName());
 
 		if (serviceImplClassName != null) {
 			try {

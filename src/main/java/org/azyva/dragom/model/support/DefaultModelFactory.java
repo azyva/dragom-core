@@ -1,5 +1,5 @@
 /*
- * Copyright 2015, 2016 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -63,7 +63,7 @@ public class DefaultModelFactory implements ModelFactory {
 	 * Initialization property indicating to ignore any cached Model and instantiate a
 	 * new one, essentially causing a reload of the {@link XmlConfig}.
 	 */
-	private static final String INIT_PROP_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
+	private static final String INIT_PROPERTY_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
 
 	@Override
 	public Model getModel(Properties propertiesInit) {
@@ -77,7 +77,7 @@ public class DefaultModelFactory implements ModelFactory {
 			throw new RuntimeException("Initialization property " + DefaultModelFactory.URL_MODEL_INIT_PROP + " is not defined.");
 		}
 
-		indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_IND_IGNORE_CACHED_MODEL));
+		indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_IGNORE_CACHED_MODEL));
 
 		if (indIgnoreCachedModel) {
 			DefaultModelFactory.mapUrlXmlConfigModel.remove(stringUrlXmlConfig);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015, 2016 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC.
  *
  * This file is part of Dragom.
  *
@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Formatter;
 import java.util.List;
@@ -40,6 +41,7 @@ import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
+import org.azyva.dragom.model.plugin.VersionClassifierPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
@@ -55,6 +57,17 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION = "SPECIFIC_STATIC_VERSION";
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION = "CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION";
 	private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX = "SPECIFIC_STATIC_VERSION_PREFIX";
+
+	/**
+	 * Runtime property specifying the initial revision to use for the first static
+	 * Version created with a given prefix.
+	 * <p>
+	 * Also defines the lower bound for new revisions. For example, if the current
+	 * most recent static Version is S/v-1.123 and this runtime property specifies 1000,
+	 * the next static Version would be S/v-1.1000 (if the prefix is S/v-1.).
+	 */
+	private static final String RUNTIME_PROPERTY_INITIAL_REVISION = "INITIAL_REVISION";
+
 	private static final String RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT = "REVISION_DECIMAL_POSITION_COUNT";
 
 	/**
@@ -92,15 +105,15 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 	 */
 	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SelectStaticVersionPluginBaseImpl.class.getName() + "ResourceBundle");
 
-	private int initialRevision;
+	private int defaultInitialRevision;
 	private int defaultRevisionDecimalPositionCount;
 
 	public SelectStaticVersionPluginBaseImpl(Module module) {
 		super(module);
 	}
 
-	protected void setInitialRevision(int initialRevision) {
-		this.initialRevision = initialRevision;
+	protected void setDefaultInitialRevision(int defaultInitialRevision) {
+		this.defaultInitialRevision = defaultInitialRevision;
 	}
 
 	protected void setDefaultRevisionDecimalPositionCount(int defaultRevisionDecimalPositionCount) {
@@ -255,85 +268,6 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 	}
 
 	/**
-	 * Gets a new static Version based on a prefix.
-	 *
-	 * @param versionDynamic Dynamic Version.
-	 * @param versionStaticPrefix Static version prefix.
-	 * @return New static Version.
-	 */
-	protected Version getNewStaticVersionFromPrefix(Version versionDynamic, Version versionStaticPrefix) {
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		ScmPlugin scmPlugin;
-		String runtimeProperty;
-		int revisionDecimalPositionCount;
-		String revisionFormat;
-		Version versionLatestStatic;
-		int revision;
-		Formatter formatter;
-		Version versionNewStatic;
-
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
-
-		runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT);
-
-		if (runtimeProperty == null) {
-			revisionDecimalPositionCount = this.defaultRevisionDecimalPositionCount;
-		} else {
-			revisionDecimalPositionCount = Integer.parseInt(runtimeProperty);
-		}
-
-		if (revisionDecimalPositionCount == 0) {
-			revisionFormat = "%d";
-		} else {
-			revisionFormat = "%0" + revisionDecimalPositionCount + "d";
-		}
-
-		versionLatestStatic = this.getVersionLatestMatchingVersionStaticPrefix(versionDynamic, versionStaticPrefix);
-
-		if (versionLatestStatic == null) {
-			revision = this.initialRevision;
-		} else {
-			String suffix;
-
-			suffix = versionLatestStatic.getVersion().substring(versionStaticPrefix.getVersion().length());
-
-			revision = -1;
-
-			if (suffix.matches("\\.\\d+")) {
-				try {
-					revision = Integer.parseInt(suffix.substring(1));
-				} catch (NumberFormatException nfe) {
-				}
-			}
-
-			if (revision == -1) {
-				throw new RuntimeException("The suffix " + suffix + " of the latest static version " + versionLatestStatic + " is not in the format \".<decimal revision>\".");
-			}
-
-			if (revisionDecimalPositionCount != 0) {
-				if (revision == Math.pow(10, revisionDecimalPositionCount) - 1) {
-					throw new RuntimeException("The suffix " + suffix + " of the latest static version " + versionLatestStatic + " is already the maximum revision allowed.");
-				}
-			}
-
-			revision++;
-
-		}
-
-		formatter = new Formatter();
-		formatter.format(revisionFormat, new Integer(revision));
-		versionNewStatic = new Version(VersionType.STATIC, versionStaticPrefix.getVersion() + '.' + formatter.out().toString());
-		formatter.close();
-
-		if (scmPlugin.isVersionExists(versionNewStatic)) {
-			throw new RuntimeException("New static version " + versionNewStatic + " already exists for module " + this.getModule() + '.');
-		}
-
-		return versionNewStatic;
-	}
-
-	/**
 	 * Gets the existing static Version that is equivalent to a dynamic Version.
 	 *
 	 * @param versionDynamic Dynamic Version.
@@ -462,18 +396,122 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 	}
 
 	/**
-	 * Gets the latest static Version matching a static Version prefix created on a
-	 * dynamic Version.
+	 * Gets a new static {@link Version} based on a prefix and a latest static
+	 * Version.
+	 * <p>
+	 * The caller is responsible for providing a latest static Version which matches
+	 * the static Version prefix.
+	 * <p>
+	 * This class provides methods to help the caller in obtaining this latest static
+	 * Version depending on the context. It could be the latest static Version created
+	 * on a given dynamic Version. It could also be the latest static Version
+	 * globally.
 	 *
-	 * @param versionDynamic Dynamic Version.
+	 * @param versionLatestStatic Latest static Version. Can be null, indicating there
+	 *   is no latest static Version.
+	 * @param versionStaticPrefix Static version prefix.
+	 * @return New static Version.
+	 */
+	protected Version getNewStaticVersionFromPrefix(Version versionLatestStatic, Version versionStaticPrefix) {
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		ScmPlugin scmPlugin;
+		String runtimeProperty;
+		int revisionDecimalPositionCount;
+		int initialRevision;
+		String revisionFormat;
+		int revision;
+		Formatter formatter;
+		Version versionNewStatic;
+
+		if (versionStaticPrefix.getVersionType() != VersionType.STATIC) {
+			throw new RuntimeException("Version " + versionStaticPrefix + " must be static.");
+		}
+
+		if ((versionLatestStatic != null) && ((versionLatestStatic.getVersionType() != VersionType.STATIC) || !versionLatestStatic.getVersion().startsWith(versionStaticPrefix.getVersion()))) {
+			throw new RuntimeException("Version " + versionLatestStatic + " must be static and must have as a prefix Version " + versionStaticPrefix + '.');
+		}
+
+		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
+
+		runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_REVISION_DECIMAL_POSITION_COUNT);
+
+		if (runtimeProperty == null) {
+			revisionDecimalPositionCount = this.defaultRevisionDecimalPositionCount;
+		} else {
+			revisionDecimalPositionCount = Integer.parseInt(runtimeProperty);
+		}
+
+		if (revisionDecimalPositionCount == 0) {
+			revisionFormat = "%d";
+		} else {
+			revisionFormat = "%0" + revisionDecimalPositionCount + "d";
+		}
+
+		runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), SelectStaticVersionPluginBaseImpl.RUNTIME_PROPERTY_INITIAL_REVISION);
+
+		if (runtimeProperty == null) {
+			initialRevision = this.defaultInitialRevision;
+		} else {
+			initialRevision = Integer.parseInt(runtimeProperty);
+		}
+
+		if (versionLatestStatic == null) {
+			revision = initialRevision;
+		} else {
+			String suffix;
+
+			suffix = versionLatestStatic.getVersion().substring(versionStaticPrefix.getVersion().length());
+
+			revision = -1;
+
+			if (suffix.matches("\\.\\d+")) {
+				try {
+					revision = Integer.parseInt(suffix.substring(1));
+				} catch (NumberFormatException nfe) {
+				}
+			}
+
+			if (revision == -1) {
+				throw new RuntimeException("The suffix " + suffix + " of the latest static version " + versionLatestStatic + " is not in the format \".<decimal revision>\".");
+			}
+
+			// initialRevision is also used as a lower bound.
+			if (revision < initialRevision) {
+				revision = initialRevision;
+			}
+
+			if (revisionDecimalPositionCount != 0) {
+				if (revision == Math.pow(10, revisionDecimalPositionCount) - 1) {
+					throw new RuntimeException("The suffix " + suffix + " of the latest static version " + versionLatestStatic + " is already the maximum revision allowed.");
+				}
+			}
+
+			revision++;
+
+		}
+
+		formatter = new Formatter();
+		formatter.format(revisionFormat, new Integer(revision));
+		versionNewStatic = new Version(VersionType.STATIC, versionStaticPrefix.getVersion() + '.' + formatter.out().toString());
+		formatter.close();
+
+		if (scmPlugin.isVersionExists(versionNewStatic)) {
+			throw new RuntimeException("New static version " + versionNewStatic + " already exists for module " + this.getModule() + '.');
+		}
+
+		return versionNewStatic;
+	}
+
+	/**
+	 * Gets the latest static {@link Version} matching a static Version prefix among a
+	 * List of static Version's.
+	 *
+	 * @param llistVersionStatic List of static Version's, ordered latest first.
 	 * @param versionStaticPrefix Static Version prefix.
 	 * @return Latest matching static Version or null if none.
 	 */
-	protected Version getVersionLatestMatchingVersionStaticPrefix(Version versionDynamic, Version versionStaticPrefix) {
-		List<Version> listVersionStatic;
-
-		listVersionStatic = this.getListVersionStatic(versionDynamic);
-
+	protected Version getVersionLatestMatchingVersionStaticPrefix(List<Version> listVersionStatic, Version versionStaticPrefix) {
 		for (Version version: listVersionStatic) {
 			if (version.getVersion().startsWith(versionStaticPrefix.getVersion())) {
 				return version;
@@ -484,13 +522,13 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 	}
 
 	/**
-	 * Gets the list of static Version created on a dynamic Version, with the most
-	 * recent ones first.
+	 * Gets the List of static {@link Version}'s created on a dynamic Version, ordered
+	 * latest first.
 	 *
 	 * @param versionDynamic Dynamic Version.
 	 * @return List of static Version.
 	 */
-	protected List<Version> getListVersionStatic(Version versionDynamic) {
+	protected List<Version> getListVersionStaticForDynamicVersion(Version versionDynamic) {
 		ScmPlugin scmPlugin;
 		List<ScmPlugin.Commit> listCommit;
 		List<Version> listVersionStatic;
@@ -504,6 +542,26 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
 		}
 
 		return listVersionStatic;
+	}
 
+	/**
+	 * Gets the List of static {@link Version}'s globally, ordered latest first.
+	 *
+	 * @return See description.
+	 */
+	protected List<Version> getListVersionStaticGlobal() {
+		Module module;
+		ScmPlugin scmPlugin;
+		VersionClassifierPlugin versionClassifierPlugin;
+		List<Version> listVersionStatic;
+
+		module = this.getModule();
+		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+		versionClassifierPlugin = module.getNodePlugin(VersionClassifierPlugin.class, null);
+
+		listVersionStatic = scmPlugin.getListVersionStatic();
+		Collections.sort(listVersionStatic, versionClassifierPlugin);
+
+		return listVersionStatic;
 	}
 }

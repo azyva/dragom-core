@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -84,7 +84,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	 * System property that specifies the file containing the credentials. "~" in the
 	 * value of this property is replaced by the user home directory.
 	 */
-	private static final String SYS_PROP_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
+	private static final String SYS_PROPERTY_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
 
 	/**
 	 * Default credential file (within the workspace metadata directory) when the
@@ -96,7 +96,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 	 * System property that specifies the master password file. "~" in the
 	 * value of this property is replaced by the user home directory.
 	 */
-	public static final String SYS_PROP_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
+	public static final String SYS_PROPERTY_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
 
 	/**
 	 * Runtime property for the list of resource-pattern-realm-user mappings.
@@ -182,7 +182,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		 * Compute the Path to the credential file.
 		 */
 
-		stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_CREDENTIAL_FILE);
+		stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_CREDENTIAL_FILE);
 
 		if (stringCredentialFile == null) {
 			pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
@@ -196,7 +196,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 		 * Compute the Path to the master password file.
 		 */
 
-		stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROP_MASTER_KEY_FILE);
+		stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_MASTER_KEY_FILE);
 
 		if (stringMasterKeyFile == null) {
 			pathMasterKeyFile = null;

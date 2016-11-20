@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -45,7 +45,7 @@ import org.azyva.dragom.model.NodePath;
  *     "runtime-property"</li>
  * <li>System properties (System.getProperty) having the prefix
  *     "org.azyva.dragom.runtime-property"</li>
- * <li>{@link Node} properties within the {@link Model} (@link Node.getProperty}.
+ * <li>{@link Node} properties within the {@link Model} (@link Node#getProperty}.
  * <p>
  * The name of the property following the prefix is the the NodePath of the node
  * with "." separating the nodes and with the last token being the actual property

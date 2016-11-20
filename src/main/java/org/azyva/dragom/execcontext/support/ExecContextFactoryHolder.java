@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -57,7 +57,7 @@ public class ExecContextFactoryHolder {
 	 * System property specifying the name of the default {@link ExecContextFactory}
 	 * implementation class to use.
 	 */
-	private static final String SYS_PROP_DEFAULT_EXEC_CONTEXT_FACTORY = "org.azyva.dragom.DefaultExecContextFactory";
+	private static final String SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY = "org.azyva.dragom.DefaultExecContextFactory";
 
 	private static ExecContextFactory execContextFactory;
 
@@ -83,7 +83,7 @@ public class ExecContextFactoryHolder {
 		if (ExecContextFactoryHolder.execContextFactory == null) {
 			String execContextFactoryClass;
 
-			execContextFactoryClass = System.getProperty(ExecContextFactoryHolder.SYS_PROP_DEFAULT_EXEC_CONTEXT_FACTORY);
+			execContextFactoryClass = System.getProperty(ExecContextFactoryHolder.SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY);
 
 			if (execContextFactoryClass != null) {
 				try {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 AZYVA INC.
+ * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -32,6 +32,7 @@ import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ArtifactVersion;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
@@ -157,6 +158,20 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	private static final String RUNTIME_PROPERTY_CAN_REUSE_PHASE = "CAN_REUSE_PHASE";
 
 	/**
+	 * Transient data prefix that caches the list of {@link ArtifactVersion} to
+	 * {@link Version} mappings. The suffix is the {@link NodePath} of the
+	 * {@link Module}.
+	 */
+	private static final String TRANSIENT_DATA_PREFIX_LIST_ARTIFACT_VERSION_TO_VERSION_MAPPING = ConfigArtifactVersionMapperPluginImpl.class.getName() + ".ListArtifactVersionToVersionMapping.";
+
+	/**
+	 * Transient data prefix that caches the list of {@link Version} to
+	 * {@link ArtifactVersion} mappings. The suffix is the {@link NodePath} of the
+	 * {@link Module}.
+	 */
+	private static final String TRANSIENT_DATA_PREFIX_LIST_VERSION_TO_ARTIFACT_VERSION_MAPPING = ConfigArtifactVersionMapperPluginImpl.class.getName() + ".ListVersionToArtifactVersionMapping.";
+
+	/**
 	 * See description in ResourceBundle.
 	 */
 	private static final String MSG_PATTERN_KEY_INPUT_PHASE = "INPUT_PHASE";
@@ -254,7 +269,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 		for (VersionMapping versionMapping: this.getListVersionMappingVersionToArtifactVersion()) {
 			Matcher matcher;
 
-			ConfigArtifactVersionMapperPluginImpl.logger.debug("Attempting to match version {} to version matching pattern {}.", version, versionMapping.patternSrcVersion);
+			ConfigArtifactVersionMapperPluginImpl.logger.debug("Attempting to match Version {} to Version matching pattern {}.", version, versionMapping.patternSrcVersion);
 
 			matcher = versionMapping.patternSrcVersion.matcher(version.toString());
 
@@ -341,17 +356,29 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 	/**
 	 * Computes and returns the List of ArtifactVersion to Version mappings from the
 	 * runtime properties.
+	 * <p>
+	 * The result is cached in transient data.
 	 *
 	 * @return See description.
 	 */
+	@SuppressWarnings("unchecked")
 	private List<VersionMapping> getListVersionMappingArtifactVersionToVersion() {
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		ExecContext execContext;
 		Module module;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		List<VersionMapping> listVersionMapping;
 		List<String> listMappingKey;
 
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+		execContext = ExecContextHolder.get();
 		module = this.getModule();
+
+		listVersionMapping = (List<VersionMapping>)execContext.getTransientData(ConfigArtifactVersionMapperPluginImpl.TRANSIENT_DATA_PREFIX_LIST_VERSION_TO_ARTIFACT_VERSION_MAPPING + module.getNodePath());
+
+		if (listVersionMapping != null) {
+			return listVersionMapping;
+		}
+
+		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
 		listVersionMapping = new ArrayList<VersionMapping>();
 
@@ -365,7 +392,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
-				throw new RuntimeException("The runtime property ARTIFACT_VERSION_TO_VERSION_MAPPING." + mappingKey + " is not defined for module " + module + '.');
+				throw new RuntimeException("The runtime property " + ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_ARTIFACT_VERSION_TO_VERSION_MAPPING + mappingKey + " is not defined for module " + module + '.');
 			}
 
 			arrayMappingComponent = property.split(":");
@@ -386,23 +413,37 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			listVersionMapping.add(versionMapping);
 		}
 
+		execContext.setTransientData(ConfigArtifactVersionMapperPluginImpl.TRANSIENT_DATA_PREFIX_LIST_VERSION_TO_ARTIFACT_VERSION_MAPPING + module.getNodePath(), listVersionMapping);
+
 		return listVersionMapping;
 	}
 
 	/**
 	 * Computes and returns the List of Version to ArtifactVersion mappings from the
 	 * runtime properties.
+	 * <p>
+	 * The result is cached in transient data.
 	 *
 	 * @return See description.
 	 */
+	@SuppressWarnings("unchecked")
 	private List<VersionMapping> getListVersionMappingVersionToArtifactVersion() {
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
+		ExecContext execContext;
 		Module module;
+		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		List<VersionMapping> listVersionMapping;
 		List<String> listMappingKey;
 
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+		execContext = ExecContextHolder.get();
 		module = this.getModule();
+
+		listVersionMapping = (List<VersionMapping>)execContext.getTransientData(ConfigArtifactVersionMapperPluginImpl.TRANSIENT_DATA_PREFIX_LIST_ARTIFACT_VERSION_TO_VERSION_MAPPING + module.getNodePath());
+
+		if (listVersionMapping != null) {
+			return listVersionMapping;
+		}
+
+		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
 		listVersionMapping = new ArrayList<VersionMapping>();
 
@@ -416,7 +457,7 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 			property = runtimePropertiesPlugin.getProperty(module, ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING + mappingKey);
 
 			if (property == null) {
-				throw new RuntimeException("The runtime property VERSION_TO_ARTIFACT_VERSION_MAPPING." + mappingKey + " is not defined for module " + module + '.');
+				throw new RuntimeException("The runtime property " + ConfigArtifactVersionMapperPluginImpl.RUNTIME_PROPERTY_PREFIX_VERSION_TO_ARTIFACT_VERSION_MAPPING + mappingKey + " is not defined for module " + module + '.');
 			}
 
 			arrayMappingComponent = property.split(":");
@@ -436,6 +477,8 @@ public class ConfigArtifactVersionMapperPluginImpl extends ModulePluginAbstractI
 
 			listVersionMapping.add(versionMapping);
 		}
+
+		execContext.setTransientData(ConfigArtifactVersionMapperPluginImpl.TRANSIENT_DATA_PREFIX_LIST_ARTIFACT_VERSION_TO_VERSION_MAPPING + module.getNodePath(), listVersionMapping);
 
 		return listVersionMapping;
 	}
