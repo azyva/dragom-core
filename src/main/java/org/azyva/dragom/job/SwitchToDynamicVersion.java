@@ -414,7 +414,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			// that it cannot match any children of the current ReferencePath. In such a case
 			// it is logically not required to retrieve the List of references above, but this
 			// List is required towards the end, so it is always retrieved.
-			if (this.referencePathMatcher.canMatchChildren(this.referencePath)) {
+			if (this.getReferencePathMatcher().canMatchChildren(this.referencePath)) {
 				for (Reference referenceChild: listReference) {
 					VisitModuleActionPerformed visitModuleActionPerformedReference;
 
@@ -614,7 +614,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				 * process it.
 				 * *******************************************************************************/
 
-				if (this.referencePathMatcher.matches(this.referencePath)) {
+				if (this.getReferencePathMatcher().matches(this.referencePath)) {
 					// The current ReferencePath is matched by the ReferencePathMatcherAnd. The
 					// current ModuleVersion must be processed.
 
@@ -682,7 +682,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			// as this is where they are actually updated. But for those references whose
 			// Version were not selected, if no child can be matched, it is not necessary
 			// to visit them.
-			indCanMatchChildren = this.referencePathMatcher.canMatchChildren(this.referencePath);
+			indCanMatchChildren = this.getReferencePathMatcher().canMatchChildren(this.referencePath);
 
 			if (indReferenceProcessed || ((visitModuleActionPerformed == VisitModuleActionPerformed.SWITCH) && indCanMatchChildren)) {
 				boolean indUserWorkspaceDir;
@@ -945,6 +945,20 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 			// user workspace directory. It is initialized in the other cases below.
 
 			if (!indSameVersion) {
+				String projectCode;
+				Map<String, String> mapVersionAttr = null;
+
+				if (indCreateNewVersion) {
+					projectCode = this.getProjectCode();
+
+					if (projectCode != null) {
+						mapVersionAttr = new HashMap<String, String>();
+						mapVersionAttr.put(ScmPlugin.VERSION_ATTR_PROJECT_CODE, projectCode);
+					} else {
+						mapVersionAttr = null;
+					}
+				}
+
 				if (indUserWorkspaceDir) {
 					if (indCreateNewVersion) {
 						if (!moduleVersion.getVersion().equals(byReferenceVersionBase.object)) {
@@ -954,7 +968,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 							message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED_AND_SWITCHED), moduleVersion, versionDynamicSelected, byReferenceVersionBase.object);
 						}
 
-						scmPlugin.createVersion(pathModuleWorkspace, versionDynamicSelected, true);
+						scmPlugin.createVersion(pathModuleWorkspace, versionDynamicSelected, mapVersionAttr, true);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);
 
@@ -971,7 +985,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 				} else {
 					if (indCreateNewVersion) {
 						pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionBase.object);
-						scmPlugin.createVersion(pathModuleWorkspace, versionDynamicSelected, true);
+						scmPlugin.createVersion(pathModuleWorkspace, versionDynamicSelected, mapVersionAttr, true);
 						message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NEW_DYNAMIC_VERSION_CREATED), moduleVersion, versionDynamicSelected, byReferenceVersionBase.object);
 						userInteractionCallbackPlugin.provideInfo(message);
 						this.listActionsPerformed.add(message);

@@ -71,12 +71,6 @@ import org.azyva.dragom.util.Util;
  * constructed by traversing the graph, and then the checkout operations can be
  * performed on the ModuleVersion's in the List. {@link BuildReferenceGraph} is
  * used for this purpose.
- * <p>
- * This implies that subclassing {@link RootModuleVersionJobAbstractImpl} is not
- * really useful as very little of its generic fonctionnality is actually reused.
- * But in order to be able to reuse
- * {@link GenericRootModuleVersionJobAbstractImpl} we still derive from that
- * class.
  *
  * @author David Raymond
  */
@@ -146,6 +140,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 	 */
 	public Checkout(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
+
+		this.setupReferencePathMatcherForProjectCode();
 	}
 
 	/**
@@ -177,7 +173,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
 		userInteractionCallbackPlugin.provideInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION));
 
 		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
-		buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
+		buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
 		buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
 		buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
 		buildReferenceGraph.performJob();

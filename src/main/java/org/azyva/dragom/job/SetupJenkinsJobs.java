@@ -30,6 +30,7 @@ import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -44,6 +45,7 @@ import org.azyva.dragom.jenkins.JenkinsClient;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.JenkinsJobInfoPlugin;
@@ -72,15 +74,10 @@ import org.azyva.dragom.util.ServiceLocator;
  * the metadata directory of the workspace. The default
  * ExistingItemsCreatedFileMode, if {@link #setItemsCreatedFileMode} is not
  * called, is {@link ExistingItemsCreatedFileMode#MERGE}.
- * <p>
- * While most job classes derive from {@link RootModuleVersionJobAbstractImpl},
- * this class works with a {@link ReferenceGraph} which was presumably created
- * using {@link BuildReferenceGraph}. It works with a ReferenceGraph since for
- * each ModuleVersion it must know the ModuleVersion's which depend on it.
  *
  * @author David Raymond
  */
-public class SetupJenkinsJobs {
+public class SetupJenkinsJobs extends RootModuleVersionJobAbstractImpl {
 	/**
 	 * Runtime property specifying the Jenkins base URL (e.g.:
 	 * https://acme.com/jenkins). Accessed on the root {@link ClassificationNode}.
@@ -137,11 +134,6 @@ public class SetupJenkinsJobs {
 	 * Default file in the workspace metadata directory containing the items created.
 	 */
 	private static final String DEFAULT_ITEMS_CREATED_FILE = "jenkins-items-created.txt";
-
-	/**
-	 * {@link ReferenceGraph}.
-	 */
-	private ReferenceGraph referenceGraph;
 
 	/**
 	 * Modes for handling the items created file if it already exists.
@@ -444,7 +436,9 @@ public class SetupJenkinsJobs {
 	 *
 	 * @param referenceGraph ReferenceGraph.
 	 */
-	public SetupJenkinsJobs(ReferenceGraph referenceGraph) {
+	public SetupJenkinsJobs(List<ModuleVersion> listModuleVersionRoot) {
+		super(listModuleVersionRoot);
+
 		ExecContext execContext;
 		RuntimePropertiesPlugin runtimePropertiesPlugin;
 		CredentialStorePlugin credentialStorePlugin;
@@ -452,7 +446,6 @@ public class SetupJenkinsJobs {
 		String user;
 		String password;
 
-		this.referenceGraph = referenceGraph;
 		this.itemsCreatedFileManager = new ItemsCreatedFileManager(((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir().resolve(SetupJenkinsJobs.DEFAULT_ITEMS_CREATED_FILE));
 		this.existingItemsCreatedFileMode = ExistingItemsCreatedFileMode.MERGE;
 
@@ -614,7 +607,16 @@ public class SetupJenkinsJobs {
 	/**
 	 * Main method for performing the job.
 	 */
+	@Override
 	public void performJob() {
+		BuildReferenceGraph buildReferenceGraph;
+		ReferenceGraph referenceGraph;
+
+		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
+		buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
+		buildReferenceGraph.performJob();
+		referenceGraph = buildReferenceGraph.getReferenceGraph();
+
 		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
 		SetupJenkinsJobs.ReferenceGraphVisitorSetupJob referenceGraphVisitorSetupJob;
 
@@ -636,7 +638,7 @@ public class SetupJenkinsJobs {
 			// Traversal is not depth-first as jobs will often refer to downstream jobs
 			// which are actually jobs that correspond to ModuleVersion's higher in the
 			// ReferenceGraph.
-			this.referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.NO_REENTRY, referenceGraphVisitorSetupJob);
+			referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.NO_REENTRY, referenceGraphVisitorSetupJob);
 
 			if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE) {
 				// We start by deleting the folders since this will delete all jobs within them at

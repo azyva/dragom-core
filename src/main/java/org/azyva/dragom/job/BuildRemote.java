@@ -266,8 +266,9 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 	 */
 	public BuildRemote(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
-	}
 
+		this.setupReferencePathMatcherForProjectCode();
+	}
 
 	@Override
 	public void performJob() {
@@ -292,7 +293,7 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
 		Map<ModuleVersion, RemoteBuildWrapper> mapRemoteBuildWrapper;
 
 		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
-		buildReferenceGraph.setReferencePathMatcher(this.referencePathMatcher);
+		buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
 		buildReferenceGraph.performJob();
 		referenceGraph = buildReferenceGraph.getReferenceGraph();
 

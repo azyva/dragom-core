@@ -473,36 +473,43 @@ public final class Util {
 	}
 
 	/**
-	 * Helper method to retrieve commit attributes from a commit message.
+	 * Helper method to retrieve attributes from a message.
+	 * <p>
+	 * These attributes are stored in a JSONObject at the beginning of the message.
+	 * The message must therefore start with "{" and continue to a matching closing
+	 * "}". For now, embedded JSONObject or "}" are not supported.
+	 * <p>
+	 * If the message does not start with "{", an empty Map is returned (not null).
+	 * <p>
+	 * This is intended to be used for storing arbitrary attributes within commit
+	 * and other messages in SCM's.
 	 *
-	 * These attributes are stored in a JSONObject at the beginning of the commit
-	 * message. The commit message must therefore start with "{" and continue to a
-	 * matching closing "}". For now, embedded JSONObject or "}" are not supported.
-	 *
-	 * If the commit message does not start with "{", an empty Map is returned.
-	 *
-	 * @param commitMessage
+	 * @param message
+	 * @param mapAttr Map that will be filled in and returned. If null, a new Map is
+	 * created, in which case it should not be modified by the caller (it may be
+	 * immutable, especially if empty).
 	 * @return Map of attributes.
 	 */
-	public static Map<String, String> getCommitAttr(String commitMessage) {
+	public static Map<String, String> getJsonAttr(String message, Map<String, String> mapAttr) {
 		int indexClosingBrace;
 		JSONObject jsonObjectAttributes;
-		Map<String, String> mapCommitAttr;
 
-		if ((commitMessage.length() == 0) || (commitMessage.charAt(0) != '{')) {
+		if ((message.length() == 0) || (message.charAt(0) != '{')) {
 			return Collections.<String, String>emptyMap();
 		}
 
-		indexClosingBrace = commitMessage.indexOf('}');
-		jsonObjectAttributes = new JSONObject(commitMessage.substring(0, indexClosingBrace + 1));
+		indexClosingBrace = message.indexOf('}');
+		jsonObjectAttributes = new JSONObject(message.substring(0, indexClosingBrace + 1));
 
-		mapCommitAttr = new HashMap<String, String>();
-
-		for (String name: JSONObject.getNames(jsonObjectAttributes)) {
-			mapCommitAttr.put(name, jsonObjectAttributes.getString(name));
+		if (mapAttr == null) {
+			mapAttr = new HashMap<String, String>();
 		}
 
-		return mapCommitAttr;
+		for (String name: JSONObject.getNames(jsonObjectAttributes)) {
+			mapAttr.put(name, jsonObjectAttributes.getString(name));
+		}
+
+		return mapAttr;
 	}
 
 	/**

@@ -43,9 +43,12 @@ import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.reference.ReferencePathMatcherAll;
+import org.azyva.dragom.reference.ReferencePathMatcherAnd;
+import org.azyva.dragom.reference.ReferencePathMatcherVersionAttribute;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
 import org.azyva.dragom.util.ModuleReentryAvoider;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
@@ -75,6 +78,37 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * Logger for the class.
 	 */
 	private static final Logger logger = LoggerFactory.getLogger(RootModuleVersionJobAbstractImpl.class);
+
+	/**
+	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
+	 * whether to synchronize the workspace directory when unsynced remote changes
+	 * exist.
+	 */
+	protected static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
+
+	/**
+	 * Runtime property specifying a project code which many job honour when
+	 * traversing {@link ReferenceGraph}'s.
+	 * <p>
+	 * This provides a matching mechanism for {@link ModuleVersion}'s within a
+	 * ReferenceGraph. It also has impacts on {@link Version} creations.
+	 * <p>
+	 * The idea is that in some cases, Dragom will be used to manage ReferenceGraph's
+	 * in the context of a project, in the sense of a time-constrained development
+	 * effort. When switching to dynamic Version's of {@link Module}'s,
+	 * (@link SwitchToDynamicVesion} can optionnally specify a project code as a
+	 * Version attribute for newly created dynamic Versions. Similarly with
+	 * {@link Release} for static Versions. And for may other jobs which traverse
+	 * a ReferenceGraph ({@link Checout}, {@link MergeMain}, etc.), this same project
+	 * code specified by this runtime property is used for matching
+	 * {@link ModuleVersion}'s based on their Version's project code attribute, in
+	 * addition to the matching performed by {@link ReferencePathMatcher}'s
+	 * (implied "and").
+	 * <p>
+	 * Accessed on the root {@link ClasificationNode}.
+	 */
+	// TODO: Eventually this may be handled with generic expression-language-based matchers.
+	protected static final String RUNTIME_PROPERTY_PROJECT_CODE = "PROJECT_CODE";
 
 	/**
 	 * See description in ResourceBundle.
@@ -161,13 +195,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	protected static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
 
 	/**
-	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
-	 * whether to synchronize the workspace directory when unsynced remote changes
-	 * exist.
-	 */
-	protected static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
-
-	/**
 	 * ResourceBundle specific to this class.
 	 */
 	protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobAbstractImpl.class.getName() + "ResourceBundle");
@@ -182,7 +209,22 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	 * ReferencePathMatcher defining on which ModuleVersion's in the reference graphs
 	 * the job will be applied.
 	 */
-	protected ReferencePathMatcher referencePathMatcher;
+	private ReferencePathMatcher referencePathMatcherProvided;
+
+	/**
+	 * ReferencePathMatcher for filtering based on the project code.
+	 */
+	private ReferencePathMatcher referencePathMatcherProjectCode;
+
+	/**
+	 * "and"-combined {@link ReferencePathMatcher} for
+	 * {@link #referencePathMatcherProvided} and
+	 * {@link #referencePathMatcherProjectCode}.
+	 * <p>
+	 * Calculated once the first time it is used and cached in this variable
+	 * afterward.
+	 */
+	private ReferencePathMatcher referencePathMatcherCombined;
 
 	/**
 	 * Indicates that dynamic {@link Version}'s must be considered during the
@@ -286,9 +328,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
 		this.moduleReentryAvoider = new ModuleReentryAvoider();
 
-		// By default assume all ReferencePath's are to be matched.
-		this.referencePathMatcher = new ReferencePathMatcherAll();
-
 		this.unsyncChangesBehaviorLocal = UnsyncChangesBehavior.DO_NOT_HANDLE;
 		this.unsyncChangesBehaviorRemote = UnsyncChangesBehavior.DO_NOT_HANDLE;
 
@@ -297,13 +336,69 @@ public abstract class RootModuleVersionJobAbstractImpl {
 	}
 
 	/**
-	 * Sets the ReferencePathMatcher defining on which ModuleVersion's in the
-	 * reference graphs the job will be applied.
+	 * Sets the {@link ReferencePathMatcher} profided by the caller defining on which
+	 * ModuleVersion's in the reference graphs the job will be applied.
 	 *
-	 * @param referencePathMatcher See description.
+	 * @param referencePathMatcherProvided See description.
 	 */
-	public void setReferencePathMatcher(ReferencePathMatcher referencePathMatcher) {
-		this.referencePathMatcher = referencePathMatcher;
+	public void setReferencePathMatcherProvided(ReferencePathMatcher referencePathMatcherProvided) {
+		this.referencePathMatcherProvided = referencePathMatcherProvided;
+	}
+
+	/**
+	 * @return The project code specified by the user with the PROJECT_CODE runtime
+	 *   property.
+	 */
+	protected String getProjectCode() {
+		return ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class).getProperty(null, RootModuleVersionJobAbstractImpl.RUNTIME_PROPERTY_PROJECT_CODE);
+	}
+
+	/**
+	 * Setup the {@link ReferencePathMatcher} so that only {@link ModuleVersions}
+	 * having the {@link Version} attribute dragom-project-code equal to that
+	 * defined by the runtime property PROJECT_CODE are matched.
+	 */
+	protected void setupReferencePathMatcherForProjectCode() {
+		String projectCode;
+
+		projectCode = this.getProjectCode();
+
+		if (projectCode != null) {
+			this.referencePathMatcherProjectCode = new ReferencePathMatcherVersionAttribute(ScmPlugin.VERSION_ATTR_PROJECT_CODE, projectCode, ExecContextHolder.get().getModel());
+		}
+	}
+
+	/**
+	 * @return ReferencePathMatcher to use for matching the {@link ReferencePath}'s.
+	 *   "and" combination of the ReferencePathMatcher provided with
+	 *   {@link #setReferencePathMatcher} and that setup by
+	 *   {@link #setupReferencePathMatcherForProjectCode}.
+	 */
+	protected ReferencePathMatcher getReferencePathMatcher() {
+		if (this.referencePathMatcherCombined == null) {
+			if ((this.referencePathMatcherProvided != null) && (this.referencePathMatcherProjectCode != null)) {
+				ReferencePathMatcherAnd referencePathMatcherAnd;
+
+				referencePathMatcherAnd = new ReferencePathMatcherAnd();
+
+				referencePathMatcherAnd.addReferencePathMatcher(this.referencePathMatcherProvided);
+				referencePathMatcherAnd.addReferencePathMatcher(this.referencePathMatcherProjectCode);
+
+				this.referencePathMatcherCombined = referencePathMatcherAnd;
+			} else if (this.referencePathMatcherProvided != null) {
+				this.referencePathMatcherCombined = this.referencePathMatcherProvided;
+			} else if (this.referencePathMatcherProjectCode != null) {
+				// This case if rather rare since tools generally require the user to specify a
+				// ReferencePathMatcher.
+				this.referencePathMatcherCombined = this.referencePathMatcherProjectCode;
+			} else {
+				// If absolutely no ReferencePathMatcher is specified, which is also rare, we
+				// match everything.
+				this.referencePathMatcherCombined = new ReferencePathMatcherAll();
+			}
+		}
+
+		return this.referencePathMatcherCombined;
 	}
 
 	/**
@@ -680,7 +775,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
 					RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
 				} else {
-					if (this.referencePathMatcher.matches(this.referencePath)) {
+					if (this.getReferencePathMatcher().matches(this.referencePath)) {
 						if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
 							return false;
@@ -713,7 +808,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				}
 			}
 
-			if (indVisitChildren && this.referencePathMatcher.canMatchChildren(this.referencePath)) {
+			if (indVisitChildren && this.getReferencePathMatcher().canMatchChildren(this.referencePath)) {
 				ReferenceManagerPlugin referenceManagerPlugin = null;
 				List<Reference> listReference;
 
@@ -758,7 +853,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 				if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
 					RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
 				} else {
-					if (this.referencePathMatcher.matches(this.referencePath)) {
+					if (this.getReferencePathMatcher().matches(this.referencePath)) {
 						if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
 							userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
 							return false;

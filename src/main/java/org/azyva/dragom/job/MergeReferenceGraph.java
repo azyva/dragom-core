@@ -457,6 +457,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	public MergeReferenceGraph(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
 
+		this.setupReferencePathMatcherForProjectCode();
 		this.setIndHandleStaticVersion(false);
 
 		this.setModuleVersionMerge= new HashSet<ModuleVersionMerge>();

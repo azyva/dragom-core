@@ -150,6 +150,7 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 	public Build(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
 
+		this.setupReferencePathMatcherForProjectCode();
 		this.setIndDepthFirst(true);
 	}
 

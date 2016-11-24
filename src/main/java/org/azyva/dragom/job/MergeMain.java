@@ -211,6 +211,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 	public MergeMain(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
 
+		this.setupReferencePathMatcherForProjectCode();
 		this.setIndHandleDynamicVersion(false);
 	}
 

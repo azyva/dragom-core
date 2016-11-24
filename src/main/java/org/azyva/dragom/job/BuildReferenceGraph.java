@@ -65,6 +65,14 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
 	}
 
 	/**
+	 * Augment the visibility of this method since it can be useful to caller.
+	 */
+	@Override
+	public void setupReferencePathMatcherForProjectCode() {
+		this.setupReferencePathMatcherForProjectCode();
+	}
+
+	/**
 	 * @return ReferenceGraph that was provided to or created by the constructor.
 	 */
 	public ReferenceGraph getReferenceGraph() {

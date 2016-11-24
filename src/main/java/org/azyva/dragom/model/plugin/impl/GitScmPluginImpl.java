@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -234,6 +235,27 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	 * not defined otherwise if there is no temporary dynamic Version.
 	 */
 	private static final String TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE = GitScmPluginImpl.class.getName() + ".TempDynamicVersionBase.";
+
+	/**
+	 * The base {@link Version} of a Version is stored as a commit attribute (commit
+	 * message) on the initial dummy commit of new branch branch and as a version
+	 * attribute (tag message) for tags. This is an implementation detail of
+	 * GitScmPluginImpl.
+	 * <p>
+	 * This Version attribute is used by {@link #createVersion} to store the base
+	 * Version, and by {@link #getBaseVersion} to retrieve it.
+	 */
+	private static final String VERSION_ATTR_BASE_VERSION = "dragom-base-version";
+
+	/**
+	 * ID of the commit at which a base {@link Version} was when a new Version for
+	 * which we are looking for the Version attributes was created. This is an
+	 * implementation detail of GitScmPluginImpl.
+	 * <p>
+	 * This information is used by {@link #getBaseVersion} to complete
+	 * {@link ScmPlugin.BaseVersion} fields.
+	 */
+	private static final String VERSION_ATTR_BASE_VERSION_COMMIT_ID = "dragom-base-version-commit-id";
 
 	/**
 	 * Default {@link Version}.
@@ -1116,9 +1138,15 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 				indexSplit = commitString.indexOf(' ');
 				commitMessage = commitString.substring(indexSplit + 1);
 
-				mapCommitAttr = Util.getCommitAttr(commitMessage);
+				mapCommitAttr = Util.getJsonAttr(commitMessage, null);
 
-				if (mapCommitAttr.get(ScmPlugin.COMMIT_ATTR_BASE_VERSION) != null) {
+				// For dynamic Versions, the Version attribute dragom-base-version is actually
+				// stored as a commit attribute in Git since Git does not support messages for
+				// branches as it does for (annotated) tags.
+				// This commit attribute is specified for a dummy commit introduced when a new
+				// branch is created and we use that attribute as an indication of the start of
+				// the branch, which is otherwise not known to Git.
+				if (mapCommitAttr.get(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION) != null) {
 					if (commitPaging != null) {
 						commitPaging.indDone = true;
 					}
@@ -1191,95 +1219,24 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 	@Override
 	public BaseVersion getBaseVersion(Version version) {
-		Path pathModuleWorkspace;
+		Map<String, String> mapVersionAttr;
 		String stringBaseVersion;
-		BaseVersion baseVersion;
 
-		pathModuleWorkspace = this.getPathModuleWorkspace();
+		mapVersionAttr = this.getMapVersionAttr(version);
+		stringBaseVersion = mapVersionAttr.get(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION);
 
-		switch (version.getVersionType()) {
-		case DYNAMIC:
-			StringBuilder stringBuilderCommits;
-			BufferedReader bufferedReaderCommits;
-			String commitString;
-
-			stringBuilderCommits = new StringBuilder();
-			this.getGit().executeGitCommand(new String[] {"rev-list", "--pretty=oneline", this.getGit().convertToRef(version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
-
-			bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
-
-			try {
-				while ((commitString = bufferedReaderCommits.readLine()) != null) {
-					int indexSplit;
-					String commitMessage;
-					Map<String, String> mapCommitAttr;
-
-					indexSplit = commitString.indexOf(' ');
-					commitMessage = commitString.substring(indexSplit + 1);
-
-					mapCommitAttr = Util.getCommitAttr(commitMessage);
-
-					stringBaseVersion = mapCommitAttr.get(ScmPlugin.COMMIT_ATTR_BASE_VERSION);
-
-					if (stringBaseVersion != null) {
-						baseVersion = new BaseVersion();
-
-						baseVersion.version = version;
-						baseVersion.versionBase = new Version(stringBaseVersion);
-						commitString = bufferedReaderCommits.readLine();
-						indexSplit = commitString.indexOf(' ');
-						baseVersion.commitId = commitString.substring(0, indexSplit);
-
-						return baseVersion;
-					}
-				}
-			} catch (IOException ioe) {
-				throw new RuntimeException(ioe);
-			}
-
-			return null;
-
-		case STATIC:
-			StringBuilder stringBuilder;
-			String tagMessage;
-			Map<String, String> mapTagAttr;
-
-			stringBuilder = new StringBuilder();
-			this.getGit().executeGitCommand(new String[] {"tag", "-n", "-l", version.getVersion()}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-			if (stringBuilder.toString().isEmpty()) {
-				throw new RuntimeException("Static version " + version + " does not exist.");
-			}
-
-			tagMessage = stringBuilder.toString().split("\\s+")[1];
-
-			mapTagAttr = Util.getCommitAttr(tagMessage);
-
-			stringBaseVersion = mapTagAttr.get(ScmPlugin.COMMIT_ATTR_BASE_VERSION);
-
-			if (stringBaseVersion == null) {
-				return null;
-			}
+		if (stringBaseVersion != null) {
+			BaseVersion baseVersion;
 
 			baseVersion = new BaseVersion();
 
 			baseVersion.version = version;
-
 			baseVersion.versionBase = new Version(stringBaseVersion);
-
-			stringBuilder.setLength(0);
-			this.getGit().executeGitCommand(new String[] {"rev-parse", version.getVersion() + "^{}"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
-
-			if (stringBuilder.toString().isEmpty()) {
-				throw new RuntimeException("Static version " + version + " does not exist.");
-			}
-
-			baseVersion.commitId = stringBuilder.toString();
+			baseVersion.commitId = mapVersionAttr.get(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION_COMMIT_ID);
 
 			return baseVersion;
-
-		default:
-			throw new RuntimeException("Invalid version type.");
+		} else {
+			return null;
 		}
 	}
 
@@ -1340,10 +1297,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	}
 
 	@Override
-	public void createVersion(Path pathModuleWorkspace, Version versionTarget, boolean indSwitch) {
+	public void createVersion(Path pathModuleWorkspace, Version versionTarget, Map<String, String> mapVersionAttr, boolean indSwitch) {
 		Version versionTempDynamicBase;
 		WorkspacePlugin workspacePlugin;
-		Map<String, String> mapCommitAttr;
+		Map<String, String> mapVersionAttr2;
 		String message;
 		WorkspaceDir workspaceDir;
 		boolean indUserWorkspaceDir;
@@ -1374,18 +1331,25 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 		// it is the same for both Version types.
 		// See commit() method for comments on commit message, more specifically the need
 		// to escape double quotes.
-		mapCommitAttr = new HashMap<String, String>();
+
+		if (mapVersionAttr != null) {
+			// If Version attributes are specified, we simply make a copy of the Map provided
+			// by the caller to avoid modifying it.
+			mapVersionAttr2 = new HashMap<String, String>(mapVersionAttr);
+		} else {
+			mapVersionAttr2 = new HashMap<String, String>();
+		}
 
 		// If there is a temporary dynamic Version, it's base it taken as the base of the
 		// new Version. Otherwise, the base of the new Version is the current Version
 		// itself.
 		if (versionTempDynamicBase == null) {
-			mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_BASE_VERSION, this.getVersion(pathModuleWorkspace).toString());
+			mapVersionAttr2.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION, this.getVersion(pathModuleWorkspace).toString());
 		} else {
-			mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_BASE_VERSION, versionTempDynamicBase.toString());
+			mapVersionAttr2.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION, versionTempDynamicBase.toString());
 		}
 
-		message = (new JSONObject(mapCommitAttr)).toString();
+		message = (new JSONObject(mapVersionAttr2)).toString();
 		message = message.replace("\"", "\\\"");
 
 		switch (versionTarget.getVersionType()) {
@@ -1426,7 +1390,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			}
 
 			try {
-				message += " Dummy commit introduced to record the base version of the newly created version " + versionTarget + '.';
+				message += " Dummy commit introduced to record the version attributes including the base version of the newly created version " + versionTarget + '.';
 
 				this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, true, AllowExitCode.NONE, pathModuleWorkspace, null);
 
@@ -1452,7 +1416,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 			this.getGit().createTag(pathModuleWorkspace, tag, message);
 
-			// In all cases, creating a new Version based on a tempoary dynamic Version
+			// In all cases, creating a new Version based on a temporary dynamic Version
 			// releases it.
 			if (versionTempDynamicBase != null) {
 				ExecContextHolder.get().setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace, null);
@@ -1484,6 +1448,92 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 			this.getModule().raiseNodeEvent(new StaticVersionCreatedEvent(this.getModule(), versionTarget));
 
 			break;
+
+		default:
+			throw new RuntimeException("Invalid version type.");
+		}
+	}
+	@Override
+	public Map<String, String> getMapVersionAttr(Version version) {
+		Path pathModuleWorkspace;
+		Map<String, String> mapVersionAttr;
+		String stringBaseVersion;
+
+		pathModuleWorkspace = this.getPathModuleWorkspace();
+
+		// We must preallocate the Map since we want to append to it after.
+		mapVersionAttr = new HashMap<String, String>();
+
+		switch (version.getVersionType()) {
+		case DYNAMIC:
+			StringBuilder stringBuilderCommits;
+			BufferedReader bufferedReaderCommits;
+			String commitString;
+
+			stringBuilderCommits = new StringBuilder();
+			this.getGit().executeGitCommand(new String[] {"rev-list", "--pretty=oneline", this.getGit().convertToRef(version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
+
+			bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
+
+			try {
+				while ((commitString = bufferedReaderCommits.readLine()) != null) {
+					int indexSplit;
+					String commitMessage;
+
+					indexSplit = commitString.indexOf(' ');
+					commitMessage = commitString.substring(indexSplit + 1);
+
+					mapVersionAttr = Util.getJsonAttr(commitMessage, mapVersionAttr);
+
+					// For dynamic Versions, the Version attribute dragom-base-version is actually
+					// stored as a commit attribute in Git since Git does not support messages for
+					// branches as it does for (annotated) tags.
+
+					// For dynamic Versions, Version attributes are stored as commit attributes on the
+					// first dummy commit of the branch. We locate that first commit given the Version
+					// attribute dragom-base-version.
+					stringBaseVersion = mapVersionAttr.get(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION);
+
+					if (stringBaseVersion != null) {
+						commitString = bufferedReaderCommits.readLine();
+						mapVersionAttr.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION_COMMIT_ID, commitString.substring(0, commitString.indexOf(' ')));
+
+						return mapVersionAttr;
+					}
+				}
+			} catch (IOException ioe) {
+				throw new RuntimeException(ioe);
+			}
+
+			// Generally we do not expect to get here since for all Version's created by
+			// Dragom, at least the dragom-base-version Version attribute is created.
+			// But it is too risky to raise a RuntimeException since Dragom could be used with
+			// existing repositories.
+			return Collections.<String, String>emptyMap();
+
+		case STATIC:
+			StringBuilder stringBuilder;
+			String tagMessage;
+
+			stringBuilder = new StringBuilder();
+			this.getGit().executeGitCommand(new String[] {"tag", "-n", "-l", version.getVersion()}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+
+			if (stringBuilder.toString().isEmpty()) {
+				throw new RuntimeException("Static version " + version + " does not exist.");
+			}
+
+			tagMessage = stringBuilder.toString().split("\\s+")[1];
+
+			mapVersionAttr = Util.getJsonAttr(tagMessage, mapVersionAttr);
+
+			stringBuilder.setLength(0);
+			this.getGit().executeGitCommand(new String[] {"rev-parse", version.getVersion() + "^{}"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+
+			if (stringBuilder.toString().isEmpty()) {
+				throw new RuntimeException("Static version " + version + " does not exist.");
+			}
+
+			mapVersionAttr.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION_COMMIT_ID, stringBuilder.toString());
 
 		default:
 			throw new RuntimeException("Invalid version type.");
@@ -1594,6 +1644,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 	@Override
 	//TODO Document Push as well...
 	// Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
+	// Caller should not specify version attributes, especially dragom-base-version, for a commit attribute, even if in Git version attributes are stored as commit attributes on the first dummy commit.
 	public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
 		boolean indTempDynamicVersion;
 		WorkspacePlugin workspacePlugin;

@@ -108,6 +108,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
 	public ChangeReferenceToModuleVersion(List<ModuleVersion> listModuleVersionRoot) {
 		super(listModuleVersionRoot);
 
+		this.setupReferencePathMatcherForProjectCode();
 		this.initFromInitProperties();
 	}
 

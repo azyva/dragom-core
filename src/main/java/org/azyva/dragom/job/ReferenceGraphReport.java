@@ -72,14 +72,10 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Produces a report about a {@link ReferenceGraph}.
- * <p>
- * While most job classes derive from {@link RootModuleVersionJobAbstractImpl},
- * this class works with a {@link ReferenceGraph} which was presumably created
- * using {@link BuildReferenceGraph}.
  *
  * @author David Raymond
  */
-public class ReferenceGraphReport {
+public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
 	public enum OutputFormat {
 		XML,
 		JSON,
@@ -101,11 +97,6 @@ public class ReferenceGraphReport {
 		 */
 		ONLY_MATCHED
 	}
-
-	/**
-	 * {@link ReferenceGraph}.
-	 */
-	private ReferenceGraph referenceGraph;
 
 	/**
 	 * {@link ReferenceGraphReport.OutputFormat}.
@@ -166,8 +157,8 @@ public class ReferenceGraphReport {
 	 *
 	 * @param referenceGraph ReferenceGraph.
 	 */
-	public ReferenceGraphReport(ReferenceGraph referenceGraph, ReferenceGraphReport.OutputFormat outputFormat) {
-		this.referenceGraph = referenceGraph;
+	public ReferenceGraphReport(List<ModuleVersion> listModuleVersionRoot, ReferenceGraphReport.OutputFormat outputFormat) {
+		super(listModuleVersionRoot);
 		this.outputFormat = outputFormat;
 	}
 
@@ -449,7 +440,16 @@ public class ReferenceGraphReport {
 	/**
 	 * Main method for performing the job.
 	 */
+	@Override
 	public void performJob() {
+		BuildReferenceGraph buildReferenceGraph;
+		ReferenceGraph referenceGraph;
+
+		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
+		buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
+		buildReferenceGraph.performJob();
+		referenceGraph = buildReferenceGraph.getReferenceGraph();
+
 		ReferenceGraphReport.ReferenceGraphVisitorReport referenceGraphVisitorReport;
 		Iterator<ReportModule> iteratorReportModule;
 
@@ -460,7 +460,7 @@ public class ReferenceGraphReport {
 		// this.referenceGraphMode is TREE_NO_REDUNDANCY, existing
 		// ReportReferenceGraphNode are reused. It is just that ReportReference with
 		// jumpToReferenceGraphNodeBookmark are generated when appropriate.
-		this.referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.ONLY_PARENT, referenceGraphVisitorReport);
+		referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.ONLY_PARENT, referenceGraphVisitorReport);
 
 		// The reference graph report has been created by including all ReportModule's,
 		// regardless of the ModuleFilter since it is not possible to perform the
@@ -544,7 +544,7 @@ public class ReferenceGraphReport {
 
 						reportVersion.listReferencePathLiteral = new ArrayList<String>();
 
-						this.referenceGraph.visitLeafModuleVersionReferencePaths(
+						referenceGraph.visitLeafModuleVersionReferencePaths(
 								new ModuleVersion(reportModule.nodePathModule, reportVersion.version),
 								new ReferenceGraph.Visitor() {
 									@Override

@@ -377,7 +377,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 			// If we are not in release mode, we must look for matching ModuleVersion's.
 			if (!indRelease) {
 				// If the current ModuleVersion matches, we switch to release mode and continue.
-				if (this.referencePathMatcher.matches(this.referencePath)) {
+				if (this.getReferencePathMatcher().matches(this.referencePath)) {
 					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
 					indRelease = true;
 				}
@@ -396,7 +396,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 			// not in release mode, we want to iterate among references only if there can be
 			// a match. In both cases, the iteration logic is similar which is why we factor
 			// it out.
-			if (indRelease || this.referencePathMatcher.canMatchChildren(this.referencePath)) {
+			if (indRelease || this.getReferencePathMatcher().canMatchChildren(this.referencePath)) {
 				boolean indUserWorkspaceDir;
 				ReferenceManagerPlugin referenceManagerPlugin = null;
 				List<Reference> listReference;
@@ -635,6 +635,8 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 		ArtifactVersionManagerPlugin artifactVersionManagerPlugin = null;
 		ArtifactVersionMapperPlugin artifactVersionMapperPlugin = null;
 		boolean indCommitRequired;
+		String projectCode;
+		Map<String, String> mapVersionAttr;
 		String message = null;
 
 		execContext = ExecContextHolder.get();
@@ -769,11 +771,20 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
 			// Perform the actual creation of the version.
 
+			projectCode = this.getProjectCode();
+
+			if (projectCode != null) {
+				mapVersionAttr = new HashMap<String, String>();
+				mapVersionAttr.put(ScmPlugin.VERSION_ATTR_PROJECT_CODE, projectCode);
+			} else {
+				mapVersionAttr = null;
+			}
+
 			// If a temporary dynamic Version was created, specifying to not switch switches
 			// back to the original base Version, which is what we want here. We do not want
 			// to switch to the newly created static Version, and we want to do as if the
 			// temporary dynamic Version never existed.
-			scmPlugin.createVersion(pathModuleWorkspace, versionStaticSelected, false);
+			scmPlugin.createVersion(pathModuleWorkspace, versionStaticSelected, mapVersionAttr, false);
 			indTempDynamicVersionCreatedLocally = false;
 			message = MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_STATIC_VERSION_CREATED), moduleVersion, versionStaticSelected);
 			userInteractionCallbackPlugin.provideInfo(message);
