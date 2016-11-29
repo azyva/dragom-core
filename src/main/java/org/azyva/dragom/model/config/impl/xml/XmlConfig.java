@@ -43,40 +43,40 @@ import org.azyva.dragom.model.config.Config;
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "config")
 public class XmlConfig implements Config {
-	@XmlElement(name = "root-classification-node")
-	XmlClassificationNodeConfig classificationNodeConfigXmlRoot;
+  @XmlElement(name = "root-classification-node")
+  XmlClassificationNodeConfig classificationNodeConfigXmlRoot;
 
-	/**
-	 * Loads a XmlConfig from a URL.
-	 *
-	 * @param urlXmlConfig URL.
-	 * @return XmlConfig.
-	 */
-	public static XmlConfig load(URL urlXmlConfig) {
-		JAXBContext jaxbContext;
-		Unmarshaller unmarshaller;
-		XmlConfig xmlConfig;
+  /**
+   * Loads a XmlConfig from a URL.
+   *
+   * @param urlXmlConfig URL.
+   * @return XmlConfig.
+   */
+  public static XmlConfig load(URL urlXmlConfig) {
+    JAXBContext jaxbContext;
+    Unmarshaller unmarshaller;
+    XmlConfig xmlConfig;
 
-		try {
-			// We include XmlModuleConfig, but not other classes since XmlModuleConfig is the
-			// only one that is not explicitly referenced (directly or indirectly) by
-			// XmlConfig.
-			jaxbContext = JAXBContext.newInstance(XmlConfig.class, XmlModuleConfig.class);
-			unmarshaller = jaxbContext.createUnmarshaller();
-			xmlConfig = (XmlConfig)unmarshaller.unmarshal(urlXmlConfig);
+    try {
+      // We include XmlModuleConfig, but not other classes since XmlModuleConfig is the
+      // only one that is not explicitly referenced (directly or indirectly) by
+      // XmlConfig.
+      jaxbContext = JAXBContext.newInstance(XmlConfig.class, XmlModuleConfig.class);
+      unmarshaller = jaxbContext.createUnmarshaller();
+      xmlConfig = (XmlConfig)unmarshaller.unmarshal(urlXmlConfig);
 
-			if (xmlConfig.getClassificationNodeConfigRoot() == null) {
-				throw new RuntimeException("root-classification-node is not present in " + urlXmlConfig + '.');
-			}
+      if (xmlConfig.getClassificationNodeConfigRoot() == null) {
+        throw new RuntimeException("root-classification-node is not present in " + urlXmlConfig + '.');
+      }
 
-			return xmlConfig;
-		} catch (JAXBException je) {
-			throw new RuntimeException(je);
-		}
-	}
+      return xmlConfig;
+    } catch (JAXBException je) {
+      throw new RuntimeException(je);
+    }
+  }
 
-	@Override
-	public ClassificationNodeConfig getClassificationNodeConfigRoot() {
-		return this.classificationNodeConfigXmlRoot;
-	}
+  @Override
+  public ClassificationNodeConfig getClassificationNodeConfigRoot() {
+    return this.classificationNodeConfigXmlRoot;
+  }
 }

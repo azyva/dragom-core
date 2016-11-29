@@ -40,123 +40,123 @@ import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 
 public class MapWorkspaceDirPathXmlAdapter extends XmlAdapter<ListWorkspaceDirPath, Map<WorkspaceDir, Path>> {
-	@XmlAccessorType(XmlAccessType.NONE)
-	public static class WorkspaceDirPath {
-		@XmlElement(name = "workspace-dir-class")
-		public String workspaceDirClass;
+  @XmlAccessorType(XmlAccessType.NONE)
+  public static class WorkspaceDirPath {
+    @XmlElement(name = "workspace-dir-class")
+    public String workspaceDirClass;
 
-		@XmlElement(name = "module-node-path")
-		public String stringNodePath;
+    @XmlElement(name = "module-node-path")
+    public String stringNodePath;
 
-		@XmlElement(name = "version")
-		public String stringVersion;
+    @XmlElement(name = "version")
+    public String stringVersion;
 
-		@XmlElement(name = "path")
-		public String stringPath;
-	}
+    @XmlElement(name = "path")
+    public String stringPath;
+  }
 
-	@XmlAccessorType(XmlAccessType.NONE)
-	public static class ListWorkspaceDirPath {
-		@XmlElement(name = "workspace-dir")
-		private List<WorkspaceDirPath> listWorkspaceDirPath;
+  @XmlAccessorType(XmlAccessType.NONE)
+  public static class ListWorkspaceDirPath {
+    @XmlElement(name = "workspace-dir")
+    private List<WorkspaceDirPath> listWorkspaceDirPath;
 
-		/**
-		 * Default constructor required by JAXB.
-		 */
-		public ListWorkspaceDirPath() {
-		}
+    /**
+     * Default constructor required by JAXB.
+     */
+    public ListWorkspaceDirPath() {
+    }
 
-		public ListWorkspaceDirPath(List<WorkspaceDirPath> listWorkspaceDirPath) {
-			this.listWorkspaceDirPath = listWorkspaceDirPath;
-		}
+    public ListWorkspaceDirPath(List<WorkspaceDirPath> listWorkspaceDirPath) {
+      this.listWorkspaceDirPath = listWorkspaceDirPath;
+    }
 
-		public List<WorkspaceDirPath> getListWorkspaceDirPath() {
-			return this.listWorkspaceDirPath;
-		}
+    public List<WorkspaceDirPath> getListWorkspaceDirPath() {
+      return this.listWorkspaceDirPath;
+    }
 
-	}
+  }
 
-	/* Path to the workspace to allow relativisation of workspace directories.
-	 */
-	private Path pathWorkspace;
+  /* Path to the workspace to allow relativisation of workspace directories.
+   */
+  private Path pathWorkspace;
 
-	/**
-	 * MapWorkspaceDirPathXmlAdapter needs to know the workspace path in order to
-	 * relativise workspace directories within the workspace.
-	 *
-	 * The instance of this class must be preset on the Marshaller and Unmarshaller
-	 * since JAXB does not know how to instantiate a XmlAdapter with no no-arg
-	 * constructor.
-	 *
-	 * @param pathWorkspace WorkspacePlugin path.
-	 */
-	public MapWorkspaceDirPathXmlAdapter(Path pathWorkspace) {
-		this.pathWorkspace = pathWorkspace;
-	}
+  /**
+   * MapWorkspaceDirPathXmlAdapter needs to know the workspace path in order to
+   * relativise workspace directories within the workspace.
+   *
+   * The instance of this class must be preset on the Marshaller and Unmarshaller
+   * since JAXB does not know how to instantiate a XmlAdapter with no no-arg
+   * constructor.
+   *
+   * @param pathWorkspace WorkspacePlugin path.
+   */
+  public MapWorkspaceDirPathXmlAdapter(Path pathWorkspace) {
+    this.pathWorkspace = pathWorkspace;
+  }
 
-	@Override
-	public ListWorkspaceDirPath marshal(Map<WorkspaceDir, Path> mapWorkspaceDirPath) {
-		List<WorkspaceDirPath> listWorkspaceDirPath;
+  @Override
+  public ListWorkspaceDirPath marshal(Map<WorkspaceDir, Path> mapWorkspaceDirPath) {
+    List<WorkspaceDirPath> listWorkspaceDirPath;
 
-		listWorkspaceDirPath = new ArrayList<WorkspaceDirPath>();
+    listWorkspaceDirPath = new ArrayList<WorkspaceDirPath>();
 
-		for (Map.Entry<WorkspaceDir, Path> mapEntry: mapWorkspaceDirPath.entrySet()) {
-			WorkspaceDirPath workspaceDirPath;
-			WorkspaceDir workspaceDir;
+    for (Map.Entry<WorkspaceDir, Path> mapEntry: mapWorkspaceDirPath.entrySet()) {
+      WorkspaceDirPath workspaceDirPath;
+      WorkspaceDir workspaceDir;
 
-			workspaceDirPath = new WorkspaceDirPath();
+      workspaceDirPath = new WorkspaceDirPath();
 
-			workspaceDir = mapEntry.getKey();
+      workspaceDir = mapEntry.getKey();
 
-			workspaceDirPath.workspaceDirClass = mapEntry.getKey().getClass().getName();
+      workspaceDirPath.workspaceDirClass = mapEntry.getKey().getClass().getName();
 
-			if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
-				workspaceDirPath.stringNodePath = ((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath().toString();
-				workspaceDirPath.stringVersion = ((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getVersion().toString();
-			} else if (workspaceDir instanceof WorkspaceDirSystemModule) {
-				workspaceDirPath.stringNodePath = ((WorkspaceDirSystemModule)workspaceDir).getNodePath().toString();
-			} else {
-				throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDir.getClass().getName() + '.');
-			}
+      if (workspaceDir instanceof WorkspaceDirUserModuleVersion) {
+        workspaceDirPath.stringNodePath = ((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getNodePath().toString();
+        workspaceDirPath.stringVersion = ((WorkspaceDirUserModuleVersion)workspaceDir).getModuleVersion().getVersion().toString();
+      } else if (workspaceDir instanceof WorkspaceDirSystemModule) {
+        workspaceDirPath.stringNodePath = ((WorkspaceDirSystemModule)workspaceDir).getNodePath().toString();
+      } else {
+        throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDir.getClass().getName() + '.');
+      }
 
-			workspaceDirPath.stringPath = this.pathWorkspace.relativize(mapEntry.getValue()).toString();
+      workspaceDirPath.stringPath = this.pathWorkspace.relativize(mapEntry.getValue()).toString();
 
-			listWorkspaceDirPath.add(workspaceDirPath);
-		}
+      listWorkspaceDirPath.add(workspaceDirPath);
+    }
 
-		return new ListWorkspaceDirPath(listWorkspaceDirPath);
-	}
+    return new ListWorkspaceDirPath(listWorkspaceDirPath);
+  }
 
-	@Override
-	public Map<WorkspaceDir, Path> unmarshal(ListWorkspaceDirPath listWorkspaceDirPath) {
-		Map<WorkspaceDir, Path> mapWorkspaceDirPath;
+  @Override
+  public Map<WorkspaceDir, Path> unmarshal(ListWorkspaceDirPath listWorkspaceDirPath) {
+    Map<WorkspaceDir, Path> mapWorkspaceDirPath;
 
-		mapWorkspaceDirPath = new HashMap<WorkspaceDir, Path>();
+    mapWorkspaceDirPath = new HashMap<WorkspaceDir, Path>();
 
-		for (WorkspaceDirPath workspaceDirPath: listWorkspaceDirPath.getListWorkspaceDirPath()) {
-			WorkspaceDir workspaceDir;
-			Class<? extends WorkspaceDir> classWorkspaceDir;
-			Path path;
+    for (WorkspaceDirPath workspaceDirPath: listWorkspaceDirPath.getListWorkspaceDirPath()) {
+      WorkspaceDir workspaceDir;
+      Class<? extends WorkspaceDir> classWorkspaceDir;
+      Path path;
 
-			try {
-				classWorkspaceDir = Class.forName(workspaceDirPath.workspaceDirClass).asSubclass(WorkspaceDir.class);
+      try {
+        classWorkspaceDir = Class.forName(workspaceDirPath.workspaceDirClass).asSubclass(WorkspaceDir.class);
 
-				if (classWorkspaceDir == WorkspaceDirUserModuleVersion.class) {
-					workspaceDir = new WorkspaceDirUserModuleVersion(new ModuleVersion(new NodePath(workspaceDirPath.stringNodePath), new Version(workspaceDirPath.stringVersion)));
-				} else if (classWorkspaceDir == WorkspaceDirSystemModule.class) {
-					workspaceDir = new WorkspaceDirSystemModule(new NodePath(workspaceDirPath.stringNodePath));
-				} else {
-					throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDirPath.workspaceDirClass + '.');
-				}
-			} catch (ClassNotFoundException cnfe) {
-				throw new RuntimeException(cnfe);
-			}
+        if (classWorkspaceDir == WorkspaceDirUserModuleVersion.class) {
+          workspaceDir = new WorkspaceDirUserModuleVersion(new ModuleVersion(new NodePath(workspaceDirPath.stringNodePath), new Version(workspaceDirPath.stringVersion)));
+        } else if (classWorkspaceDir == WorkspaceDirSystemModule.class) {
+          workspaceDir = new WorkspaceDirSystemModule(new NodePath(workspaceDirPath.stringNodePath));
+        } else {
+          throw new RuntimeException("Unknown WorkspaceDir class " + workspaceDirPath.workspaceDirClass + '.');
+        }
+      } catch (ClassNotFoundException cnfe) {
+        throw new RuntimeException(cnfe);
+      }
 
-			path = this.pathWorkspace.resolve(Paths.get(workspaceDirPath.stringPath));
+      path = this.pathWorkspace.resolve(Paths.get(workspaceDirPath.stringPath));
 
-			mapWorkspaceDirPath.put(workspaceDir, path);
-		}
+      mapWorkspaceDirPath.put(workspaceDir, path);
+    }
 
-		return mapWorkspaceDirPath;
-	}
+    return mapWorkspaceDirPath;
+  }
 }

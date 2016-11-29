@@ -49,58 +49,58 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class DefaultModelFactory implements ModelFactory {
-	/**
-	 * Initialization property specifying the model URL.
-	 */
-	private static final String URL_MODEL_INIT_PROP = "org.azyva.dragom.UrlModel";
+  /**
+   * Initialization property specifying the model URL.
+   */
+  private static final String URL_MODEL_INIT_PROP = "org.azyva.dragom.UrlModel";
 
-	/**
-	 * Map of URLs (of {@link XmlConfig} XML configuration) to Model.
-	 */
-	private static Map<URL, Model> mapUrlXmlConfigModel = new HashMap<URL, Model>();
+  /**
+   * Map of URLs (of {@link XmlConfig} XML configuration) to Model.
+   */
+  private static Map<URL, Model> mapUrlXmlConfigModel = new HashMap<URL, Model>();
 
-	/**
-	 * Initialization property indicating to ignore any cached Model and instantiate a
-	 * new one, essentially causing a reload of the {@link XmlConfig}.
-	 */
-	private static final String INIT_PROPERTY_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
+  /**
+   * Initialization property indicating to ignore any cached Model and instantiate a
+   * new one, essentially causing a reload of the {@link XmlConfig}.
+   */
+  private static final String INIT_PROPERTY_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
 
-	@Override
-	public Model getModel(Properties propertiesInit) {
-		String stringUrlXmlConfig;
-		boolean indIgnoreCachedModel;
-		Model model;
+  @Override
+  public Model getModel(Properties propertiesInit) {
+    String stringUrlXmlConfig;
+    boolean indIgnoreCachedModel;
+    Model model;
 
-		stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.URL_MODEL_INIT_PROP);
+    stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.URL_MODEL_INIT_PROP);
 
-		if (stringUrlXmlConfig == null) {
-			throw new RuntimeException("Initialization property " + DefaultModelFactory.URL_MODEL_INIT_PROP + " is not defined.");
-		}
+    if (stringUrlXmlConfig == null) {
+      throw new RuntimeException("Initialization property " + DefaultModelFactory.URL_MODEL_INIT_PROP + " is not defined.");
+    }
 
-		indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_IGNORE_CACHED_MODEL));
+    indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_IGNORE_CACHED_MODEL));
 
-		if (indIgnoreCachedModel) {
-			DefaultModelFactory.mapUrlXmlConfigModel.remove(stringUrlXmlConfig);
-		}
+    if (indIgnoreCachedModel) {
+      DefaultModelFactory.mapUrlXmlConfigModel.remove(stringUrlXmlConfig);
+    }
 
-		model = DefaultModelFactory.mapUrlXmlConfigModel.get(stringUrlXmlConfig);
+    model = DefaultModelFactory.mapUrlXmlConfigModel.get(stringUrlXmlConfig);
 
-		if (model == null) {
-			URL urlXmlConfig;
-			XmlConfig xmlConfig;
+    if (model == null) {
+      URL urlXmlConfig;
+      XmlConfig xmlConfig;
 
-			try {
-				urlXmlConfig = new URL(stringUrlXmlConfig);
-			} catch (MalformedURLException mue) {
-				throw new RuntimeException(mue);
-			}
+      try {
+        urlXmlConfig = new URL(stringUrlXmlConfig);
+      } catch (MalformedURLException mue) {
+        throw new RuntimeException(mue);
+      }
 
-			xmlConfig = XmlConfig.load(urlXmlConfig);
-			model = new SimpleModel(xmlConfig, propertiesInit);
+      xmlConfig = XmlConfig.load(urlXmlConfig);
+      model = new SimpleModel(xmlConfig, propertiesInit);
 
-			DefaultModelFactory.mapUrlXmlConfigModel.put(urlXmlConfig, model);
-		}
+      DefaultModelFactory.mapUrlXmlConfigModel.put(urlXmlConfig, model);
+    }
 
-		return model;
-	}
+    return model;
+  }
 }

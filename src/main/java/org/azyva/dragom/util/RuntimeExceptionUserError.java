@@ -37,15 +37,15 @@ package org.azyva.dragom.util;
  *
  */
 public class RuntimeExceptionUserError extends RuntimeException {
-	// To keep the compiler from complaining.
-	static final long serialVersionUID = 0;
+  // To keep the compiler from complaining.
+  static final long serialVersionUID = 0;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param message Message. The caller has to take care of localization, if required.
-	 */
-	public RuntimeExceptionUserError(String message) {
-		super(message);
-	}
+  /**
+   * Constructor.
+   *
+   * @param message Message. The caller has to take care of localization, if required.
+   */
+  public RuntimeExceptionUserError(String message) {
+    super(message);
+  }
 }

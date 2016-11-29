@@ -43,53 +43,53 @@ import org.azyva.dragom.model.config.PropertyDefConfig;
  * @see org.azyva.dragom.model.config.xml
  */
 public class XmlPropertyDefConfig implements PropertyDefConfig {
-	String name;
+  String name;
 
-	String value;
+  String value;
 
-	boolean indOnlyThisNode;
+  boolean indOnlyThisNode;
 
-	/**
-	 * Constructor.
-	 * <p>
-	 * XmlPropertyDefConfig is instantiated by MapXmlPropertyDefConfigAdapter so a
-	 * constructor needs to be provided, as opposed to the other classes in this
-	 * package which are instantiated directly by JAXB and for which only the default
-	 * no-arg constructor is required.
-	 *
-	 * @param name Name.
-	 * @param value Value.
-	 * @param indOnlyThisNode Indicates that this property applies specifically to the
-	 *   {@link NodeConfig} on which it is defined, as opposed to being inherited by
-	 *   child NodeConfig when interpreted by the {@link Model}.
-	 */
-	XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
-		this.name = name;
-		this.value = value;
-		this.indOnlyThisNode = indOnlyThisNode;
-	}
+  /**
+   * Constructor.
+   * <p>
+   * XmlPropertyDefConfig is instantiated by MapXmlPropertyDefConfigAdapter so a
+   * constructor needs to be provided, as opposed to the other classes in this
+   * package which are instantiated directly by JAXB and for which only the default
+   * no-arg constructor is required.
+   *
+   * @param name Name.
+   * @param value Value.
+   * @param indOnlyThisNode Indicates that this property applies specifically to the
+   *   {@link NodeConfig} on which it is defined, as opposed to being inherited by
+   *   child NodeConfig when interpreted by the {@link Model}.
+   */
+  XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
+    this.name = name;
+    this.value = value;
+    this.indOnlyThisNode = indOnlyThisNode;
+  }
 
-	@Override
-	public String getName() {
-		return this.name;
-	}
+  @Override
+  public String getName() {
+    return this.name;
+  }
 
-	@Override
-	public String getValue() {
-		return this.value;
-	}
+  @Override
+  public String getValue() {
+    return this.value;
+  }
 
-	@Override
-	public boolean isOnlyThisNode() {
-		return this.indOnlyThisNode;
-	}
+  @Override
+  public boolean isOnlyThisNode() {
+    return this.indOnlyThisNode;
+  }
 
-	/**
-	 * @return String to help recognize the {@link PropertyDefConfig} instance, in
-	 *   logs for example.
-	 */
-	@Override
-	public String toString() {
-		return "XmlPropertyDefConfig [name=" + this.name + ", value=" + this.value + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
-	}
+  /**
+   * @return String to help recognize the {@link PropertyDefConfig} instance, in
+   *   logs for example.
+   */
+  @Override
+  public String toString() {
+    return "XmlPropertyDefConfig [name=" + this.name + ", value=" + this.value + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
+  }
 }

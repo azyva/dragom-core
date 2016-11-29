@@ -46,93 +46,93 @@ import org.azyva.dragom.util.Util;
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "plugin")
 public class XmlPluginDefConfig implements PluginDefConfig {
-	/**
-	 * This is the String property coming from the XML file. The actual internal
-	 * property is classNodePlugin/
-	 */
-	@XmlElement(name = "plugin-interface")
-	private String stringClassNodePluginFromXml;
+  /**
+   * This is the String property coming from the XML file. The actual internal
+   * property is classNodePlugin/
+   */
+  @XmlElement(name = "plugin-interface")
+  private String stringClassNodePluginFromXml;
 
-	/**
-	 * Being a Class, this property is not directly mapped to an XML element in the
-	 * XML file. The corresponding property stringClassNodePluginFromXml is.
-	 */
-	private Class<? extends NodePlugin> classNodePlugin;
+  /**
+   * Being a Class, this property is not directly mapped to an XML element in the
+   * XML file. The corresponding property stringClassNodePluginFromXml is.
+   */
+  private Class<? extends NodePlugin> classNodePlugin;
 
-	@XmlElement(name = "plugin-id")
-	private String pluginIdFromXml;
+  @XmlElement(name = "plugin-id")
+  private String pluginIdFromXml;
 
-	private String pluginId;
+  private String pluginId;
 
-	@XmlElement(name = "plugin-class")
-	private String pluginClass;
+  @XmlElement(name = "plugin-class")
+  private String pluginClass;
 
-	@XmlElement(name = "ind-only-this-node")
-	private boolean indOnlyThisNode;
+  @XmlElement(name = "ind-only-this-node")
+  private boolean indOnlyThisNode;
 
-	/**
-	 * Sets the values of the classNodePlugin and pluginId properties.
-	 * <p>
-	 * The values can come from the stringClassNodePlugin and pluginIdFromXml if they
-	 * are specified. If not the strategy described in the description of
-	 * {@link PluginDefConfig} is implemented using
-	 * {@link Util#getDefaultClassNodePlugin} and
-	 * {@link Util#getDefaultPluginId}.
-	 *
-	 * @param unmarshaller Unmarshaller.
-	 * @param parent Parent.
-	 */
-	@SuppressWarnings("unused")
-	private void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
-		if (this.stringClassNodePluginFromXml == null) {
-			this.classNodePlugin = Util.getDefaultClassNodePlugin(this.pluginClass);
-		} else {
-			try {
-				this.classNodePlugin = Class.forName(this.stringClassNodePluginFromXml).asSubclass(NodePlugin.class);
-			} catch (ClassNotFoundException cnfe) {
-				throw new RuntimeException(cnfe);
-			}
-		}
+  /**
+   * Sets the values of the classNodePlugin and pluginId properties.
+   * <p>
+   * The values can come from the stringClassNodePlugin and pluginIdFromXml if they
+   * are specified. If not the strategy described in the description of
+   * {@link PluginDefConfig} is implemented using
+   * {@link Util#getDefaultClassNodePlugin} and
+   * {@link Util#getDefaultPluginId}.
+   *
+   * @param unmarshaller Unmarshaller.
+   * @param parent Parent.
+   */
+  @SuppressWarnings("unused")
+  private void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+    if (this.stringClassNodePluginFromXml == null) {
+      this.classNodePlugin = Util.getDefaultClassNodePlugin(this.pluginClass);
+    } else {
+      try {
+        this.classNodePlugin = Class.forName(this.stringClassNodePluginFromXml).asSubclass(NodePlugin.class);
+      } catch (ClassNotFoundException cnfe) {
+        throw new RuntimeException(cnfe);
+      }
+    }
 
-		if (this.pluginIdFromXml == null) {
-			// pluginId can end up null here if no default plugin ID is defined for the
-			// NodePlugin.
-			// If the configuration needs to force a null pluginId even if the NodePlugin
-			// defines a default plugin ID, an empty "plugin-id" element must be specified
-			// in the XML file.
-			// TODO: Need to check this. Are empty elements mapped to null or empty string.
-			this.pluginId = Util.getDefaultPluginId(this.classNodePlugin, this.pluginClass);
-		} else {
-			this.pluginId = this.pluginIdFromXml;
-		}
-	}
+    if (this.pluginIdFromXml == null) {
+      // pluginId can end up null here if no default plugin ID is defined for the
+      // NodePlugin.
+      // If the configuration needs to force a null pluginId even if the NodePlugin
+      // defines a default plugin ID, an empty "plugin-id" element must be specified
+      // in the XML file.
+      // TODO: Need to check this. Are empty elements mapped to null or empty string.
+      this.pluginId = Util.getDefaultPluginId(this.classNodePlugin, this.pluginClass);
+    } else {
+      this.pluginId = this.pluginIdFromXml;
+    }
+  }
 
-	@Override
-	public Class<? extends NodePlugin> getClassNodePlugin() {
-		return this.classNodePlugin;
-	}
+  @Override
+  public Class<? extends NodePlugin> getClassNodePlugin() {
+    return this.classNodePlugin;
+  }
 
-	@Override
-	public String getPluginId() {
-		return this.pluginId;
-	}
+  @Override
+  public String getPluginId() {
+    return this.pluginId;
+  }
 
-	@Override
-	public String getPluginClass() {
-		return this.pluginClass;
-	}
+  @Override
+  public String getPluginClass() {
+    return this.pluginClass;
+  }
 
-	@Override
-	public boolean isOnlyThisNode() {
-		return this.indOnlyThisNode;
-	}
+  @Override
+  public boolean isOnlyThisNode() {
+    return this.indOnlyThisNode;
+  }
 
-	/**
-	 * @return String to help recognize the {@link PluginDefConfig} instance, in
-	 *   logs for example.
-	 */
-	@Override
-	public String toString() {
-		return "XmlPluginDefConfig [classNodePlugin=" + this.classNodePlugin.getName() + ", pluginId=" + this.pluginId + ", pluginClass=" + this.pluginClass + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
-	}
+  /**
+   * @return String to help recognize the {@link PluginDefConfig} instance, in
+   *   logs for example.
+   */
+  @Override
+  public String toString() {
+    return "XmlPluginDefConfig [classNodePlugin=" + this.classNodePlugin.getName() + ", pluginId=" + this.pluginId + ", pluginClass=" + this.pluginClass + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
+  }
 }

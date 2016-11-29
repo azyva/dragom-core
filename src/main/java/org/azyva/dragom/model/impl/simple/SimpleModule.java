@@ -37,53 +37,53 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
  * @author David Raymond
  */
 public class SimpleModule extends SimpleNode implements Module, MutableModule {
-	/**
-	 * Constructor used when dynamically completing a {@link Model}.
-	 * <p>
-	 * This constructor has package scope to enforce the use of
-	 * {@link ModelNodeBuilderFactory#createModuleBuilder} to create new
-	 * {@link SimpleModule}'s.
-	 *
-	 * @param simpleModel
-	 */
-	SimpleModule(SimpleModel simpleModel) {
-		super(simpleModel);
-	}
+  /**
+   * Constructor used when dynamically completing a {@link Model}.
+   * <p>
+   * This constructor has package scope to enforce the use of
+   * {@link ModelNodeBuilderFactory#createModuleBuilder} to create new
+   * {@link SimpleModule}'s.
+   *
+   * @param simpleModel
+   */
+  SimpleModule(SimpleModel simpleModel) {
+    super(simpleModel);
+  }
 
-	/**
-	 * Constructor used when creating a {@link Model} from {@link Config}.
-	 * <p>
-	 * This constructor has package scope to enforce the use of
-	 * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
-	 * {@link Config}.
-	 *
-	 * @param moduleConfig ModuleConfig.
-	 * @param simpleClassificationNodeParent Parent SimpleClassificationNode.
-	 */
-	SimpleModule(ModuleConfig moduleConfig, SimpleClassificationNode simpleClassificationNodeParent) {
-		super(moduleConfig, simpleClassificationNodeParent);
-	}
+  /**
+   * Constructor used when creating a {@link Model} from {@link Config}.
+   * <p>
+   * This constructor has package scope to enforce the use of
+   * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
+   * {@link Config}.
+   *
+   * @param moduleConfig ModuleConfig.
+   * @param simpleClassificationNodeParent Parent SimpleClassificationNode.
+   */
+  SimpleModule(ModuleConfig moduleConfig, SimpleClassificationNode simpleClassificationNodeParent) {
+    super(moduleConfig, simpleClassificationNodeParent);
+  }
 
-	@Override
-	public NodeType getNodeType() {
-		// This may seem overkill for such a simple method, but it is better to fail fast.
-		this.checkNotDeleted();
+  @Override
+  public NodeType getNodeType() {
+    // This may seem overkill for such a simple method, but it is better to fail fast.
+    this.checkNotDeleted();
 
-		return NodeType.MODULE;
-	}
+    return NodeType.MODULE;
+  }
 
-	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
-			throws OptimisticLockException, DuplicateNodeException {
-		// Validates the state so we do not need to do it here.
-		// here.
-		super.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
+  @Override
+  public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+      throws OptimisticLockException, DuplicateNodeException {
+    // Validates the state so we do not need to do it here.
+    // here.
+    super.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 
-		this.state = State.CONFIG;
+    this.state = State.CONFIG;
 
-		// SimpleNode.setNodeConfigTransferObject does not call init since for
-		// SimpleClassificationNode init must be called laster.
-		this.init();
-	}
+    // SimpleNode.setNodeConfigTransferObject does not call init since for
+    // SimpleClassificationNode init must be called laster.
+    this.init();
+  }
 
 }

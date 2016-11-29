@@ -19,7 +19,7 @@
 
 /**
  * Implementations of classes in {@link org.azyva.dragom.model.config} that allow
- * reading {@link Config} from an XML file.
+ * reading {@link org.azyva.dragom.model.config.Config} from an XML file.
  * <p>
  * JAXB is used.
  */

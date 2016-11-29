@@ -31,87 +31,87 @@ package org.azyva.dragom.util;
  * <li>No (but ask again)</li>
  */
 public enum AlwaysNeverYesNoAskUserResponse {
-	/**
-	 * Indicates to silently assume a positive response.
-	 */
-	ALWAYS,
+  /**
+   * Indicates to silently assume a positive response.
+   */
+  ALWAYS,
 
-	/**
-	 * Indicates to silently assume a negative response.
-	 */
-	NEVER,
+  /**
+   * Indicates to silently assume a negative response.
+   */
+  NEVER,
 
-	/**
-	 * Indicates to ask the user, but with a positive default response.
-	 */
-	YES_ASK,
+  /**
+   * Indicates to ask the user, but with a positive default response.
+   */
+  YES_ASK,
 
-	/**
-	 * Indicates to ask the user, but with a negative default response.
-	 */
-	NO_ASK;
+  /**
+   * Indicates to ask the user, but with a negative default response.
+   */
+  NO_ASK;
 
-	/**
-	 * @return Indicates if ALWAYS.
-	 */
-	public boolean isAlways() {
-		return this == ALWAYS;
-	}
+  /**
+   * @return Indicates if ALWAYS.
+   */
+  public boolean isAlways() {
+    return this == ALWAYS;
+  }
 
-	/**
-	 * @return Indicates if NEVER.
-	 */
-	public boolean isNever() {
-		return this == NEVER;
-	}
+  /**
+   * @return Indicates if NEVER.
+   */
+  public boolean isNever() {
+    return this == NEVER;
+  }
 
-	/**
-	 * @return Indicates if YES_ASK.
-	 */
-	public boolean isYesAsk() {
-		return this == YES_ASK;
-	}
+  /**
+   * @return Indicates if YES_ASK.
+   */
+  public boolean isYesAsk() {
+    return this == YES_ASK;
+  }
 
-	/**
-	 * @return Indicates if NO_ASK.
-	 */
-	public boolean isNoAsk() {
-		return this == NO_ASK;
-	}
+  /**
+   * @return Indicates if NO_ASK.
+   */
+  public boolean isNoAsk() {
+    return this == NO_ASK;
+  }
 
-	/**
-	 * @return Indicates if ALWAYS or YES_ASK.
-	 */
-	public boolean isYes() {
-		return (this == ALWAYS) || (this == YES_ASK);
-	}
+  /**
+   * @return Indicates if ALWAYS or YES_ASK.
+   */
+  public boolean isYes() {
+    return (this == ALWAYS) || (this == YES_ASK);
+  }
 
-	/**
-	 * @return Indicates if NEVER or NO_ASK.
-	 */
-	public boolean isNo() {
-		return (this == NEVER) || (this == NO_ASK);
-	}
+  /**
+   * @return Indicates if NEVER or NO_ASK.
+   */
+  public boolean isNo() {
+    return (this == NEVER) || (this == NO_ASK);
+  }
 
-	/**
-	 * @return Indicates if YES_ASK or NO_ASK.
-	 */
-	public boolean isAsk() {
-		return (this == YES_ASK) || (this == NO_ASK);
-	}
+  /**
+   * @return Indicates if YES_ASK or NO_ASK.
+   */
+  public boolean isAsk() {
+    return (this == YES_ASK) || (this == NO_ASK);
+  }
 
-	/**
-	 * Facilitates parsing a String representation of this enum when the String can be
-	 * null.
-	 *
-	 * @param value Value. Can be null.
-	 * @return AlwaysNeverYesNoAskUserResponse. YES_ASK if value is null.
-	 */
-	public static AlwaysNeverYesNoAskUserResponse valueOfWithYesAskDefault(String value) {
-		if (value == null) {
-			return AlwaysNeverYesNoAskUserResponse.YES_ASK;
-		} else {
-			return AlwaysNeverYesNoAskUserResponse.valueOf(value);
-		}
-	}
+  /**
+   * Facilitates parsing a String representation of this enum when the String can be
+   * null.
+   *
+   * @param value Value. Can be null.
+   * @return AlwaysNeverYesNoAskUserResponse. YES_ASK if value is null.
+   */
+  public static AlwaysNeverYesNoAskUserResponse valueOfWithYesAskDefault(String value) {
+    if (value == null) {
+      return AlwaysNeverYesNoAskUserResponse.YES_ASK;
+    } else {
+      return AlwaysNeverYesNoAskUserResponse.valueOf(value);
+    }
+  }
 };

@@ -28,26 +28,26 @@ import org.azyva.dragom.model.plugin.ModulePlugin;
  * @author David Raymond
  */
 public abstract class ModulePluginAbstractImpl extends NodePluginAbstractImpl implements ModulePlugin {
-	/**
-	 * Constructor.
-	 *
-	 * @param Module module.
-	 */
-	protected ModulePluginAbstractImpl(Module module) {
-		super(module);
-	}
+  /**
+   * Constructor.
+   *
+   * @param Module module.
+   */
+  protected ModulePluginAbstractImpl(Module module) {
+    super(module);
+  }
 
-	@Override
-	public Module getModule() {
-		return (Module)this.getNode();
-	}
+  @Override
+  public Module getModule() {
+    return (Module)this.getNode();
+  }
 
-	/**
-	 * @return String to help recognize the ModulePlugin instance, in logs for
-	 * example.
-	 */
-	@Override
-	public String toString() {
-		return this.getClass().getName() + " extends ModulePluginAbstractImpl [module=" + this.getModule() + "]";
-	}
+  /**
+   * @return String to help recognize the ModulePlugin instance, in logs for
+   * example.
+   */
+  @Override
+  public String toString() {
+    return this.getClass().getName() + " extends ModulePluginAbstractImpl [module=" + this.getModule() + "]";
+  }
 }

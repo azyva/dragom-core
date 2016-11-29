@@ -34,25 +34,25 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig, MutableModuleConfig  {
-	/**
-	 * Constructor.
-	 *
-	 * @param simpleClassificationNodeConfigParent Parent
-	 *   SimpleClassificationNodeConfig.
-	 */
-	SimpleModuleConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
-		super(simpleClassificationNodeConfigParent);
-	}
+  /**
+   * Constructor.
+   *
+   * @param simpleClassificationNodeConfigParent Parent
+   *   SimpleClassificationNodeConfig.
+   */
+  SimpleModuleConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+    super(simpleClassificationNodeConfigParent);
+  }
 
-	@Override
-	public NodeType getNodeType() {
-		return NodeType.MODULE;
-	}
+  @Override
+  public NodeType getNodeType() {
+    return NodeType.MODULE;
+  }
 
-	@Override
-	public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
-		this.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
+  @Override
+  public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
+    this.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 
-		this.indNew = false;
-	}
+    this.indNew = false;
+  }
 }

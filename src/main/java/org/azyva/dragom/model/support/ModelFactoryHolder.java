@@ -69,86 +69,86 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class ModelFactoryHolder {
-	/**
-	 * System property specifying the name of the default {@link ModelFactory}
-	 * implementation class to use.
-	 */
-	private static final String SYS_PROPERTY_DEFAULT_MODEL_FACTORY = "org.azyva.dragom.DefaultModelFactory";
+  /**
+   * System property specifying the name of the default {@link ModelFactory}
+   * implementation class to use.
+   */
+  private static final String SYS_PROPERTY_DEFAULT_MODEL_FACTORY = "org.azyva.dragom.DefaultModelFactory";
 
-	/**
-	 * {@link ModelFactory} set with {@link #setModelFactory} which
-	 * should be returned.
-	 */
-	private static ModelFactory modelFactory;
+  /**
+   * {@link ModelFactory} set with {@link #setModelFactory} which
+   * should be returned.
+   */
+  private static ModelFactory modelFactory;
 
-	/**
-	 * {@link Model} set with {@link #setModel} for which a simple factory returning
-	 * that Model should be returned.
-	 */
-	private static Model model;
+  /**
+   * {@link Model} set with {@link #setModel} for which a simple factory returning
+   * that Model should be returned.
+   */
+  private static Model model;
 
-	/**
-	 * Simple {@link ModelFactory} returned when a Model is set with
-	 * {@link #setModel}.
-	 */
-	private static ModelFactory modelFactoryForLocalModel = new ModelFactory() {
-		@Override
-		public Model getModel(Properties propertiesInit) {
-			return ModelFactoryHolder.model;
-		}
-	};
+  /**
+   * Simple {@link ModelFactory} returned when a Model is set with
+   * {@link #setModel}.
+   */
+  private static ModelFactory modelFactoryForLocalModel = new ModelFactory() {
+    @Override
+    public Model getModel(Properties propertiesInit) {
+      return ModelFactoryHolder.model;
+    }
+  };
 
-	// Ensures that the Dragom properties are loaded into the system properties.
-	static {
-		Util.applyDragomSystemProperties();
-	}
+  // Ensures that the Dragom properties are loaded into the system properties.
+  static {
+    Util.applyDragomSystemProperties();
+  }
 
-	/**
-	 * Sets the {@link ModelFactory}.
-	 *
-	 * @param modelFactory See description.
-	 */
-	public static void setModelFactory(ModelFactory modelFactory) {
-		ModelFactoryHolder.modelFactory = modelFactory;
-	}
+  /**
+   * Sets the {@link ModelFactory}.
+   *
+   * @param modelFactory See description.
+   */
+  public static void setModelFactory(ModelFactory modelFactory) {
+    ModelFactoryHolder.modelFactory = modelFactory;
+  }
 
-	/**
-	 * Sets the {@link Model}.
-	 *
-	 * @param model See description.
-	 */
-	public static void setModel(Model model) {
-		ModelFactoryHolder.model = model;
-	}
+  /**
+   * Sets the {@link Model}.
+   *
+   * @param model See description.
+   */
+  public static void setModel(Model model) {
+    ModelFactoryHolder.model = model;
+  }
 
-	/**
-	 * @return {@link ModelFactory} set with {@link #setModelFactory} or the default
-	 *   ModelFactory if none has been set.
-	 */
-	public static ModelFactory getModelFactory() {
-		if (ModelFactoryHolder.modelFactory != null) {
-			return ModelFactoryHolder.modelFactory;
-		} else if (ModelFactoryHolder.model != null) {
-			return ModelFactoryHolder.modelFactoryForLocalModel;
-		} else {
-			String modelFactoryClass;
+  /**
+   * @return {@link ModelFactory} set with {@link #setModelFactory} or the default
+   *   ModelFactory if none has been set.
+   */
+  public static ModelFactory getModelFactory() {
+    if (ModelFactoryHolder.modelFactory != null) {
+      return ModelFactoryHolder.modelFactory;
+    } else if (ModelFactoryHolder.model != null) {
+      return ModelFactoryHolder.modelFactoryForLocalModel;
+    } else {
+      String modelFactoryClass;
 
-			modelFactoryClass = System.getProperty(ModelFactoryHolder.SYS_PROPERTY_DEFAULT_MODEL_FACTORY);
+      modelFactoryClass = System.getProperty(ModelFactoryHolder.SYS_PROPERTY_DEFAULT_MODEL_FACTORY);
 
-			if (modelFactoryClass != null) {
-				try {
-					Class<? extends ModelFactory> classModelFactory;
+      if (modelFactoryClass != null) {
+        try {
+          Class<? extends ModelFactory> classModelFactory;
 
-					classModelFactory = Class.forName(modelFactoryClass).asSubclass(ModelFactory.class);
-					return classModelFactory.newInstance();
-				} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-					throw new RuntimeException(e);
-				}
-			} else {
-				ModelFactoryHolder.modelFactory = new DefaultModelFactory();
-			}
-		}
+          classModelFactory = Class.forName(modelFactoryClass).asSubclass(ModelFactory.class);
+          return classModelFactory.newInstance();
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        ModelFactoryHolder.modelFactory = new DefaultModelFactory();
+      }
+    }
 
-		return ModelFactoryHolder.modelFactory;
-	}
+    return ModelFactoryHolder.modelFactory;
+  }
 }

@@ -41,278 +41,278 @@ import org.azyva.dragom.util.ServiceLocator;
  * @author David Raymond
  */
 public interface JenkinsClient {
-	/**
-	 * Exception that wraps an HTTP status code.
-	 * <p>
-	 * Similar classes exist in different framework, but such frameworks are not used
-	 * here and introducing an otherwise useless dependency is not desirable.
-	 * <p>
-	 * javax.xml.ws.http.HTTPException might have been a good fit, but it does not
-	 * allow providing a description of the context, which is required here.
-	 */
-	public class HttpStatusException extends RuntimeException {
-		// To keep the compiler from complaining.
-		private static final long serialVersionUID = 0;
+  /**
+   * Exception that wraps an HTTP status code.
+   * <p>
+   * Similar classes exist in different framework, but such frameworks are not used
+   * here and introducing an otherwise useless dependency is not desirable.
+   * <p>
+   * javax.xml.ws.http.HTTPException might have been a good fit, but it does not
+   * allow providing a description of the context, which is required here.
+   */
+  public class HttpStatusException extends RuntimeException {
+    // To keep the compiler from complaining.
+    private static final long serialVersionUID = 0;
 
-		/**
-		 * Status code.
-		 */
-		private int statusCode;
+    /**
+     * Status code.
+     */
+    private int statusCode;
 
-		/**
-		 * Constructor.
-		 *
-		 * @param message Message.
-		 * @param statusCode Status code.
-		 */
-		public HttpStatusException(String message, int statusCode) {
-			super(message);
+    /**
+     * Constructor.
+     *
+     * @param message Message.
+     * @param statusCode Status code.
+     */
+    public HttpStatusException(String message, int statusCode) {
+      super(message);
 
-			this.statusCode = statusCode;
-		}
+      this.statusCode = statusCode;
+    }
 
-		/**
-		 * @return Status code.
-		 */
-		public int getStatusCode() {
-			return this.statusCode;
-		}
-	}
+    /**
+     * @return Status code.
+     */
+    public int getStatusCode() {
+      return this.statusCode;
+    }
+  }
 
-	/**
-	 * Types of items.
-	 */
-	public enum ItemType {
-		/**
-		 * Item is a folder.
-		 */
-		FOLDER,
+  /**
+   * Types of items.
+   */
+  public enum ItemType {
+    /**
+     * Item is a folder.
+     */
+    FOLDER,
 
-		/**
-		 * Item is not a folder. It is probably a job, but could be anything among the set
-		 * of item types supported by Jenkins (job template, job, etc.).
-		 */
-		NOT_FOLDER
-	}
+    /**
+     * Item is not a folder. It is probably a job, but could be anything among the set
+     * of item types supported by Jenkins (job template, job, etc.).
+     */
+    NOT_FOLDER
+  }
 
-	/**
-	 * Build states.
-	 */
-	public enum BuildState {
-		/**
-		 * Build is queued and not running yet.
-		 */
-		QUEUED,
+  /**
+   * Build states.
+   */
+  public enum BuildState {
+    /**
+     * Build is queued and not running yet.
+     */
+    QUEUED,
 
-		/**
-		 * Build has been cancelled while it was queued.
-		 * <p>
-		 * This is similar to ABORTED, except that the build was never RUNNING.
-		 */
-		CANCELLED,
+    /**
+     * Build has been cancelled while it was queued.
+     * <p>
+     * This is similar to ABORTED, except that the build was never RUNNING.
+     */
+    CANCELLED,
 
-		/**
-		 * Build is running.
-		 */
-		RUNNING,
+    /**
+     * Build is running.
+     */
+    RUNNING,
 
-		/**
-		 * Build has been aborted while it was running.
-		 * <p>
-		 * This is similar to CANCELLED, except that the build was RUNNING.
-		 */
-		ABORTED,
+    /**
+     * Build has been aborted while it was running.
+     * <p>
+     * This is similar to CANCELLED, except that the build was RUNNING.
+     */
+    ABORTED,
 
-		/**
-		 * Build is completed and is FAILED.
-		 */
-		FAILED,
+    /**
+     * Build is completed and is FAILED.
+     */
+    FAILED,
 
-		/**
-		 * Build is completed and is UNSTABLE.
-		 */
-		UNSTABLE,
+    /**
+     * Build is completed and is UNSTABLE.
+     */
+    UNSTABLE,
 
-		/**
-		 * Build completed with SUCCESS.
-		 */
-		SUCCESS;
+    /**
+     * Build completed with SUCCESS.
+     */
+    SUCCESS;
 
-		/**
-		 * @return Indicates if the build is out of the queue (is running or completed).
-		 */
-		public boolean isOutOfQueue() {
-			return (this != QUEUED) && (this != CANCELLED);
-		}
+    /**
+     * @return Indicates if the build is out of the queue (is running or completed).
+     */
+    public boolean isOutOfQueue() {
+      return (this != QUEUED) && (this != CANCELLED);
+    }
 
-		/**
-		 * @return Indicates if the build is completed.
-		 */
-		public boolean isCompleted() {
-			return (this == ABORTED) || (this == FAILED) || (this == UNSTABLE) || (this == SUCCESS);
-		}
-	}
+    /**
+     * @return Indicates if the build is completed.
+     */
+    public boolean isCompleted() {
+      return (this == ABORTED) || (this == FAILED) || (this == UNSTABLE) || (this == SUCCESS);
+    }
+  }
 
-	/**
-	 * Represents a build.
-	 * <p>
-	 * Instances are created by {@link JenkinsClient#build).
-	 * <p>
-	 * Allows getting information about the build while it progresses to completion.
-	 */
-	public interface Build {
-		/**
-		 * Updates and returns the BuildState.
-		 *
-		 * @return See description.
-		 */
-		BuildState getBuildState();
+  /**
+   * Represents a build.
+   * <p>
+   * Instances are created by {@link JenkinsClient#build).
+   * <p>
+   * Allows getting information about the build while it progresses to completion.
+   */
+  public interface Build {
+    /**
+     * Updates and returns the BuildState.
+     *
+     * @return See description.
+     */
+    BuildState getBuildState();
 
-		/**
-		 * @return Job URL.
-		 */
-		String getJobUrl();
+    /**
+     * @return Job URL.
+     */
+    String getJobUrl();
 
-		/**
-		 * @return Job (full name).
-		 */
-		String getJob();
+    /**
+     * @return Job (full name).
+     */
+    String getJob();
 
-		/**
-		 * @return Build URL.
-		 */
-		String getBuildUrl();
+    /**
+     * @return Build URL.
+     */
+    String getBuildUrl();
 
-		/**
-		 * @return Build number.
-		 */
-		int getBuildNumber();
+    /**
+     * @return Build number.
+     */
+    int getBuildNumber();
 
-		/**
-		 * @return Build (display) name.
-		 */
-		String getBuildName();
+    /**
+     * @return Build (display) name.
+     */
+    String getBuildName();
 
-		/**
-		 * Cancels or aborts the build, depending on whether its {@link BuildState} is
-		 * {@link BuildState#QUEUED} or {@link BuildState#RUNNING}.
-		 * <p>
-		 * A build in any other BuildState cannot be cancelled and false is returned.
-		 *
-		 * @return Indicates if the build has been aborted or cancelled successfully.
-		 *   Generally this can be assumed to be true since if an error occurs, an
-		 *   exception is thrown.
-		 */
-		boolean cancel();
+    /**
+     * Cancels or aborts the build, depending on whether its {@link BuildState} is
+     * {@link BuildState#QUEUED} or {@link BuildState#RUNNING}.
+     * <p>
+     * A build in any other BuildState cannot be cancelled and false is returned.
+     *
+     * @return Indicates if the build has been aborted or cancelled successfully.
+     *   Generally this can be assumed to be true since if an error occurs, an
+     *   exception is thrown.
+     */
+    boolean cancel();
 
-		/**
-		 * @return Returns the next chunk of console output or null if not
-		 *   {@link BuildState#isOutOfQueue} or if no more data is available.
-		 */
-		String getNextConsoleChunk();
+    /**
+     * @return Returns the next chunk of console output or null if not
+     *   {@link BuildState#isOutOfQueue} or if no more data is available.
+     */
+    String getNextConsoleChunk();
 
-		/**
-		 * @return Complete console output or null if not {@link BuildState#isOutOfQueue}.
-		 */
-		String getFullConsole();
-	}
+    /**
+     * @return Complete console output or null if not {@link BuildState#isOutOfQueue}.
+     */
+    String getFullConsole();
+  }
 
-	/**
-	 * Sets the Jenkins base URL.
-	 *
-	 * @param baseUrl See description.
-	 */
-	void setBaseUrl(String baseUrl);
+  /**
+   * Sets the Jenkins base URL.
+   *
+   * @param baseUrl See description.
+   */
+  void setBaseUrl(String baseUrl);
 
-	/**
-	 * Sets the user to access Jenkins. If null (or not set) Jenkins is accessed
-	 * anonymously.
-	 *
-	 * @param user See description.
-	 */
-	void setUser(String user);
+  /**
+   * Sets the user to access Jenkins. If null (or not set) Jenkins is accessed
+   * anonymously.
+   *
+   * @param user See description.
+   */
+  void setUser(String user);
 
-	/**
-	 * Sets the password to access Jenkins. null if user (see {@link #setUser}) is
-	 * null.
-	 *
-	 * @param password See description.
-	 */
-	void setPassword(String password);
+  /**
+   * Sets the password to access Jenkins. null if user (see {@link #setUser}) is
+   * null.
+   *
+   * @param password See description.
+   */
+  void setPassword(String password);
 
-	/**
-	 * @return Indicates if the credentials provided are valid.
-	 */
-	boolean validateCredentials();
+  /**
+   * @return Indicates if the credentials provided are valid.
+   */
+  boolean validateCredentials();
 
-	/**
-	 * Returns the {@link ItemType}.
-	 * <p>
-	 * Returns null if the item does not exist.
-	 *
-	 * @param item Item (full name).
-	 * @return See description.
-	 */
-	ItemType getItemType(String item);
+  /**
+   * Returns the {@link ItemType}.
+   * <p>
+   * Returns null if the item does not exist.
+   *
+   * @param item Item (full name).
+   * @return See description.
+   */
+  ItemType getItemType(String item);
 
-	/**
-	 * Deletes an item.
-	 *
-	 * @param item Item (full name).
-	 * @return Indicates if the item existed and was deleted.
-	 */
-	boolean deleteItem(String item);
+  /**
+   * Deletes an item.
+   *
+   * @param item Item (full name).
+   * @return Indicates if the item existed and was deleted.
+   */
+  boolean deleteItem(String item);
 
-	/**
-	 * Created a job from a template.
-	 *
-	 * @param template Template (full name).
-	 * @param job New job (full name).
-	 * @param mapTemplateParam Template parameters.
-	 */
-	void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam);
+  /**
+   * Created a job from a template.
+   *
+   * @param template Template (full name).
+   * @param job New job (full name).
+   * @param mapTemplateParam Template parameters.
+   */
+  void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam);
 
-	/**
-	 * Creates a regular non-templatized job.
-	 *
-	 * @param job New job (full name).
-	 * @param readerConfig Reader providing the configuration of the job.
-	 */
-	void createJob(String job, Reader readerConfig);
+  /**
+   * Creates a regular non-templatized job.
+   *
+   * @param job New job (full name).
+   * @param readerConfig Reader providing the configuration of the job.
+   */
+  void createJob(String job, Reader readerConfig);
 
-	/**
-	 * Updates a regular non-templatized job.
-	 *
-	 * @param job Job (full name).
-	 * @param readerConfig Reader providing the configuration of the job.
-	 */
-	void updateJob(String job, Reader readerConfig);
+  /**
+   * Updates a regular non-templatized job.
+   *
+   * @param job Job (full name).
+   * @param readerConfig Reader providing the configuration of the job.
+   */
+  void updateJob(String job, Reader readerConfig);
 
-	/**
-	 * Creates or updates a regular non-templatized job.
-	 *
-	 * @param job Job (full name).
-	 * @param readerConfig Reader providing the configuration of the job.
-	 */
-	void createUpdateJob(String job, Reader readerConfig);
+  /**
+   * Creates or updates a regular non-templatized job.
+   *
+   * @param job Job (full name).
+   * @param readerConfig Reader providing the configuration of the job.
+   */
+  void createUpdateJob(String job, Reader readerConfig);
 
-	/**
-	 * Triggers a build for a job.
-	 *
-	 * @param job Job (full name).
-	 * @param mapBuildParam Build parameters. Can be null.
-	 * @return Build.
-	 */
-	Build build(String job, Map<String, String> mapBuildParam);
+  /**
+   * Triggers a build for a job.
+   *
+   * @param job Job (full name).
+   * @param mapBuildParam Build parameters. Can be null.
+   * @return Build.
+   */
+  Build build(String job, Map<String, String> mapBuildParam);
 
-	boolean isFolderEmpty(String folder);
+  boolean isFolderEmpty(String folder);
 
-	/**
-	 * Creates a simple folder.
-	 *
-	 * @param folder Folder (full name).
-	 * @return Indicates if the folder was created. false is returned if it already
-	 *   exited.
-	 */
-	boolean createSimpleFolder(String folder);
+  /**
+   * Creates a simple folder.
+   *
+   * @param folder Folder (full name).
+   * @return Indicates if the folder was created. false is returned if it already
+   *   exited.
+   */
+  boolean createSimpleFolder(String folder);
 }

@@ -67,92 +67,92 @@ import org.azyva.dragom.jenkins.JenkinsClient;
  * @author David Raymond
  */
 public class ServiceLocator {
-	/**
-	 * Prefix of the system property specifying the default factory class for a
-	 * service interface whose name is used as the suffix.
-	 */
-	private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY = "org.azyva.dragom.DefaultServiceFactory.";
+  /**
+   * Prefix of the system property specifying the default factory class for a
+   * service interface whose name is used as the suffix.
+   */
+  private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY = "org.azyva.dragom.DefaultServiceFactory.";
 
-	/**
-	 * Prefix of the system property specifying the default service implementation
-	 * class for a service interface whose name is used as the suffix.
-	 */
-	private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL = "org.azyva.dragom.DefaultServiceImpl.";
+  /**
+   * Prefix of the system property specifying the default service implementation
+   * class for a service interface whose name is used as the suffix.
+   */
+  private static final String SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL = "org.azyva.dragom.DefaultServiceImpl.";
 
-	/**
-	 * Interface which must be implemented by registered service factories.
-	 *
-	 * @param <ServiceInterface> Service interface.
-	 */
-	public interface ServiceFactory<ServiceInterface> {
-		/**
-		 *
-		 * @return Service instance. Instantiation semantics (singleton, new instance,
-		 *   etc.) are not defined.
-		 */
-		ServiceInterface getService();
-	}
+  /**
+   * Interface which must be implemented by registered service factories.
+   *
+   * @param <ServiceInterface> Service interface.
+   */
+  public interface ServiceFactory<ServiceInterface> {
+    /**
+     *
+     * @return Service instance. Instantiation semantics (singleton, new instance,
+     *   etc.) are not defined.
+     */
+    ServiceInterface getService();
+  }
 
-	private static Map<Class<?>, ServiceFactory<?>> mapServiceFactory = new HashMap<Class<?>, ServiceFactory<?>>();
+  private static Map<Class<?>, ServiceFactory<?>> mapServiceFactory = new HashMap<Class<?>, ServiceFactory<?>>();
 
-	static {
-		Util.applyDragomSystemProperties();
-	}
+  static {
+    Util.applyDragomSystemProperties();
+  }
 
-	/**
-	 * Constructor.
-	 * <p>
-	 * This class has only static methods.
-	 */
-	private ServiceLocator() {
-	}
+  /**
+   * Constructor.
+   * <p>
+   * This class has only static methods.
+   */
+  private ServiceLocator() {
+  }
 
-	public static <ServiceInterface> void setServiceFactory(Class<ServiceInterface> classServiceInterface, ServiceFactory<ServiceInterface> serviceFactory) {
-		ServiceLocator.mapServiceFactory.put(classServiceInterface, serviceFactory);
-	}
+  public static <ServiceInterface> void setServiceFactory(Class<ServiceInterface> classServiceInterface, ServiceFactory<ServiceInterface> serviceFactory) {
+    ServiceLocator.mapServiceFactory.put(classServiceInterface, serviceFactory);
+  }
 
-	@SuppressWarnings("unchecked")
-	public static <ServiceInterface> ServiceInterface getService(Class<ServiceInterface> classServiceInterface) {
-		ServiceFactory<ServiceInterface> serviceFactory;
-		String serviceFactoryClassName;
-		String serviceImplClassName;
+  @SuppressWarnings("unchecked")
+  public static <ServiceInterface> ServiceInterface getService(Class<ServiceInterface> classServiceInterface) {
+    ServiceFactory<ServiceInterface> serviceFactory;
+    String serviceFactoryClassName;
+    String serviceImplClassName;
 
-		serviceFactory = (ServiceFactory<ServiceInterface>)ServiceLocator.mapServiceFactory.get(classServiceInterface);
+    serviceFactory = (ServiceFactory<ServiceInterface>)ServiceLocator.mapServiceFactory.get(classServiceInterface);
 
-		if (serviceFactory != null) {
-			return serviceFactory.getService();
-		}
+    if (serviceFactory != null) {
+      return serviceFactory.getService();
+    }
 
-		serviceFactoryClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY + classServiceInterface.getName());
+    serviceFactoryClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_FACTORY + classServiceInterface.getName());
 
-		if (serviceFactoryClassName != null) {
-			try {
-				return (ServiceInterface)Class.forName(serviceFactoryClassName).getMethod("getService").invoke(null);
-			} catch (NoSuchMethodException | ClassNotFoundException | InvocationTargetException | IllegalAccessException e) {
-				throw new RuntimeException(e);
-			}
-		}
+    if (serviceFactoryClassName != null) {
+      try {
+        return (ServiceInterface)Class.forName(serviceFactoryClassName).getMethod("getService").invoke(null);
+      } catch (NoSuchMethodException | ClassNotFoundException | InvocationTargetException | IllegalAccessException e) {
+        throw new RuntimeException(e);
+      }
+    }
 
-		serviceImplClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL + classServiceInterface.getName());
+    serviceImplClassName = System.getProperty(ServiceLocator.SYS_PROPERTY_PREFIX_DEFAULT_SERVICE_IMPL + classServiceInterface.getName());
 
-		if (serviceImplClassName != null) {
-			try {
-				return (ServiceInterface)Class.forName(serviceImplClassName).newInstance();
-			} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-				throw new RuntimeException(e);
-			}
-		}
+    if (serviceImplClassName != null) {
+      try {
+        return (ServiceInterface)Class.forName(serviceImplClassName).newInstance();
+      } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+        throw new RuntimeException(e);
+      }
+    }
 
-		try {
-			return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Factory").getMethod("getService").invoke(null);
-		} catch (ClassNotFoundException cnfe) {
-			try {
-				return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Impl").newInstance();
-			} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-				throw new RuntimeException(e);
-			}
-		} catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    try {
+      return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Factory").getMethod("getService").invoke(null);
+    } catch (ClassNotFoundException cnfe) {
+      try {
+        return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Impl").newInstance();
+      } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+        throw new RuntimeException(e);
+      }
+    } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

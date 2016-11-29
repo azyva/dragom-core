@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.util.StdConverter;
  * @author David Raymond
  */
 public class NodePathJsonConverter extends StdConverter<NodePath, String> {
-	@Override
-	public String convert(NodePath nodePath) {
-		return nodePath.toString();
-	}
+  @Override
+  public String convert(NodePath nodePath) {
+    return nodePath.toString();
+  }
 }

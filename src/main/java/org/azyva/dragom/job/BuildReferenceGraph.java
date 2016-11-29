@@ -41,64 +41,64 @@ import org.azyva.dragom.reference.support.SimpleReferenceGraph;
  * @author David Raymond
  */
 public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
-	/**
-	 * ReferenceGraph that will be built.
-	 */
-	private ReferenceGraph referenceGraph;
+  /**
+   * ReferenceGraph that will be built.
+   */
+  private ReferenceGraph referenceGraph;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param referenceGraph ReferenceGraph that will be built or completed. Can be
-	 *   null in which case a new initially empty SimpleReferenceGraph is used.
-	 * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
-	 *   the traversal of the reference graphs.
-	 */
-	public BuildReferenceGraph(ReferenceGraph referenceGraph, List<ModuleVersion> listModuleVersionRoot) {
-		super(listModuleVersionRoot);
+  /**
+   * Constructor.
+   *
+   * @param referenceGraph ReferenceGraph that will be built or completed. Can be
+   *   null in which case a new initially empty SimpleReferenceGraph is used.
+   * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
+   *   the traversal of the reference graphs.
+   */
+  public BuildReferenceGraph(ReferenceGraph referenceGraph, List<ModuleVersion> listModuleVersionRoot) {
+    super(listModuleVersionRoot);
 
-		if (referenceGraph == null) {
-			this.referenceGraph = new SimpleReferenceGraph();
-		}
+    if (referenceGraph == null) {
+      this.referenceGraph = new SimpleReferenceGraph();
+    }
 
-		this.setIndAvoidReentry(false);
-	}
+    this.setIndAvoidReentry(false);
+  }
 
-	/**
-	 * Augment the visibility of this method since it can be useful to caller.
-	 */
-	@Override
-	public void setupReferencePathMatcherForProjectCode() {
-		this.setupReferencePathMatcherForProjectCode();
-	}
+  /**
+   * Augment the visibility of this method since it can be useful to caller.
+   */
+  @Override
+  public void setupReferencePathMatcherForProjectCode() {
+    this.setupReferencePathMatcherForProjectCode();
+  }
 
-	/**
-	 * @return ReferenceGraph that was provided to or created by the constructor.
-	 */
-	public ReferenceGraph getReferenceGraph() {
-		return this.referenceGraph;
-	}
+  /**
+   * @return ReferenceGraph that was provided to or created by the constructor.
+   */
+  public ReferenceGraph getReferenceGraph() {
+    return this.referenceGraph;
+  }
 
-	/**
-	 * This method will be called only for matched {@link ModuleVersion}'s. But the
-	 * {@link ReferenceGraph} needs to include the {@link ReferencePath}'s leading to
-	 * them. It must also identify those ModuleVersion's which are the roots. This is
-	 * all taken care of by {@link ReferenceGraph#addReferencePath}.
-	 *
-	 * @param reference Reference to the matched ModuleVersion.
-	 * @return Indicates if children must be visited. true is returned.
-	 */
-	@Override
-	protected boolean visitMatchedModuleVersion(Reference reference) {
-		this.referencePath.add(reference);
+  /**
+   * This method will be called only for matched {@link ModuleVersion}'s. But the
+   * {@link ReferenceGraph} needs to include the {@link ReferencePath}'s leading to
+   * them. It must also identify those ModuleVersion's which are the roots. This is
+   * all taken care of by {@link ReferenceGraph#addReferencePath}.
+   *
+   * @param reference Reference to the matched ModuleVersion.
+   * @return Indicates if children must be visited. true is returned.
+   */
+  @Override
+  protected boolean visitMatchedModuleVersion(Reference reference) {
+    this.referencePath.add(reference);
 
-		try {
-			this.referenceGraph.addMatchedReferencePath(this.referencePath);
-		} finally {
-			this.referencePath.removeLeafReference();
-		}
+    try {
+      this.referenceGraph.addMatchedReferencePath(this.referencePath);
+    } finally {
+      this.referencePath.removeLeafReference();
+    }
 
-		return true;
-	}
+    return true;
+  }
 
 }

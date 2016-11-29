@@ -70,231 +70,231 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  * @author David Raymond
  */
 public class ExecContextHolder {
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED = "EXEC_CONTEXT_LOCKED";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED = "EXEC_CONTEXT_LOCKED";
 
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ExecContextHolder.class.getName() + "ResourceBundle");
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(ExecContextHolder.class.getName() + "ResourceBundle");
 
-	/**
-	 * Thread-local holder variable for the ExecContext.
-	 */
-	private static ThreadLocal<ExecContext> threadLocalExecContext = new ThreadLocal<ExecContext>();
+  /**
+   * Thread-local holder variable for the ExecContext.
+   */
+  private static ThreadLocal<ExecContext> threadLocalExecContext = new ThreadLocal<ExecContext>();
 
-	/**
-	 * Set of ExecContext currently being used.
-	 */
-	private static Set<ExecContext> setExecContextLocked = new HashSet<ExecContext>();
+  /**
+   * Set of ExecContext currently being used.
+   */
+  private static Set<ExecContext> setExecContextLocked = new HashSet<ExecContext>();
 
-	private static class DummyExecContext implements ExecContext {
-		private Model model;
+  private static class DummyExecContext implements ExecContext {
+    private Model model;
 
-		/**
-		 * Constructor.
-		 *
-		 * @param model Model.
-		 */
-		public DummyExecContext(Model model) {
-			this.model = model;
-		}
+    /**
+     * Constructor.
+     *
+     * @param model Model.
+     */
+    public DummyExecContext(Model model) {
+      this.model = model;
+    }
 
-		@Override
-		public Model getModel() {
-			return this.model;
-		}
+    @Override
+    public Model getModel() {
+      return this.model;
+    }
 
-		@Override
-		public <ExecContextPluginInterface extends ExecContextPlugin> ExecContextPluginInterface getExecContextPlugin(Class<ExecContextPluginInterface> classExecContextPluginInterface) {
-			return null;
-		}
+    @Override
+    public <ExecContextPluginInterface extends ExecContextPlugin> ExecContextPluginInterface getExecContextPlugin(Class<ExecContextPluginInterface> classExecContextPluginInterface) {
+      return null;
+    }
 
-		@Override
-		public Set<String> getSetInitProperty() {
-			// TODO Auto-generated method stub
-			return Collections.<String>emptySet();
-		}
+    @Override
+    public Set<String> getSetInitProperty() {
+      // TODO Auto-generated method stub
+      return Collections.<String>emptySet();
+    }
 
-		@Override
-		public String getInitProperty(String name) {
-			return null;
-		}
+    @Override
+    public String getInitProperty(String name) {
+      return null;
+    }
 
-		@Override
-		public String getProperty(String name) {
-			return null;
-		}
+    @Override
+    public String getProperty(String name) {
+      return null;
+    }
 
-		@Override
-		public void setProperty(String name, String value) {
-		}
+    @Override
+    public void setProperty(String name, String value) {
+    }
 
-		@Override
-		public Set<String> getSetProperty(String prefix) {
-			return Collections.<String>emptySet();
-		}
+    @Override
+    public Set<String> getSetProperty(String prefix) {
+      return Collections.<String>emptySet();
+    }
 
-		@Override
-		public void removeProperty(String name) {
-		}
+    @Override
+    public void removeProperty(String name) {
+    }
 
-		@Override
-		public void removeProperties(String prefix) {
-		}
+    @Override
+    public void removeProperties(String prefix) {
+    }
 
-		@Override
-		public Object getTransientData(String name) {
-			return null;
-		}
+    @Override
+    public Object getTransientData(String name) {
+      return null;
+    }
 
-		@Override
-		public void setTransientData(String name, Object value) {
-		}
+    @Override
+    public void setTransientData(String name, Object value) {
+    }
 
-		@Override
-		public String getName() {
-			return "Dummy ExecContext";
-		}
+    @Override
+    public String getName() {
+      return "Dummy ExecContext";
+    }
 
-		@Override
-		public void release() {
-		}
+    @Override
+    public void release() {
+    }
 
-	}
+  }
 
-	/**
-	 * Sets the {@link ExecContext} in thread-local storage and starts tool
-	 * execution.
-	 * <p>
-	 * To be called during the initialization phase of a tool.
-	 * <p>
-	 * If the ExecContext implementation implements {@link ToolLifeCycleExecContext}
-	 * {@link ToolLifeCycleExecContext#startTool} is called.
-	 *
-	 * @param execContext ExecContext.
-	 * @param propertiesInit Initialization properties specific to the tool.
-	 */
-	public static void setAndStartTool(ExecContext execContext, Properties propertiesInit) {
-		if (ExecContextHolder.setExecContextLocked.contains(execContext)) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(ExecContextHolder.resourceBundle.getString(ExecContextHolder.MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED), execContext.getName()));
-		}
+  /**
+   * Sets the {@link ExecContext} in thread-local storage and starts tool
+   * execution.
+   * <p>
+   * To be called during the initialization phase of a tool.
+   * <p>
+   * If the ExecContext implementation implements {@link ToolLifeCycleExecContext}
+   * {@link ToolLifeCycleExecContext#startTool} is called.
+   *
+   * @param execContext ExecContext.
+   * @param propertiesInit Initialization properties specific to the tool.
+   */
+  public static void setAndStartTool(ExecContext execContext, Properties propertiesInit) {
+    if (ExecContextHolder.setExecContextLocked.contains(execContext)) {
+      throw new RuntimeExceptionUserError(MessageFormat.format(ExecContextHolder.resourceBundle.getString(ExecContextHolder.MSG_PATTERN_KEY_EXEC_CONTEXT_LOCKED), execContext.getName()));
+    }
 
-		ExecContextHolder.threadLocalExecContext.set(execContext);
-		ExecContextHolder.setExecContextLocked.add(execContext);
+    ExecContextHolder.threadLocalExecContext.set(execContext);
+    ExecContextHolder.setExecContextLocked.add(execContext);
 
-		if (execContext instanceof ToolLifeCycleExecContext) {
-			ToolLifeCycleExecContext toolLifeCycleExecContext;
+    if (execContext instanceof ToolLifeCycleExecContext) {
+      ToolLifeCycleExecContext toolLifeCycleExecContext;
 
-			toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
+      toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-			toolLifeCycleExecContext.startTool(propertiesInit);
-		}
-	}
+      toolLifeCycleExecContext.startTool(propertiesInit);
+    }
+  }
 
-	/**
-	 * Sets a dummy {@link ExecContext} in thread-local storage.
-	 * <p>
-	 * Useful in non-tool contexts where an ExecContext is not really required. But
-	 * since many methods rely on an ExecContext being available, a dummy non-null
-	 * ExecContext prevents NullPointerException's.
-	 * <p>
-	 * Since a {@link Model} is an integral part of the ExecContext, it is specified
-	 * here as an argument to be associated with the ExecContext.
-	 *
-	 * @param Model Model.
-	 * @return Dummy ExecContext.
-	 */
-	public static ExecContext setDummy(Model model) {
-		ExecContext execContext = new DummyExecContext(model);
+  /**
+   * Sets a dummy {@link ExecContext} in thread-local storage.
+   * <p>
+   * Useful in non-tool contexts where an ExecContext is not really required. But
+   * since many methods rely on an ExecContext being available, a dummy non-null
+   * ExecContext prevents NullPointerException's.
+   * <p>
+   * Since a {@link Model} is an integral part of the ExecContext, it is specified
+   * here as an argument to be associated with the ExecContext.
+   *
+   * @param Model Model.
+   * @return Dummy ExecContext.
+   */
+  public static ExecContext setDummy(Model model) {
+    ExecContext execContext = new DummyExecContext(model);
 
-		ExecContextHolder.setAndStartTool(execContext, null);
+    ExecContextHolder.setAndStartTool(execContext, null);
 
-		return execContext;
-	}
+    return execContext;
+  }
 
-	/**
-	 * Sets the {@link ExecContext} in thread-local storage for a secondary
-	 * thread for an already started tool.
-	 * <p>
-	 * To be called when a tool is multi-threaded so that each thread gets its own
-	 * ExecContext, without having {@link ToolLifeCycleExecContext#startTool} called.
-	 *
-	 * @param execContext ExecContext. Must be one for which
-	 *   {@link #setAndStartTool} has already been called.
-	 */
-	public static void setSecondaryThread(ExecContext execContext) {
-		if (!ExecContextHolder.setExecContextLocked.contains(execContext)) {
-			throw new RuntimeException("ExecContext is not currenly being used.");
-		}
+  /**
+   * Sets the {@link ExecContext} in thread-local storage for a secondary
+   * thread for an already started tool.
+   * <p>
+   * To be called when a tool is multi-threaded so that each thread gets its own
+   * ExecContext, without having {@link ToolLifeCycleExecContext#startTool} called.
+   *
+   * @param execContext ExecContext. Must be one for which
+   *   {@link #setAndStartTool} has already been called.
+   */
+  public static void setSecondaryThread(ExecContext execContext) {
+    if (!ExecContextHolder.setExecContextLocked.contains(execContext)) {
+      throw new RuntimeException("ExecContext is not currenly being used.");
+    }
 
-		ExecContextHolder.threadLocalExecContext.set(execContext);
-	}
+    ExecContextHolder.threadLocalExecContext.set(execContext);
+  }
 
-	/**
-	 * Ends tool execution and unsets the {@link ExecContext} from thread-local
-	 * storage.
-	 * <p>
-	 * The ExecContext is the one that was set using {@link #setAndStartTool}.
-	 * <p>
-	 * To be called during the termination phase of a tool. Should be called on the
-	 * same thread as setAndStartTool.
-	 * <p>
-	 * If the ExecContext implementation implements {@link ToolLifeCycleExecContext}
-	 * {@link ToolLifeCycleExecContext#endTool} is called.
-	 */
-	public static void endToolAndUnset() {
-		ExecContext execContext;
+  /**
+   * Ends tool execution and unsets the {@link ExecContext} from thread-local
+   * storage.
+   * <p>
+   * The ExecContext is the one that was set using {@link #setAndStartTool}.
+   * <p>
+   * To be called during the termination phase of a tool. Should be called on the
+   * same thread as setAndStartTool.
+   * <p>
+   * If the ExecContext implementation implements {@link ToolLifeCycleExecContext}
+   * {@link ToolLifeCycleExecContext#endTool} is called.
+   */
+  public static void endToolAndUnset() {
+    ExecContext execContext;
 
-		execContext = ExecContextHolder.get();
+    execContext = ExecContextHolder.get();
 
-		if (execContext != null) {
-			if (execContext instanceof ToolLifeCycleExecContext) {
-				ToolLifeCycleExecContext toolLifeCycleExecContext;
+    if (execContext != null) {
+      if (execContext instanceof ToolLifeCycleExecContext) {
+        ToolLifeCycleExecContext toolLifeCycleExecContext;
 
-				toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
+        toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-				toolLifeCycleExecContext.endTool();
-			}
+        toolLifeCycleExecContext.endTool();
+      }
 
-			ExecContextHolder.setExecContextLocked.remove(execContext);
-			ExecContextHolder.threadLocalExecContext.set(null);
-		}
-	}
+      ExecContextHolder.setExecContextLocked.remove(execContext);
+      ExecContextHolder.threadLocalExecContext.set(null);
+    }
+  }
 
-	/**
-	 * Force-unsets an {@link ExecContext}. Used as a last resort after a tool
-	 * ends abnormally, leaving the ExecContext in the used state.
-	 * <p>
-	 * The ExecContext cannot be obtained with {@link ExecContext#get} since this
-	 * method is generally not called on the same thread as the one that previously
-	 * set the ExecContext without releasing it.
-	 *
-	 * @param execContext ExecContext.
-	 */
-	public static void forceUnset(ExecContext execContext) {
-		if (execContext instanceof ToolLifeCycleExecContext) {
-			ToolLifeCycleExecContext toolLifeCycleExecContext;
+  /**
+   * Force-unsets an {@link ExecContext}. Used as a last resort after a tool
+   * ends abnormally, leaving the ExecContext in the used state.
+   * <p>
+   * The ExecContext cannot be obtained with {@link ExecContext#get} since this
+   * method is generally not called on the same thread as the one that previously
+   * set the ExecContext without releasing it.
+   *
+   * @param execContext ExecContext.
+   */
+  public static void forceUnset(ExecContext execContext) {
+    if (execContext instanceof ToolLifeCycleExecContext) {
+      ToolLifeCycleExecContext toolLifeCycleExecContext;
 
-			toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
+      toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-			toolLifeCycleExecContext.endTool();
-		}
+      toolLifeCycleExecContext.endTool();
+    }
 
-		ExecContextHolder.setExecContextLocked.remove(execContext);
-	}
+    ExecContextHolder.setExecContextLocked.remove(execContext);
+  }
 
-	/**
-	 * Returns the {@link ExecContext} stored in thread-local storage.
-	 * <p>
-	 * To be called during the execution of tools. Essentially any class (model,
-	 * plugin, etc.) can call this method to have access to the ExecContext.
-	 *
-	 * @return See description.
-	 */
-	public static ExecContext get() {
-		return ExecContextHolder.threadLocalExecContext.get();
-	}
+  /**
+   * Returns the {@link ExecContext} stored in thread-local storage.
+   * <p>
+   * To be called during the execution of tools. Essentially any class (model,
+   * plugin, etc.) can call this method to have access to the ExecContext.
+   *
+   * @return See description.
+   */
+  public static ExecContext get() {
+    return ExecContextHolder.threadLocalExecContext.get();
+  }
 }

@@ -31,20 +31,20 @@ import org.azyva.dragom.model.ModuleVersion;
  */
 
 public class ModuleReentryAvoider {
-	Set<ModuleVersion> setModuleVersion;
+  Set<ModuleVersion> setModuleVersion;
 
-	public ModuleReentryAvoider() {
-		this.setModuleVersion = new HashSet<ModuleVersion>();
-	}
+  public ModuleReentryAvoider() {
+    this.setModuleVersion = new HashSet<ModuleVersion>();
+  }
 
-	/**
-	 * Indicates the intent of processing a module.
-	 *
-	 * @param moduleVersion ModuleVersion.
-	 * @return Indicates if the module can be processed, meaning that it has not
-	 * already been processed.
-	 */
-	public boolean processModule(ModuleVersion moduleVersion) {
-		return this.setModuleVersion.add(moduleVersion);
-	}
+  /**
+   * Indicates the intent of processing a module.
+   *
+   * @param moduleVersion ModuleVersion.
+   * @return Indicates if the module can be processed, meaning that it has not
+   * already been processed.
+   */
+  public boolean processModule(ModuleVersion moduleVersion) {
+    return this.setModuleVersion.add(moduleVersion);
+  }
 }

@@ -55,665 +55,665 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class DefaultGitImpl implements Git {
-	/**
-	 * Logger for the class.
-	 */
-	private static final Logger logger = LoggerFactory.getLogger(DefaultGitImpl.class);
-
-	/**
-	 * Pattern to extract the user from a HTTP[S] repository URL.
-	 */
-	private static final Pattern patternExtractHttpReposUrlUser = Pattern.compile("([hH][tT][tT][pP][sS]?://)(?:([a-zA-Z0-9_\\.\\-]+)@)?([^/]+)/.*");
-
-	/**
-	 * Path to the git Executable.
-	 */
-	private Path pathExecutable;
-
-	/**
-	 * Repository URL.
-	 */
-	private String reposUrl;
-
-	/**
-	 * User.
-	 */
-	private String user;
-
-	/**
-	 * Password.
-	 */
-	private String password;
-
-	/**
-	 * HTTP credentials to include in the credentials file provided to git through the
-	 * "store" credential helper.
-	 * <p>
-	 * The fact that this is not null is also used as an indicator of if the user
-	 * specified in the repository URL, if any, has been validated against the user
-	 * provided with {@link #setUser}.
-	 * <p>
-	 * This is required only if the user is provided, in which case the protocol used
-	 * in the repository URL must be HTTP[S].
-	 */
-	private String httpCredentials;
-
-	@Override
-	public void setPathExecutable(Path pathExecutable) {
-		this.pathExecutable = pathExecutable;
-	}
-
-	@Override
-	public void setReposUrl(String reposUrl) {
-		this.reposUrl = reposUrl;
-	}
-
-	@Override
-	public void setUser(String user) {
-		this.user = user;
-	}
-
-	@Override
-	public void setPassword(String password) {
-		this.password = password;
-	}
-
-	@Override
-	public int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput) {
-		CommandLine commandLine;
-		Path pathFileCredentials;
-		DefaultExecutor defaultExecutor;
-		ByteArrayOutputStream byteArrayOutputStreamOut;
-		ByteArrayOutputStream byteArrayOutputStreamErr;
-		int exitCode;
-
-		pathFileCredentials = null;
-
-		try {
-			commandLine = new CommandLine(this.pathExecutable.toString());
-
-			if (indProvideCredentials && (this.user != null)) {
-				Writer writer;
-
-				if (this.httpCredentials == null) {
-					Matcher matcher;
-					String userFromReposUrl;
-
-					matcher = DefaultGitImpl.patternExtractHttpReposUrlUser.matcher(this.reposUrl);
-
-					if (!matcher.matches()) {
-						throw new RuntimeException("Repository URL " + this.reposUrl + " does not match credential extraction pattern " + DefaultGitImpl.patternExtractHttpReposUrlUser.toString() + '.');
-					}
-
-					userFromReposUrl = matcher.group(2);
-
-					if ((userFromReposUrl != null) && !userFromReposUrl.equals(this.user)) {
-						throw new RuntimeException("User " + userFromReposUrl + " extracted from repository URL " + this.reposUrl + " does not correspond to user provided in credentials " + this.user + '.');
-					}
-
-					this.httpCredentials = matcher.group(1) + this.user + ':' + this.password + '@' + matcher.group(3);
-				}
-
-				try {
-					if (Util.isPosix()) {
-						Set<PosixFilePermission> setPosixFilePermission;
-
-						setPosixFilePermission = new HashSet<PosixFilePermission>();
-
-						setPosixFilePermission.add(PosixFilePermission.OWNER_READ);
-						setPosixFilePermission.add(PosixFilePermission.OWNER_WRITE);
-
-						pathFileCredentials = Files.createTempFile((String)null, (String)null, PosixFilePermissions.asFileAttribute(setPosixFilePermission));
-					} else {
-						pathFileCredentials = Files.createTempFile((String)null, (String)null);
-					}
-
-					writer = new FileWriter(pathFileCredentials.toFile());
-					writer.append(this.httpCredentials);
-					writer.close();
-				} catch (IOException ioe) {
-					throw new RuntimeException(ioe);
-				}
-
-				commandLine.addArgument("-c").addArgument("credential.helper=store --file=" + pathFileCredentials.toString());
-			}
-
-			for (String arg: arrayArg) {
-				commandLine.addArgument(arg, false);
-			}
-
-			DefaultGitImpl.logger.trace(commandLine.toString());
-
-			defaultExecutor = new DefaultExecutor();
-			byteArrayOutputStreamOut = new ByteArrayOutputStream();
-			byteArrayOutputStreamErr = new ByteArrayOutputStream();
-			defaultExecutor.setStreamHandler(new PumpStreamHandler(byteArrayOutputStreamOut, byteArrayOutputStreamErr));
-			defaultExecutor.setExitValues(null); // To not check for exit values.
-
-			if (pathWorkingDirectory != null) {
-				defaultExecutor.setWorkingDirectory(pathWorkingDirectory.toFile());
-				DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + " within " + pathWorkingDirectory + '.');
-			} else {
-				DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + '.');
-			}
-
-			try {
-				exitCode = defaultExecutor.execute(commandLine);
-			} catch (IOException ioe) {
-				throw new RuntimeException(ioe);
-			}
-
-			if (!(   (exitCode == 0)
-			      || ((exitCode == 1) && allowExitCode == AllowExitCode.ONE)
-			      || ((exitCode != 0) && allowExitCode == AllowExitCode.ALL))) {
-
-				DefaultGitImpl.logger.error("Git command returned " + exitCode + '.');
-				DefaultGitImpl.logger.error("Output of the command:");
-				DefaultGitImpl.logger.error(byteArrayOutputStreamOut.toString());
-				DefaultGitImpl.logger.error("Error output of the command:");
-				DefaultGitImpl.logger.error(byteArrayOutputStreamErr.toString());
-				throw new RuntimeException("Git command " + commandLine + " failed.");
-			}
-
-			if (stringBuilderOutput != null) {
-				stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
-
-				// We concatenate stderr since in some cases it is of interest to the caller,
-				// such as in validateCredentials, where the text allowing the method to
-				// distinguish various cases is returned therein. For most cases the caller is
-				// interested in stdout only, and fortunately, when a command exists
-				// successfully with output to stdout, no output is sent to stderr.
-				stringBuilderOutput.append(byteArrayOutputStreamErr.toString().trim());
-			}
-
-			return exitCode;
-		} finally {
-			if (pathFileCredentials != null) {
-				pathFileCredentials.toFile().delete();
-			}
-		}
-	}
-
-	@Override
-	public boolean validateCredentials() {
-		StringBuilder stringBuilderOutput;
-
-		stringBuilderOutput = new StringBuilder();
-
-		// The most convenient way to validate the credentials is to use the ls-remote
-		// command. Unfortunately, if the remove repository does not exist, the command
-		// fails, which is expected. The only way to distinguish between the credentials
-		// not being valid and the repository not existing is to look for some pattern in
-		// the error message (which by the way is returned in stderr, which
-		// executeGitCommand does include in the output StreamBuilder). This is admittedly
-		// not robust, especially if the git client is configured to returned localized
-		// messages, but seems to be the only way to do it.
-		// The complete message returned when the credentials are not valid is:
-		//   remote: Invalid username or password. If you log in via a third party service you must ensure you have an account password set in your account profile.
-		//   fatal: Authentication failed for 'https://azyva@bitbucket.org/azyva/dragom-api.git/'
-		// And when the remote repository does not exist:
-		//   remote: Not Found
-		//   fatal: repository '<repository url>' not found
-
-		if (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, stringBuilderOutput) != 0) {
-			String error;
-
-			error = stringBuilderOutput.toString();
-
-			// We know "Authentication" is included in the English message. We attempt to
-			// cover the French case by testing for "Authentification" and "authentification"
-			// as well, but the behavior of the git client with French messages, if ever that
-			// exists, has not been tested.
-			return !(error.contains("Authentication") || error.contains("Authentification") || error.contains("authentification"));
-		} else {
-			return true;
-		}
-	}
-
-	@Override
-	public boolean isReposExists() {
-		boolean isReposExists;
-
-		isReposExists = (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, null) == 0);
-
-		if (isReposExists) {
-			DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " exists.");
-			return true;
-		} else {
-			DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " does not exist.");
-			return false;
-		}
-	}
-
-	@Override
-	public String getBranch(Path pathWorkspace) {
-		StringBuilder stringBuilder;
-		int exitCode;
-
-		stringBuilder = new StringBuilder();
-		exitCode = this.executeGitCommand(new String[] {"symbolic-ref", "-q", "HEAD"}, false, AllowExitCode.ONE, pathWorkspace, stringBuilder);
-
-		if (exitCode == 0) {
-			String branch;
-
-			branch = stringBuilder.toString();
-
-			if (branch.startsWith("refs/heads/")) {
-				return branch.substring(11);
-			} else {
-				throw new RuntimeException("Unrecognized branch reference " + branch + " returned by git symbolic-ref.");
-			}
-		} else {
-			return null;
-		}
-	}
-
-	@Override
-	public void config(Path pathWorkspace, String param, String value) {
-		this.executeGitCommand(new String[] {"config", param, value}, false, AllowExitCode.NONE, pathWorkspace, null);
-	}
-
-	@Override
-	public void clone(String reposUrl, Version version, Path pathWorkspace) {
-		boolean isConfiguredReposUrl;
-		boolean isDetachedHead;
-
-		if (reposUrl == null) {
-			reposUrl = this.reposUrl;
-			isConfiguredReposUrl = true;
-		} else {
-			isConfiguredReposUrl = false;
-		}
-
-		// We always specify --no-local in order to prevent Git from implementing its
-		// optimizations when the remote is a file-based repository (or a simple path).
-		// This is necessary in the context of Dragom since repositories within a
-		// workspace can be used as remotes of each other for improving the performance of
-		// some operations, but can come and go as the workspace evolves.
-		if (version == null) {
-			this.executeGitCommand(
-					new String[] {"clone", "--no-local", "--no-checkout", reposUrl, pathWorkspace.toString()},
-					isConfiguredReposUrl,
-					AllowExitCode.NONE,
-					null,
-					null);
-		} else {
-			// The -b option takes a branch or tag name, but without the complete reference
-			// prefix such as heads/master or tags/v-1.2.3. This means that it is not
-			// straightforward to distinguish between branches and tags.
-			this.executeGitCommand(
-					new String[] {"clone", "--no-local", "-b", version.getVersion(), reposUrl, pathWorkspace.toString()},
-					isConfiguredReposUrl,
-					AllowExitCode.NONE,
-					null,
-					null);
-		}
-
-		if (version != null) {
-			// We need to verify the type of version checked out by checking whether we are in
-			// a detached head state (tag) or not (branch).
-			isDetachedHead = (this.getBranch(pathWorkspace) == null);
-
-			if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
-				try {
-					FileUtils.deleteDirectory(pathWorkspace.toFile());
-				} catch (IOException ioe) {}
-
-				throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
-			}
-
-			if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
-				try {
-					FileUtils.deleteDirectory(pathWorkspace.toFile());
-				} catch (IOException ioe) {}
-
-				throw new RuntimeException("Requested version is static but checked out version is a branch.");
-			}
-		}
-	}
-
-	@Override
-	public void fetch(Path pathWorkspace, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch) {
-		List<String> listArg;
-
-		listArg = new ArrayList<String>();
-
-		listArg.add("fetch");
-
-		if (indFetchingIntoCurrentBranch) {
-			listArg.add("--update-head-ok");
-		}
-
-		if (reposUrl != null) {
-			listArg.add(reposUrl);
-		}
-
-		if (refspec != null) {
-			if (reposUrl == null) {
-				listArg.add("origin");
-			}
-
-			listArg.add(refspec);
-		}
-
-		// The empty String[] argument to toArray is required for proper typing in Java.
-		this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null);
-	}
-
-	@Override
-	public boolean pull(Path pathWorkspace) {
-		String branch;
-		int exitCode;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		exitCode = this.executeGitCommand(new String[] {"pull"}, true, AllowExitCode.ONE, pathWorkspace, null);
-
-		return exitCode == 1;
-	}
-
-	@Override
-	public boolean rebaseSimple(Path pathWorkspace) {
-		String branch;
-		int exitCode;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		// Rebase onto the upstream tracking branch corresponding to the current branch.
-		// This is the default behavior, but specifying @{u} is more symmetrical with the
-		// merge mode below.
-		exitCode = this.executeGitCommand(new String[] {"rebase", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
-
-		return exitCode == 1;
-	}
-
-	@Override
-	public boolean mergeSimple(Path pathWorkspace) {
-		String branch;
-		int exitCode;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		exitCode = this.executeGitCommand(new String[] {"merge", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
-
-		return exitCode == 1;
-	}
-
-	@Override
-	public void push(Path pathWorkspace, String gitRef) {
-		if (gitRef != null) {
-			this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null);
-		} else {
-			this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null);
-		}
-	}
-
-	@Override
-	public void checkout(Path pathWorkspace, Version version) {
-		boolean isDetachedHead;
-
-		// The checkout command takes a branch or tag name, but without the complete
-		// reference prefix such as heads/master or tags/v-1.2.3. This means that it is
-		// not straightforward to distinguish between branches and tags.
-		this.executeGitCommand(new String[] {"checkout", version.getVersion()}, false, AllowExitCode.NONE, pathWorkspace, null);
-
-		// We need to verify the type of version checked out by checking whether we are in
-		// a detached head state (tag) or not (branch).
-		isDetachedHead = (this.getBranch(pathWorkspace) == null);
-
-		if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
-		}
-
-		if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
-			try {
-				FileUtils.deleteDirectory(pathWorkspace.toFile());
-			} catch (IOException ioe) {}
-
-			throw new RuntimeException("Requested version is static but checked out version is a branch.");
-		}
-	}
-
-	@Override
-	public boolean isVersionExists(Path pathWorkspace, Version version) {
-		// We add "--" as a last argument since when a ref does no exist, Git complains
-		// about the fact that the command is ambiguous.
-		//TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
-		if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null) == 0) {
-			DefaultGitImpl.logger.trace("Version " + version + " exists.");
-			return true;
-		} else {
-			DefaultGitImpl.logger.trace("Version " + version + " does not exist.");
-			return false;
-		}
-	}
-
-	@Override
-	public AheadBehindInfo getAheadBehindInfo(Path pathWorkspace) {
-		String branch;
-		StringBuilder stringBuilder;
-		AheadBehindInfo aheadBehindInfo;
-		int index;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		// Getting ahead/behind information is done with the "git for-each-ref" command
-		// which will provide us with "behind" information for the desired branch.
-		// Note that "git status -sb" also provides this information, but only for the
-		// current branch, whereas "git for-each-ref" can provide that information for any
-		// branch.
-
-		stringBuilder = new StringBuilder();
-		this.executeGitCommand(new String[] {"for-each-ref", "--format=%(upstream:track)", "refs/heads/" + branch}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
-
-		aheadBehindInfo = new AheadBehindInfo();
-
-		// The result in stringBuilder is either empty (if local and remote repositories
-		// are synchronized) or one of:
-		// - [ahead #]
-		// - [behind #]
-		// - [ahead #, behind #]
-		// where # is an integer specifying how far ahead or behind. The following parses
-		// this information in a relatively efficient manner. Using Pattern to extract the
-		// required information may have been more elegant, but certainly not as efficient.
-
-		if ((index = stringBuilder.indexOf("ahead")) != -1) {
-			int index2;
-
-			index2 = stringBuilder.indexOf(",", index + 6);
-
-			if (index2 == -1) {
-				index2 = stringBuilder.indexOf("]", index + 6);
-			}
-
-			aheadBehindInfo.ahead = Integer.parseInt(stringBuilder.substring(index + 6, index2));
-		}
-
-		if ((index = stringBuilder.indexOf("behind")) != -1) {
-			aheadBehindInfo.behind = Integer.parseInt(stringBuilder.substring(index + 7, stringBuilder.indexOf("]", index + 7)));
-		}
-
-		return aheadBehindInfo;
-	}
-
-	@Override
-	public boolean isLocalChanges(Path pathWorkspace) {
-		String branch;
-		StringBuilder stringBuilder;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		// Verifying if a Git local repository contains changes that are not in the remote
-		// repository involves verifying in the repository specified if there are local
-		// changes that have not been committed. This is done with the "git status"
-		// command.
-
-		stringBuilder = new StringBuilder();
-		this.executeGitCommand(new String[] {"status", "-s"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
-
-		return (stringBuilder.length() != 0);
-	}
-
-	@Override
-	public void push(Path pathWorkspace) {
-		// We always set the upstream tracking information because because pushes can be
-		// delayed and new branches can be pushed on the call to this method other than
-		// the one immediately after creating the branch.
-		this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null);
-
-		// Unfortunately we cannot specify --all and --tags in the same command.
-		// Maybe it is possible to specify --follow-tags with --all, but even if so,
-		// this is not what we need since there may be exceptional cases where tags
-		// are not reachable from a branch.
-		this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null);
-	}
-
-	@Override
-	public Version getVersion(Path pathWorkspace) {
-		String branch;
-		StringBuilder stringBuilder;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch != null) {
-			return new Version(VersionType.DYNAMIC, branch);
-		}
-
-		// branch is null it means we are in detached HEAD state and thus probably on a
-		// tag.
-
-		stringBuilder = new StringBuilder();
-		this.executeGitCommand(new String[] {"describe", "--exact-match"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
-
-		return new Version(VersionType.STATIC, stringBuilder.toString());
-	}
-
-	@Override
-	public List<Version> getListVersionStatic(Path pathWorkspace) {
-		StringBuilder stringBuilder;
-		BufferedReader bufferedReader;
-		String tagLine;
-		List<Version> listVersionStatic;
-
-		try {
-			stringBuilder = new StringBuilder();
-			this.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
-
-			bufferedReader = new BufferedReader(new StringReader(stringBuilder.toString()));
-			listVersionStatic = new ArrayList<Version>();
-
-			while ((tagLine = bufferedReader.readLine()) != null) {
-				String[] arrayTagLineComponent;
-				String tagRef;
-
-				arrayTagLineComponent = tagLine.split("\\s+");
-
-				tagRef = arrayTagLineComponent[1];
-
-				if (tagRef.endsWith("^{}")) {
-					String tagName;
-
-					// A few magic numbers here, but not worth having constants.
-					// 10 is the length of "refs/tags/" that prefixes each tag name.
-					// 3 is the length of "^{}" that suffixes each tag name.
-					tagName = tagRef.substring(10, tagRef.length() - 3);
-					listVersionStatic.add(new Version(VersionType.STATIC, tagName));
-				}
-			}
-		} catch (IOException ioe) {
-			throw new RuntimeException(ioe);
-		}
-
-		return listVersionStatic;
-	}
-
-	@Override
-	public void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch) {
-		this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
-
-		if (indSwitch) {
-			this.checkout(pathModuleWorkspace, new Version(VersionType.DYNAMIC, branch));
-		}
-	}
-
-	@Override
-	public void createTag(Path pathModuleWorkspace, String tag, String message) {
-		this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
-	}
-
-	@Override
-	public void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush) {
-		String branch;
-
-		branch = this.getBranch(pathWorkspace);
-
-		if (branch == null) {
-			throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
-		}
-
-		this.executeGitCommand(new String[] {"add", "--all"}, false, AllowExitCode.NONE, pathWorkspace, null);
-
-		// Git does not natively support commit attributes. It does support "notes" which
-		// could be used to keep commit attributes. But it looks like this is not a robust
-		// solution as notes are independent of commits and can easily be modified. And
-		// also not all Git repository managers support Git notes. Specifically, Stash
-		// does not seem to have full support for git notes.
-		// For these reasons commit attributes are stored within the commit messages
-		// themselves.
-		if (mapCommitAttr != null) {
-			message = (new JSONObject(mapCommitAttr)).toString() + ' ' + message;
-		}
-
-		// Commons Exec ends up calling Runtime.exec(String[], ...) with the command line
-		// arguments. It looks like along the way double quotes within the arguments get
-		// removed which, apart from being undesirable, causes a bug with the commit
-		// messages that included a JSONObject for the commit attributes. At the very
-		// least it is required to use the addArgument(String, boolean handleQuote) method
-		// to disable quote handling. Otherwise Commons Exec surrounds the argument with
-		// single quotes when it contains double quotes, which we do not want. But we must
-		// also escape double quotes to prevent Runtime.exec from removing them. I did not
-		// find any reference to this behavior, and I am not 100% sure that it is
-		// Runtime.exec's fault. But escaping the double quotes works.
-		message = message.replace("\"", "\\\"");
-
-		this.executeGitCommand(new String[] {"commit", "-m", message}, false, AllowExitCode.NONE, pathWorkspace, null);
-
-		if (indPush) {
-			this.push(pathWorkspace, "refs/heads/" + branch);
-		}
-	}
-
-	@Override
-	public String convertToRef(Version version) {
-		if (version.getVersionType() == VersionType.STATIC) {
-			// "^{tag}" ensures we consider only annotated tags.
-			return "refs/tags/" + version.getVersion() + "^{tag}";
-		} else {
-			return "refs/remotes/origin/" + version.getVersion();
-		}
-	}
+  /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(DefaultGitImpl.class);
+
+  /**
+   * Pattern to extract the user from a HTTP[S] repository URL.
+   */
+  private static final Pattern patternExtractHttpReposUrlUser = Pattern.compile("([hH][tT][tT][pP][sS]?://)(?:([a-zA-Z0-9_\\.\\-]+)@)?([^/]+)/.*");
+
+  /**
+   * Path to the git Executable.
+   */
+  private Path pathExecutable;
+
+  /**
+   * Repository URL.
+   */
+  private String reposUrl;
+
+  /**
+   * User.
+   */
+  private String user;
+
+  /**
+   * Password.
+   */
+  private String password;
+
+  /**
+   * HTTP credentials to include in the credentials file provided to git through the
+   * "store" credential helper.
+   * <p>
+   * The fact that this is not null is also used as an indicator of if the user
+   * specified in the repository URL, if any, has been validated against the user
+   * provided with {@link #setUser}.
+   * <p>
+   * This is required only if the user is provided, in which case the protocol used
+   * in the repository URL must be HTTP[S].
+   */
+  private String httpCredentials;
+
+  @Override
+  public void setPathExecutable(Path pathExecutable) {
+    this.pathExecutable = pathExecutable;
+  }
+
+  @Override
+  public void setReposUrl(String reposUrl) {
+    this.reposUrl = reposUrl;
+  }
+
+  @Override
+  public void setUser(String user) {
+    this.user = user;
+  }
+
+  @Override
+  public void setPassword(String password) {
+    this.password = password;
+  }
+
+  @Override
+  public int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput) {
+    CommandLine commandLine;
+    Path pathFileCredentials;
+    DefaultExecutor defaultExecutor;
+    ByteArrayOutputStream byteArrayOutputStreamOut;
+    ByteArrayOutputStream byteArrayOutputStreamErr;
+    int exitCode;
+
+    pathFileCredentials = null;
+
+    try {
+      commandLine = new CommandLine(this.pathExecutable.toString());
+
+      if (indProvideCredentials && (this.user != null)) {
+        Writer writer;
+
+        if (this.httpCredentials == null) {
+          Matcher matcher;
+          String userFromReposUrl;
+
+          matcher = DefaultGitImpl.patternExtractHttpReposUrlUser.matcher(this.reposUrl);
+
+          if (!matcher.matches()) {
+            throw new RuntimeException("Repository URL " + this.reposUrl + " does not match credential extraction pattern " + DefaultGitImpl.patternExtractHttpReposUrlUser.toString() + '.');
+          }
+
+          userFromReposUrl = matcher.group(2);
+
+          if ((userFromReposUrl != null) && !userFromReposUrl.equals(this.user)) {
+            throw new RuntimeException("User " + userFromReposUrl + " extracted from repository URL " + this.reposUrl + " does not correspond to user provided in credentials " + this.user + '.');
+          }
+
+          this.httpCredentials = matcher.group(1) + this.user + ':' + this.password + '@' + matcher.group(3);
+        }
+
+        try {
+          if (Util.isPosix()) {
+            Set<PosixFilePermission> setPosixFilePermission;
+
+            setPosixFilePermission = new HashSet<PosixFilePermission>();
+
+            setPosixFilePermission.add(PosixFilePermission.OWNER_READ);
+            setPosixFilePermission.add(PosixFilePermission.OWNER_WRITE);
+
+            pathFileCredentials = Files.createTempFile((String)null, (String)null, PosixFilePermissions.asFileAttribute(setPosixFilePermission));
+          } else {
+            pathFileCredentials = Files.createTempFile((String)null, (String)null);
+          }
+
+          writer = new FileWriter(pathFileCredentials.toFile());
+          writer.append(this.httpCredentials);
+          writer.close();
+        } catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        }
+
+        commandLine.addArgument("-c").addArgument("credential.helper=store --file=" + pathFileCredentials.toString());
+      }
+
+      for (String arg: arrayArg) {
+        commandLine.addArgument(arg, false);
+      }
+
+      DefaultGitImpl.logger.trace(commandLine.toString());
+
+      defaultExecutor = new DefaultExecutor();
+      byteArrayOutputStreamOut = new ByteArrayOutputStream();
+      byteArrayOutputStreamErr = new ByteArrayOutputStream();
+      defaultExecutor.setStreamHandler(new PumpStreamHandler(byteArrayOutputStreamOut, byteArrayOutputStreamErr));
+      defaultExecutor.setExitValues(null); // To not check for exit values.
+
+      if (pathWorkingDirectory != null) {
+        defaultExecutor.setWorkingDirectory(pathWorkingDirectory.toFile());
+        DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + " within " + pathWorkingDirectory + '.');
+      } else {
+        DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + '.');
+      }
+
+      try {
+        exitCode = defaultExecutor.execute(commandLine);
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+
+      if (!(   (exitCode == 0)
+            || ((exitCode == 1) && allowExitCode == AllowExitCode.ONE)
+            || ((exitCode != 0) && allowExitCode == AllowExitCode.ALL))) {
+
+        DefaultGitImpl.logger.error("Git command returned " + exitCode + '.');
+        DefaultGitImpl.logger.error("Output of the command:");
+        DefaultGitImpl.logger.error(byteArrayOutputStreamOut.toString());
+        DefaultGitImpl.logger.error("Error output of the command:");
+        DefaultGitImpl.logger.error(byteArrayOutputStreamErr.toString());
+        throw new RuntimeException("Git command " + commandLine + " failed.");
+      }
+
+      if (stringBuilderOutput != null) {
+        stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
+
+        // We concatenate stderr since in some cases it is of interest to the caller,
+        // such as in validateCredentials, where the text allowing the method to
+        // distinguish various cases is returned therein. For most cases the caller is
+        // interested in stdout only, and fortunately, when a command exists
+        // successfully with output to stdout, no output is sent to stderr.
+        stringBuilderOutput.append(byteArrayOutputStreamErr.toString().trim());
+      }
+
+      return exitCode;
+    } finally {
+      if (pathFileCredentials != null) {
+        pathFileCredentials.toFile().delete();
+      }
+    }
+  }
+
+  @Override
+  public boolean validateCredentials() {
+    StringBuilder stringBuilderOutput;
+
+    stringBuilderOutput = new StringBuilder();
+
+    // The most convenient way to validate the credentials is to use the ls-remote
+    // command. Unfortunately, if the remove repository does not exist, the command
+    // fails, which is expected. The only way to distinguish between the credentials
+    // not being valid and the repository not existing is to look for some pattern in
+    // the error message (which by the way is returned in stderr, which
+    // executeGitCommand does include in the output StreamBuilder). This is admittedly
+    // not robust, especially if the git client is configured to returned localized
+    // messages, but seems to be the only way to do it.
+    // The complete message returned when the credentials are not valid is:
+    //   remote: Invalid username or password. If you log in via a third party service you must ensure you have an account password set in your account profile.
+    //   fatal: Authentication failed for 'https://azyva@bitbucket.org/azyva/dragom-api.git/'
+    // And when the remote repository does not exist:
+    //   remote: Not Found
+    //   fatal: repository '<repository url>' not found
+
+    if (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, stringBuilderOutput) != 0) {
+      String error;
+
+      error = stringBuilderOutput.toString();
+
+      // We know "Authentication" is included in the English message. We attempt to
+      // cover the French case by testing for "Authentification" and "authentification"
+      // as well, but the behavior of the git client with French messages, if ever that
+      // exists, has not been tested.
+      return !(error.contains("Authentication") || error.contains("Authentification") || error.contains("authentification"));
+    } else {
+      return true;
+    }
+  }
+
+  @Override
+  public boolean isReposExists() {
+    boolean isReposExists;
+
+    isReposExists = (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, null) == 0);
+
+    if (isReposExists) {
+      DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " exists.");
+      return true;
+    } else {
+      DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " does not exist.");
+      return false;
+    }
+  }
+
+  @Override
+  public String getBranch(Path pathWorkspace) {
+    StringBuilder stringBuilder;
+    int exitCode;
+
+    stringBuilder = new StringBuilder();
+    exitCode = this.executeGitCommand(new String[] {"symbolic-ref", "-q", "HEAD"}, false, AllowExitCode.ONE, pathWorkspace, stringBuilder);
+
+    if (exitCode == 0) {
+      String branch;
+
+      branch = stringBuilder.toString();
+
+      if (branch.startsWith("refs/heads/")) {
+        return branch.substring(11);
+      } else {
+        throw new RuntimeException("Unrecognized branch reference " + branch + " returned by git symbolic-ref.");
+      }
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public void config(Path pathWorkspace, String param, String value) {
+    this.executeGitCommand(new String[] {"config", param, value}, false, AllowExitCode.NONE, pathWorkspace, null);
+  }
+
+  @Override
+  public void clone(String reposUrl, Version version, Path pathWorkspace) {
+    boolean isConfiguredReposUrl;
+    boolean isDetachedHead;
+
+    if (reposUrl == null) {
+      reposUrl = this.reposUrl;
+      isConfiguredReposUrl = true;
+    } else {
+      isConfiguredReposUrl = false;
+    }
+
+    // We always specify --no-local in order to prevent Git from implementing its
+    // optimizations when the remote is a file-based repository (or a simple path).
+    // This is necessary in the context of Dragom since repositories within a
+    // workspace can be used as remotes of each other for improving the performance of
+    // some operations, but can come and go as the workspace evolves.
+    if (version == null) {
+      this.executeGitCommand(
+          new String[] {"clone", "--no-local", "--no-checkout", reposUrl, pathWorkspace.toString()},
+          isConfiguredReposUrl,
+          AllowExitCode.NONE,
+          null,
+          null);
+    } else {
+      // The -b option takes a branch or tag name, but without the complete reference
+      // prefix such as heads/master or tags/v-1.2.3. This means that it is not
+      // straightforward to distinguish between branches and tags.
+      this.executeGitCommand(
+          new String[] {"clone", "--no-local", "-b", version.getVersion(), reposUrl, pathWorkspace.toString()},
+          isConfiguredReposUrl,
+          AllowExitCode.NONE,
+          null,
+          null);
+    }
+
+    if (version != null) {
+      // We need to verify the type of version checked out by checking whether we are in
+      // a detached head state (tag) or not (branch).
+      isDetachedHead = (this.getBranch(pathWorkspace) == null);
+
+      if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
+        try {
+          FileUtils.deleteDirectory(pathWorkspace.toFile());
+        } catch (IOException ioe) {}
+
+        throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
+      }
+
+      if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
+        try {
+          FileUtils.deleteDirectory(pathWorkspace.toFile());
+        } catch (IOException ioe) {}
+
+        throw new RuntimeException("Requested version is static but checked out version is a branch.");
+      }
+    }
+  }
+
+  @Override
+  public void fetch(Path pathWorkspace, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch) {
+    List<String> listArg;
+
+    listArg = new ArrayList<String>();
+
+    listArg.add("fetch");
+
+    if (indFetchingIntoCurrentBranch) {
+      listArg.add("--update-head-ok");
+    }
+
+    if (reposUrl != null) {
+      listArg.add(reposUrl);
+    }
+
+    if (refspec != null) {
+      if (reposUrl == null) {
+        listArg.add("origin");
+      }
+
+      listArg.add(refspec);
+    }
+
+    // The empty String[] argument to toArray is required for proper typing in Java.
+    this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null);
+  }
+
+  @Override
+  public boolean pull(Path pathWorkspace) {
+    String branch;
+    int exitCode;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    exitCode = this.executeGitCommand(new String[] {"pull"}, true, AllowExitCode.ONE, pathWorkspace, null);
+
+    return exitCode == 1;
+  }
+
+  @Override
+  public boolean rebaseSimple(Path pathWorkspace) {
+    String branch;
+    int exitCode;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    // Rebase onto the upstream tracking branch corresponding to the current branch.
+    // This is the default behavior, but specifying @{u} is more symmetrical with the
+    // merge mode below.
+    exitCode = this.executeGitCommand(new String[] {"rebase", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
+
+    return exitCode == 1;
+  }
+
+  @Override
+  public boolean mergeSimple(Path pathWorkspace) {
+    String branch;
+    int exitCode;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    exitCode = this.executeGitCommand(new String[] {"merge", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
+
+    return exitCode == 1;
+  }
+
+  @Override
+  public void push(Path pathWorkspace, String gitRef) {
+    if (gitRef != null) {
+      this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null);
+    } else {
+      this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null);
+    }
+  }
+
+  @Override
+  public void checkout(Path pathWorkspace, Version version) {
+    boolean isDetachedHead;
+
+    // The checkout command takes a branch or tag name, but without the complete
+    // reference prefix such as heads/master or tags/v-1.2.3. This means that it is
+    // not straightforward to distinguish between branches and tags.
+    this.executeGitCommand(new String[] {"checkout", version.getVersion()}, false, AllowExitCode.NONE, pathWorkspace, null);
+
+    // We need to verify the type of version checked out by checking whether we are in
+    // a detached head state (tag) or not (branch).
+    isDetachedHead = (this.getBranch(pathWorkspace) == null);
+
+    if ((version.getVersionType() == VersionType.DYNAMIC) && isDetachedHead) {
+      try {
+        FileUtils.deleteDirectory(pathWorkspace.toFile());
+      } catch (IOException ioe) {}
+
+      throw new RuntimeException("Requested version is dynamic but checked out version is a tag.");
+    }
+
+    if ((version.getVersionType() == VersionType.STATIC) && !isDetachedHead) {
+      try {
+        FileUtils.deleteDirectory(pathWorkspace.toFile());
+      } catch (IOException ioe) {}
+
+      throw new RuntimeException("Requested version is static but checked out version is a branch.");
+    }
+  }
+
+  @Override
+  public boolean isVersionExists(Path pathWorkspace, Version version) {
+    // We add "--" as a last argument since when a ref does no exist, Git complains
+    // about the fact that the command is ambiguous.
+    //TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
+    if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null) == 0) {
+      DefaultGitImpl.logger.trace("Version " + version + " exists.");
+      return true;
+    } else {
+      DefaultGitImpl.logger.trace("Version " + version + " does not exist.");
+      return false;
+    }
+  }
+
+  @Override
+  public AheadBehindInfo getAheadBehindInfo(Path pathWorkspace) {
+    String branch;
+    StringBuilder stringBuilder;
+    AheadBehindInfo aheadBehindInfo;
+    int index;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    // Getting ahead/behind information is done with the "git for-each-ref" command
+    // which will provide us with "behind" information for the desired branch.
+    // Note that "git status -sb" also provides this information, but only for the
+    // current branch, whereas "git for-each-ref" can provide that information for any
+    // branch.
+
+    stringBuilder = new StringBuilder();
+    this.executeGitCommand(new String[] {"for-each-ref", "--format=%(upstream:track)", "refs/heads/" + branch}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+
+    aheadBehindInfo = new AheadBehindInfo();
+
+    // The result in stringBuilder is either empty (if local and remote repositories
+    // are synchronized) or one of:
+    // - [ahead #]
+    // - [behind #]
+    // - [ahead #, behind #]
+    // where # is an integer specifying how far ahead or behind. The following parses
+    // this information in a relatively efficient manner. Using Pattern to extract the
+    // required information may have been more elegant, but certainly not as efficient.
+
+    if ((index = stringBuilder.indexOf("ahead")) != -1) {
+      int index2;
+
+      index2 = stringBuilder.indexOf(",", index + 6);
+
+      if (index2 == -1) {
+        index2 = stringBuilder.indexOf("]", index + 6);
+      }
+
+      aheadBehindInfo.ahead = Integer.parseInt(stringBuilder.substring(index + 6, index2));
+    }
+
+    if ((index = stringBuilder.indexOf("behind")) != -1) {
+      aheadBehindInfo.behind = Integer.parseInt(stringBuilder.substring(index + 7, stringBuilder.indexOf("]", index + 7)));
+    }
+
+    return aheadBehindInfo;
+  }
+
+  @Override
+  public boolean isLocalChanges(Path pathWorkspace) {
+    String branch;
+    StringBuilder stringBuilder;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    // Verifying if a Git local repository contains changes that are not in the remote
+    // repository involves verifying in the repository specified if there are local
+    // changes that have not been committed. This is done with the "git status"
+    // command.
+
+    stringBuilder = new StringBuilder();
+    this.executeGitCommand(new String[] {"status", "-s"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+
+    return (stringBuilder.length() != 0);
+  }
+
+  @Override
+  public void push(Path pathWorkspace) {
+    // We always set the upstream tracking information because because pushes can be
+    // delayed and new branches can be pushed on the call to this method other than
+    // the one immediately after creating the branch.
+    this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null);
+
+    // Unfortunately we cannot specify --all and --tags in the same command.
+    // Maybe it is possible to specify --follow-tags with --all, but even if so,
+    // this is not what we need since there may be exceptional cases where tags
+    // are not reachable from a branch.
+    this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null);
+  }
+
+  @Override
+  public Version getVersion(Path pathWorkspace) {
+    String branch;
+    StringBuilder stringBuilder;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch != null) {
+      return new Version(VersionType.DYNAMIC, branch);
+    }
+
+    // branch is null it means we are in detached HEAD state and thus probably on a
+    // tag.
+
+    stringBuilder = new StringBuilder();
+    this.executeGitCommand(new String[] {"describe", "--exact-match"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+
+    return new Version(VersionType.STATIC, stringBuilder.toString());
+  }
+
+  @Override
+  public List<Version> getListVersionStatic(Path pathWorkspace) {
+    StringBuilder stringBuilder;
+    BufferedReader bufferedReader;
+    String tagLine;
+    List<Version> listVersionStatic;
+
+    try {
+      stringBuilder = new StringBuilder();
+      this.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+
+      bufferedReader = new BufferedReader(new StringReader(stringBuilder.toString()));
+      listVersionStatic = new ArrayList<Version>();
+
+      while ((tagLine = bufferedReader.readLine()) != null) {
+        String[] arrayTagLineComponent;
+        String tagRef;
+
+        arrayTagLineComponent = tagLine.split("\\s+");
+
+        tagRef = arrayTagLineComponent[1];
+
+        if (tagRef.endsWith("^{}")) {
+          String tagName;
+
+          // A few magic numbers here, but not worth having constants.
+          // 10 is the length of "refs/tags/" that prefixes each tag name.
+          // 3 is the length of "^{}" that suffixes each tag name.
+          tagName = tagRef.substring(10, tagRef.length() - 3);
+          listVersionStatic.add(new Version(VersionType.STATIC, tagName));
+        }
+      }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+
+    return listVersionStatic;
+  }
+
+  @Override
+  public void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch) {
+    this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
+
+    if (indSwitch) {
+      this.checkout(pathModuleWorkspace, new Version(VersionType.DYNAMIC, branch));
+    }
+  }
+
+  @Override
+  public void createTag(Path pathModuleWorkspace, String tag, String message) {
+    this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
+  }
+
+  @Override
+  public void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush) {
+    String branch;
+
+    branch = this.getBranch(pathWorkspace);
+
+    if (branch == null) {
+      throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
+    }
+
+    this.executeGitCommand(new String[] {"add", "--all"}, false, AllowExitCode.NONE, pathWorkspace, null);
+
+    // Git does not natively support commit attributes. It does support "notes" which
+    // could be used to keep commit attributes. But it looks like this is not a robust
+    // solution as notes are independent of commits and can easily be modified. And
+    // also not all Git repository managers support Git notes. Specifically, Stash
+    // does not seem to have full support for git notes.
+    // For these reasons commit attributes are stored within the commit messages
+    // themselves.
+    if (mapCommitAttr != null) {
+      message = (new JSONObject(mapCommitAttr)).toString() + ' ' + message;
+    }
+
+    // Commons Exec ends up calling Runtime.exec(String[], ...) with the command line
+    // arguments. It looks like along the way double quotes within the arguments get
+    // removed which, apart from being undesirable, causes a bug with the commit
+    // messages that included a JSONObject for the commit attributes. At the very
+    // least it is required to use the addArgument(String, boolean handleQuote) method
+    // to disable quote handling. Otherwise Commons Exec surrounds the argument with
+    // single quotes when it contains double quotes, which we do not want. But we must
+    // also escape double quotes to prevent Runtime.exec from removing them. I did not
+    // find any reference to this behavior, and I am not 100% sure that it is
+    // Runtime.exec's fault. But escaping the double quotes works.
+    message = message.replace("\"", "\\\"");
+
+    this.executeGitCommand(new String[] {"commit", "-m", message}, false, AllowExitCode.NONE, pathWorkspace, null);
+
+    if (indPush) {
+      this.push(pathWorkspace, "refs/heads/" + branch);
+    }
+  }
+
+  @Override
+  public String convertToRef(Version version) {
+    if (version.getVersionType() == VersionType.STATIC) {
+      // "^{tag}" ensures we consider only annotated tags.
+      return "refs/tags/" + version.getVersion() + "^{tag}";
+    } else {
+      return "refs/remotes/origin/" + version.getVersion();
+    }
+  }
 }

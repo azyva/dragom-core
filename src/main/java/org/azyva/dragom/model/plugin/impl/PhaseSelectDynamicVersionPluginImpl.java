@@ -53,34 +53,34 @@ import org.azyva.dragom.reference.ReferencePath;
  */
 public class PhaseSelectDynamicVersionPluginImpl extends ModulePluginAbstractImpl implements SelectDynamicVersionPlugin {
 
-	public PhaseSelectDynamicVersionPluginImpl(Module module) {
-		super(module);
-	}
+  public PhaseSelectDynamicVersionPluginImpl(Module module) {
+    super(module);
+  }
 
-	@Override
-	public Version selectDynamicVersion(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
-		ScmPlugin scmPlugin;
-		Version versionDynamicSelected;
-		ScmPlugin.BaseVersion baseVersion;
+  @Override
+  public Version selectDynamicVersion(Version version, ByReference<Version> byReferenceVersionBase, ReferencePath referencePath) {
+    ScmPlugin scmPlugin;
+    Version versionDynamicSelected;
+    ScmPlugin.BaseVersion baseVersion;
 
-		if (version.getVersionType() == VersionType.DYNAMIC) {
-			return version;
-		}
+    if (version.getVersionType() == VersionType.DYNAMIC) {
+      return version;
+    }
 
-		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
+    scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
-		baseVersion = scmPlugin.getBaseVersion(version);
+    baseVersion = scmPlugin.getBaseVersion(version);
 
-		if (baseVersion == null) {
-			throw new RuntimeException("Base version for version " + version + " of module " + this.getModule() + " could not be found.");
-		}
+    if (baseVersion == null) {
+      throw new RuntimeException("Base version for version " + version + " of module " + this.getModule() + " could not be found.");
+    }
 
-		versionDynamicSelected = baseVersion.versionBase;
+    versionDynamicSelected = baseVersion.versionBase;
 
-		if (versionDynamicSelected.getVersionType() != VersionType.DYNAMIC) {
-			throw new RuntimeException("Base version " + versionDynamicSelected + " of current version " + version + " of module " + this.getModule() + " is not dynamic.");
-		}
+    if (versionDynamicSelected.getVersionType() != VersionType.DYNAMIC) {
+      throw new RuntimeException("Base version " + versionDynamicSelected + " of current version " + version + " of module " + this.getModule() + " is not dynamic.");
+    }
 
-		return versionDynamicSelected;
-	}
+    return versionDynamicSelected;
+  }
 }

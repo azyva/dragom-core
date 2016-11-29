@@ -39,57 +39,57 @@ import org.azyva.dragom.model.config.impl.xml.MapXmlNodeConfigXmAdapter.ListNode
  * @author David Raymond
  */
 public class MapXmlNodeConfigXmAdapter extends XmlAdapter<ListNode, Map<String, XmlNodeConfig>> {
-	@XmlAccessorType(XmlAccessType.NONE)
-	public static class ListNode {
-		@XmlElementRef
-		private List<XmlNodeConfig> listNodeConfigXml;
+  @XmlAccessorType(XmlAccessType.NONE)
+  public static class ListNode {
+    @XmlElementRef
+    private List<XmlNodeConfig> listNodeConfigXml;
 
-		/**
-		 * Default constructor required by JAXB.
-		 */
-		public ListNode() {
-		}
+    /**
+     * Default constructor required by JAXB.
+     */
+    public ListNode() {
+    }
 
-		/**
-		 * Constructor taking a List of XmlNodeConfig used for marshalling.
-		 * @param listNodeConfigXml
-		 */
-		public ListNode(List<XmlNodeConfig> listNodeConfigXml) {
-			this.listNodeConfigXml = listNodeConfigXml;
-		}
+    /**
+     * Constructor taking a List of XmlNodeConfig used for marshalling.
+     * @param listNodeConfigXml
+     */
+    public ListNode(List<XmlNodeConfig> listNodeConfigXml) {
+      this.listNodeConfigXml = listNodeConfigXml;
+    }
 
-		/**
-		 * @return List of XmlNodeConfig.
-		 */
-		public List<XmlNodeConfig> getListNodeConfigXml() {
-			return this.listNodeConfigXml;
-		}
-	}
+    /**
+     * @return List of XmlNodeConfig.
+     */
+    public List<XmlNodeConfig> getListNodeConfigXml() {
+      return this.listNodeConfigXml;
+    }
+  }
 
-	/**
-	 * This method is not really useful for now since modification of
-	 * {@link XmlConfig} is not currently supported.
-	 */
-	@Override
-	public ListNode marshal(Map<String, XmlNodeConfig> mapNodeConfigXml) {
-		if ((mapNodeConfigXml == null) || mapNodeConfigXml.isEmpty()) {
-			return null;
-		}
+  /**
+   * This method is not really useful for now since modification of
+   * {@link XmlConfig} is not currently supported.
+   */
+  @Override
+  public ListNode marshal(Map<String, XmlNodeConfig> mapNodeConfigXml) {
+    if ((mapNodeConfigXml == null) || mapNodeConfigXml.isEmpty()) {
+      return null;
+    }
 
-		return new ListNode(new ArrayList<XmlNodeConfig>(mapNodeConfigXml.values()));
-	}
+    return new ListNode(new ArrayList<XmlNodeConfig>(mapNodeConfigXml.values()));
+  }
 
-	@Override
-	public Map<String, XmlNodeConfig> unmarshal(ListNode listNode) {
-		Map<String, XmlNodeConfig> mapNodeConfigXml;
+  @Override
+  public Map<String, XmlNodeConfig> unmarshal(ListNode listNode) {
+    Map<String, XmlNodeConfig> mapNodeConfigXml;
 
-		// LinkedHashMap is used to preserve insertion order.
-		mapNodeConfigXml = new LinkedHashMap<String, XmlNodeConfig>();
+    // LinkedHashMap is used to preserve insertion order.
+    mapNodeConfigXml = new LinkedHashMap<String, XmlNodeConfig>();
 
-		for (XmlNodeConfig xmlNodeConfig: listNode.getListNodeConfigXml()) {
-			mapNodeConfigXml.put(xmlNodeConfig.getName(), xmlNodeConfig);
-		}
+    for (XmlNodeConfig xmlNodeConfig: listNode.getListNodeConfigXml()) {
+      mapNodeConfigXml.put(xmlNodeConfig.getName(), xmlNodeConfig);
+    }
 
-		return mapNodeConfigXml;
-	}
+    return mapNodeConfigXml;
+  }
 }

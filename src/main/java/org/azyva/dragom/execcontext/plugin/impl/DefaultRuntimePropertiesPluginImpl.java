@@ -72,151 +72,151 @@ import org.azyva.dragom.model.NodePath;
  * @author David Raymond
  */
 public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlugin {
-	public DefaultRuntimePropertiesPluginImpl(ExecContext execContext) {
-	}
+  public DefaultRuntimePropertiesPluginImpl(ExecContext execContext) {
+  }
 
-	@Override
-	public String getProperty(Node node, String name) {
-		NodePath nodePath;
-		String[] arrayNodeName;
-		StringBuilder stringBuilder;
-		String foundPropertyValue;
-		String propertyValue;
-		ExecContext execContext;
+  @Override
+  public String getProperty(Node node, String name) {
+    NodePath nodePath;
+    String[] arrayNodeName;
+    StringBuilder stringBuilder;
+    String foundPropertyValue;
+    String propertyValue;
+    ExecContext execContext;
 
-		execContext = ExecContextHolder.get();
+    execContext = ExecContextHolder.get();
 
-		nodePath = (node == null) ? null : node.getNodePath();
+    nodePath = (node == null) ? null : node.getNodePath();
 
-		if (nodePath == null) {
-			arrayNodeName = new String[0];
-		} else {
-			arrayNodeName = nodePath.getArrayNodeName();
-		}
+    if (nodePath == null) {
+      arrayNodeName = new String[0];
+    } else {
+      arrayNodeName = nodePath.getArrayNodeName();
+    }
 
-		stringBuilder = new StringBuilder("runtime-property.");
-		foundPropertyValue = (String)execContext.getTransientData(stringBuilder.toString() + name);
+    stringBuilder = new StringBuilder("runtime-property.");
+    foundPropertyValue = (String)execContext.getTransientData(stringBuilder.toString() + name);
 
-		for (String nodeName: arrayNodeName) {
-			stringBuilder.append(nodeName).append('.');
+    for (String nodeName: arrayNodeName) {
+      stringBuilder.append(nodeName).append('.');
 
-			propertyValue = (String)execContext.getTransientData(stringBuilder.toString() + name);
+      propertyValue = (String)execContext.getTransientData(stringBuilder.toString() + name);
 
-			if (propertyValue != null) {
-				foundPropertyValue = propertyValue;
-			}
-		}
+      if (propertyValue != null) {
+        foundPropertyValue = propertyValue;
+      }
+    }
 
-		if (foundPropertyValue != null) {
-			return foundPropertyValue;
-		}
+    if (foundPropertyValue != null) {
+      return foundPropertyValue;
+    }
 
-		if (execContext instanceof ToolLifeCycleExecContext) {
-			ToolLifeCycleExecContext toolLifeCycleExecContext;
+    if (execContext instanceof ToolLifeCycleExecContext) {
+      ToolLifeCycleExecContext toolLifeCycleExecContext;
 
-			toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
+      toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-			stringBuilder = new StringBuilder("runtime-property.");
-			foundPropertyValue = toolLifeCycleExecContext.getToolProperty(stringBuilder.toString() + name);
+      stringBuilder = new StringBuilder("runtime-property.");
+      foundPropertyValue = toolLifeCycleExecContext.getToolProperty(stringBuilder.toString() + name);
 
-			for (String nodeName: arrayNodeName) {
-				stringBuilder.append(nodeName).append('.');
+      for (String nodeName: arrayNodeName) {
+        stringBuilder.append(nodeName).append('.');
 
-				propertyValue = toolLifeCycleExecContext.getToolProperty(stringBuilder.toString() + name);
+        propertyValue = toolLifeCycleExecContext.getToolProperty(stringBuilder.toString() + name);
 
-				if (propertyValue != null) {
-					foundPropertyValue = propertyValue;
-				}
-			}
+        if (propertyValue != null) {
+          foundPropertyValue = propertyValue;
+        }
+      }
 
-			if (foundPropertyValue != null) {
-				return foundPropertyValue;
-			}
-		}
+      if (foundPropertyValue != null) {
+        return foundPropertyValue;
+      }
+    }
 
-		execContext = ExecContextHolder.get();
+    execContext = ExecContextHolder.get();
 
-		stringBuilder = new StringBuilder("runtime-property.");
-		foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
+    stringBuilder = new StringBuilder("runtime-property.");
+    foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
 
-		for (String nodeName: arrayNodeName) {
-			stringBuilder.append(nodeName).append('.');
+    for (String nodeName: arrayNodeName) {
+      stringBuilder.append(nodeName).append('.');
 
-			propertyValue = execContext.getProperty(stringBuilder.toString() + name);
+      propertyValue = execContext.getProperty(stringBuilder.toString() + name);
 
-			if (propertyValue != null) {
-				foundPropertyValue = propertyValue;
-			}
-		}
+      if (propertyValue != null) {
+        foundPropertyValue = propertyValue;
+      }
+    }
 
-		if (foundPropertyValue != null) {
-			return foundPropertyValue;
-		}
+    if (foundPropertyValue != null) {
+      return foundPropertyValue;
+    }
 
-		stringBuilder = new StringBuilder("runtime-property.");
-		foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
+    stringBuilder = new StringBuilder("runtime-property.");
+    foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
 
-		for (String nodeName: arrayNodeName) {
-			stringBuilder.append(nodeName).append('.');
+    for (String nodeName: arrayNodeName) {
+      stringBuilder.append(nodeName).append('.');
 
-			propertyValue = execContext.getInitProperty(stringBuilder.toString() + name);
+      propertyValue = execContext.getInitProperty(stringBuilder.toString() + name);
 
-			if (propertyValue != null) {
-				foundPropertyValue = propertyValue;
-			}
-		}
+      if (propertyValue != null) {
+        foundPropertyValue = propertyValue;
+      }
+    }
 
-		if (foundPropertyValue != null) {
-			return foundPropertyValue;
-		}
+    if (foundPropertyValue != null) {
+      return foundPropertyValue;
+    }
 
-		stringBuilder = new StringBuilder("org.azyva.dragom.runtime-property.");
-		foundPropertyValue = System.getProperty(stringBuilder.toString() + name);
+    stringBuilder = new StringBuilder("org.azyva.dragom.runtime-property.");
+    foundPropertyValue = System.getProperty(stringBuilder.toString() + name);
 
-		for (String nodeName: arrayNodeName) {
-			stringBuilder.append(nodeName).append('.');
+    for (String nodeName: arrayNodeName) {
+      stringBuilder.append(nodeName).append('.');
 
-			propertyValue = System.getProperty(stringBuilder.toString() + name);
+      propertyValue = System.getProperty(stringBuilder.toString() + name);
 
-			if (propertyValue != null) {
-				foundPropertyValue = propertyValue;
-			}
-		}
+      if (propertyValue != null) {
+        foundPropertyValue = propertyValue;
+      }
+    }
 
-		if (foundPropertyValue != null) {
-			return foundPropertyValue;
-		}
+    if (foundPropertyValue != null) {
+      return foundPropertyValue;
+    }
 
-		if (node != null) {
-			return node.getProperty(name);
-		} else {
-			return execContext.getModel().getClassificationNodeRoot().getProperty(name);
-		}
-	}
+    if (node != null) {
+      return node.getProperty(name);
+    } else {
+      return execContext.getModel().getClassificationNodeRoot().getProperty(name);
+    }
+  }
 
-	@Override
-	public void setProperty(Node node, String name, String value) {
-		NodePath nodePath;
-		String[] arrayNodeName;
-		StringBuilder stringBuilder;
-		ExecContext execContext;
+  @Override
+  public void setProperty(Node node, String name, String value) {
+    NodePath nodePath;
+    String[] arrayNodeName;
+    StringBuilder stringBuilder;
+    ExecContext execContext;
 
-		execContext = ExecContextHolder.get();
+    execContext = ExecContextHolder.get();
 
-		nodePath = (node == null) ? null : node.getNodePath();
+    nodePath = (node == null) ? null : node.getNodePath();
 
-		if (nodePath == null) {
-			arrayNodeName = new String[0];
-		} else {
-			arrayNodeName = nodePath.getArrayNodeName();
-		}
+    if (nodePath == null) {
+      arrayNodeName = new String[0];
+    } else {
+      arrayNodeName = nodePath.getArrayNodeName();
+    }
 
-		stringBuilder = new StringBuilder("runtime-property.");
+    stringBuilder = new StringBuilder("runtime-property.");
 
-		for (String nodeName: arrayNodeName) {
-			stringBuilder.append(nodeName).append('.');
-		}
+    for (String nodeName: arrayNodeName) {
+      stringBuilder.append(nodeName).append('.');
+    }
 
-		execContext.setTransientData(stringBuilder.toString() + name, value);
-	}
+    execContext.setTransientData(stringBuilder.toString() + name, value);
+  }
 }

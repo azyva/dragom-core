@@ -23,67 +23,67 @@ package org.azyva.dragom.util;
  * Enumerates the possible responses to a Yes/Yes always/No type of user input.
  */
 public enum YesAlwaysNoUserResponse {
-	/**
-	 * Yes.
-	 */
-	YES,
+  /**
+   * Yes.
+   */
+  YES,
 
-	/**
-	 * Yes and assume that response thereafter.
-	 */
-	YES_ALWAYS,
+  /**
+   * Yes and assume that response thereafter.
+   */
+  YES_ALWAYS,
 
-	/**
-	 * No.
-	 */
-	NO,
+  /**
+   * No.
+   */
+  NO,
 
-	/**
-	 * No and abort. Not always used. Used only during iterative processes where "no"
-	 * is in the context of the current iteration and "no, abort" means to really
-	 * abort the whole process.
-	 */
-	NO_ABORT;
+  /**
+   * No and abort. Not always used. Used only during iterative processes where "no"
+   * is in the context of the current iteration and "no, abort" means to really
+   * abort the whole process.
+   */
+  NO_ABORT;
 
-	/**
-	 * @return Indicates if YES.
-	 */
-	public boolean isYes() {
-		return (this == YES);
-	}
+  /**
+   * @return Indicates if YES.
+   */
+  public boolean isYes() {
+    return (this == YES);
+  }
 
-	/**
-	 * @return Indicates if YES or YES_ALWAYS.
-	 */
-	public boolean isYesOrAlways() {
-		return (this == YES) || (this == YES_ALWAYS);
-	}
+  /**
+   * @return Indicates if YES or YES_ALWAYS.
+   */
+  public boolean isYesOrAlways() {
+    return (this == YES) || (this == YES_ALWAYS);
+  }
 
-	/**
-	 * @return Indicates if YES_ALWAYS.
-	 */
-	public boolean isYesAlways() {
-		return this == YES_ALWAYS;
-	}
+  /**
+   * @return Indicates if YES_ALWAYS.
+   */
+  public boolean isYesAlways() {
+    return this == YES_ALWAYS;
+  }
 
-	/**
-	 * @return Indicates if NO.
-	 */
-	public boolean isNo() {
-		return this == NO;
-	}
+  /**
+   * @return Indicates if NO.
+   */
+  public boolean isNo() {
+    return this == NO;
+  }
 
-	/**
-	 * @return Indicates if NO or NO_ABORT.
-	 */
-	public boolean isNoOrAbort() {
-		return (this == NO) || (this == NO_ABORT);
-	}
+  /**
+   * @return Indicates if NO or NO_ABORT.
+   */
+  public boolean isNoOrAbort() {
+    return (this == NO) || (this == NO_ABORT);
+  }
 
-	/**
-	 * @return Indicates if NO_ABORT.
-	 */
-	public boolean isNoAbort() {
-		return this == NO_ABORT;
-	}
+  /**
+   * @return Indicates if NO_ABORT.
+   */
+  public boolean isNoAbort() {
+    return this == NO_ABORT;
+  }
 };

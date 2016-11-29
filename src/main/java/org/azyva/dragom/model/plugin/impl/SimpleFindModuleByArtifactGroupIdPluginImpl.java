@@ -80,48 +80,48 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationNodePluginAbstractImpl implements FindModuleByArtifactGroupIdPlugin {
-	private String groupId;
+  private String groupId;
 
-	public SimpleFindModuleByArtifactGroupIdPluginImpl(ClassificationNode classificationNode) {
-		super(classificationNode);
+  public SimpleFindModuleByArtifactGroupIdPluginImpl(ClassificationNode classificationNode) {
+    super(classificationNode);
 
-		String baseGroupId;
+    String baseGroupId;
 
-		baseGroupId = classificationNode.getProperty("BASE_GROUP_ID");
+    baseGroupId = classificationNode.getProperty("BASE_GROUP_ID");
 
-		if (baseGroupId == null) {
-			// If there is no base groupId, we must not get here for the root ClassificationNode since an empty groupId is not allowed.
-			this.groupId = Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
-		} else if (classificationNode != classificationNode.getModel().getClassificationNodeRoot()) {
-			this.groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
-		} else {
-			// If we get here for the root ClassificationNode, the groupId is the base groupId.
-			this.groupId = baseGroupId;
-		}
-	}
+    if (baseGroupId == null) {
+      // If there is no base groupId, we must not get here for the root ClassificationNode since an empty groupId is not allowed.
+      this.groupId = Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
+    } else if (classificationNode != classificationNode.getModel().getClassificationNodeRoot()) {
+      this.groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
+    } else {
+      // If we get here for the root ClassificationNode, the groupId is the base groupId.
+      this.groupId = baseGroupId;
+    }
+  }
 
-	@Override
-	public List<NodePath> getListModulePossiblyProduceArtifactGroupId(ArtifactGroupId artifactGroupId) {
-		List<NodePath> listNodePath;
-		String artifactId;
-		int lastDashPos;
+  @Override
+  public List<NodePath> getListModulePossiblyProduceArtifactGroupId(ArtifactGroupId artifactGroupId) {
+    List<NodePath> listNodePath;
+    String artifactId;
+    int lastDashPos;
 
-		if (!artifactGroupId.getGroupId().equals(this.groupId)) {
-			return null;
-		}
+    if (!artifactGroupId.getGroupId().equals(this.groupId)) {
+      return null;
+    }
 
-		listNodePath = new ArrayList<NodePath>();
+    listNodePath = new ArrayList<NodePath>();
 
-		artifactId = artifactGroupId.getArtifactId();
+    artifactId = artifactGroupId.getArtifactId();
 
-		do {
-			listNodePath.add(new NodePath(this.getNode().getNodePath(), artifactId));
-			lastDashPos = artifactId.lastIndexOf('-');
-			if (lastDashPos != -1) {
-				artifactId = artifactId.substring(0, lastDashPos);
-			}
-		} while (lastDashPos != -1);
+    do {
+      listNodePath.add(new NodePath(this.getNode().getNodePath(), artifactId));
+      lastDashPos = artifactId.lastIndexOf('-');
+      if (lastDashPos != -1) {
+        artifactId = artifactId.substring(0, lastDashPos);
+      }
+    } while (lastDashPos != -1);
 
-		return listNodePath;
-	}
+    return listNodePath;
+  }
 }

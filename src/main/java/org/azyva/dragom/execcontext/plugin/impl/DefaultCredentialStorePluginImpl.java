@@ -80,307 +80,307 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
-	/**
-	 * System property that specifies the file containing the credentials. "~" in the
-	 * value of this property is replaced by the user home directory.
-	 */
-	private static final String SYS_PROPERTY_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
-
-	/**
-	 * Default credential file (within the workspace metadata directory) when the
-	 * org.azyva.dragom.CredentialFile system property is not defined.
-	 */
-	private static final String DEFAULT_CREDENTIAL_FILE = "credentials.properties";
-
-	/**
-	 * System property that specifies the master password file. "~" in the
-	 * value of this property is replaced by the user home directory.
-	 */
-	public static final String SYS_PROPERTY_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
-
-	/**
-	 * Runtime property for the list of resource-pattern-realm-user mappings.
-	 */
-	public static final String RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS = "RESOURCE_PATTERN_REALM_USER_MAPPINGS";
-
-	/**
-	 * Runtime property prefix for the resource Pattern for a given
-	 * resource-pattern-realm-user mapping.
-	 */
-	public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN = "RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.";
-
-	/**
-	 * Runtime property prefix for the realm for a given
-	 * resource-pattern-realm-user mapping.
-	 */
-	public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM = "RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.";
-
-	/**
-	 * Runtime property prefix for the user for a given
-	 * resource-pattern-realm-user mapping.
-	 */
-	public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER = "RESOURCE_PATTERN_REALM_USER_MAPPING_USER.";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE = "INPUT_USER_FOR_RESOURCE";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE = "INPUT_PASSWORD_FOR_USER_RESOURCE";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_USER_PASSWORD_INVALID = "USER_PASSWORD_INVALID";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE = "USER_NOT_SAME_AS_RESOURCE";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND = "NO_RESOURCE_REALM_MAPPING_FOUND";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE = "PASSWORD_NOT_AVAILABLE";
-
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultCredentialStorePluginImpl.class.getName() + "ResourceBundle");
-
-	/**
-	 * CredentialStore.
-	 */
-	private CredentialStore credentialStore;
-
-	/**
-	 * Constructor.
-	 *
-	 * @param execContext ExecContext.
-	 */
-	public DefaultCredentialStorePluginImpl(ExecContext execContext) {
-		String stringCredentialFile;
-		Path pathMetadataDir;
-		Path pathCredentialFile;
-		String stringMasterKeyFile;
-		Path pathMasterKeyFile;
-		List<CredentialStore.ResourcePatternRealmUser> listResourcePatternRealmUser;
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		String stringRuntimeProperty;
-
-		Util.applyDragomSystemProperties();
-
-		/*
-		 * Compute the Path to the credential file.
-		 */
+  /**
+   * System property that specifies the file containing the credentials. "~" in the
+   * value of this property is replaced by the user home directory.
+   */
+  private static final String SYS_PROPERTY_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
+
+  /**
+   * Default credential file (within the workspace metadata directory) when the
+   * org.azyva.dragom.CredentialFile system property is not defined.
+   */
+  private static final String DEFAULT_CREDENTIAL_FILE = "credentials.properties";
+
+  /**
+   * System property that specifies the master password file. "~" in the
+   * value of this property is replaced by the user home directory.
+   */
+  public static final String SYS_PROPERTY_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
+
+  /**
+   * Runtime property for the list of resource-pattern-realm-user mappings.
+   */
+  public static final String RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS = "RESOURCE_PATTERN_REALM_USER_MAPPINGS";
+
+  /**
+   * Runtime property prefix for the resource Pattern for a given
+   * resource-pattern-realm-user mapping.
+   */
+  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN = "RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.";
+
+  /**
+   * Runtime property prefix for the realm for a given
+   * resource-pattern-realm-user mapping.
+   */
+  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM = "RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.";
+
+  /**
+   * Runtime property prefix for the user for a given
+   * resource-pattern-realm-user mapping.
+   */
+  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER = "RESOURCE_PATTERN_REALM_USER_MAPPING_USER.";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE = "INPUT_USER_FOR_RESOURCE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE = "INPUT_PASSWORD_FOR_USER_RESOURCE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_USER_PASSWORD_INVALID = "USER_PASSWORD_INVALID";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE = "USER_NOT_SAME_AS_RESOURCE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND = "NO_RESOURCE_REALM_MAPPING_FOUND";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE = "PASSWORD_NOT_AVAILABLE";
+
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultCredentialStorePluginImpl.class.getName() + "ResourceBundle");
+
+  /**
+   * CredentialStore.
+   */
+  private CredentialStore credentialStore;
+
+  /**
+   * Constructor.
+   *
+   * @param execContext ExecContext.
+   */
+  public DefaultCredentialStorePluginImpl(ExecContext execContext) {
+    String stringCredentialFile;
+    Path pathMetadataDir;
+    Path pathCredentialFile;
+    String stringMasterKeyFile;
+    Path pathMasterKeyFile;
+    List<CredentialStore.ResourcePatternRealmUser> listResourcePatternRealmUser;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    String stringRuntimeProperty;
+
+    Util.applyDragomSystemProperties();
+
+    /*
+     * Compute the Path to the credential file.
+     */
 
-		stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_CREDENTIAL_FILE);
+    stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_CREDENTIAL_FILE);
 
-		if (stringCredentialFile == null) {
-			pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
-			pathCredentialFile = pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.DEFAULT_CREDENTIAL_FILE);
-		} else {
-			stringCredentialFile = stringCredentialFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
-			pathCredentialFile = Paths.get(stringCredentialFile);
-		}
+    if (stringCredentialFile == null) {
+      pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
+      pathCredentialFile = pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.DEFAULT_CREDENTIAL_FILE);
+    } else {
+      stringCredentialFile = stringCredentialFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+      pathCredentialFile = Paths.get(stringCredentialFile);
+    }
 
-		/*
-		 * Compute the Path to the master password file.
-		 */
-
-		stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_MASTER_KEY_FILE);
-
-		if (stringMasterKeyFile == null) {
-			pathMasterKeyFile = null;
-		} else {
-			stringMasterKeyFile = stringMasterKeyFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
-			pathMasterKeyFile = Paths.get(stringMasterKeyFile);
-		}
+    /*
+     * Compute the Path to the master password file.
+     */
+
+    stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_MASTER_KEY_FILE);
+
+    if (stringMasterKeyFile == null) {
+      pathMasterKeyFile = null;
+    } else {
+      stringMasterKeyFile = stringMasterKeyFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+      pathMasterKeyFile = Paths.get(stringMasterKeyFile);
+    }
 
-		/*
-		 * Reads the ResourcePatternRealmUser mappings from runtime properties.
-		 */
+    /*
+     * Reads the ResourcePatternRealmUser mappings from runtime properties.
+     */
 
-		listResourcePatternRealmUser = new ArrayList<ResourcePatternRealmUser>();
+    listResourcePatternRealmUser = new ArrayList<ResourcePatternRealmUser>();
 
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+    runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-		stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS);
+    stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS);
 
-		for (String mapping: stringRuntimeProperty.split(",")) {
-			ResourcePatternRealmUser resourcePatternRealmUser;
-
-			resourcePatternRealmUser = new ResourcePatternRealmUser();
+    for (String mapping: stringRuntimeProperty.split(",")) {
+      ResourcePatternRealmUser resourcePatternRealmUser;
+
+      resourcePatternRealmUser = new ResourcePatternRealmUser();
 
-			mapping = mapping.trim();
-
-			stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN + mapping);
-			resourcePatternRealmUser.patternResource = Pattern.compile(stringRuntimeProperty);
-
-			resourcePatternRealmUser.realm = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM + mapping);
-
-			if (resourcePatternRealmUser.realm == null) {
-				throw new RuntimeException("Realm cannot be null for mapping " + mapping + '.');
-			}
-
-			resourcePatternRealmUser.user = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER + mapping);
+      mapping = mapping.trim();
+
+      stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN + mapping);
+      resourcePatternRealmUser.patternResource = Pattern.compile(stringRuntimeProperty);
+
+      resourcePatternRealmUser.realm = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM + mapping);
+
+      if (resourcePatternRealmUser.realm == null) {
+        throw new RuntimeException("Realm cannot be null for mapping " + mapping + '.');
+      }
+
+      resourcePatternRealmUser.user = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER + mapping);
 
-			listResourcePatternRealmUser.add(resourcePatternRealmUser);
-		}
-
-		/*
-		 * Construct CredentialStore.
-		 */
-
-		this.credentialStore = new CredentialStore(pathCredentialFile, pathMasterKeyFile, listResourcePatternRealmUser);
-	}
-
-	/**
-	 * @return CredentialStore.
-	 */
-	public CredentialStore getCredentialStore() {
-		return this.credentialStore;
-	}
+      listResourcePatternRealmUser.add(resourcePatternRealmUser);
+    }
+
+    /*
+     * Construct CredentialStore.
+     */
+
+    this.credentialStore = new CredentialStore(pathCredentialFile, pathMasterKeyFile, listResourcePatternRealmUser);
+  }
+
+  /**
+   * @return CredentialStore.
+   */
+  public CredentialStore getCredentialStore() {
+    return this.credentialStore;
+  }
 
-	@Override
-	public boolean isCredentialsExist(String resource, String user, CredentialValidator credentialValidator) {
-		return this.getCredentialsInternal(resource, user, credentialValidator) != null;
-	}
-
-	@Override
-	public Credentials getCredentials(String resource, String user, CredentialValidator credentialValidator) {
-		Credentials credentials;
-
-		credentials = this.getCredentialsInternal(resource, user, credentialValidator);
-
-		if (credentials == null) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE), user, resource));
-		}
-
-		return credentials;
-	}
-
-	/**
-	 * The code for {@link #isCredentialsExist} and {@link #getCredentials} is very
-	 * similar and is factored out here.
-	 * <p>
-	 * The difference between this method and getCredentials is that this one returns
-	 * null if the requested credentials are not available, making it usable for
-	 * isCredentialsExist.
-	 *
-	 * @param resource Resource.
-	 * @param user User. Can be null.
-	 * @param credentialValidator CredentialValidator.
-	 * @return Credentials. null if not available.s
-	 */
-	public Credentials getCredentialsInternal(String resource, String user, CredentialValidator credentialValidator) {
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		String password;
-		Credentials credentials;
-		CredentialStore.ResourceInfo resourceInfo;
-		boolean indSetDefaultUser;
-
-		userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-		password = this.credentialStore.getPassword(resource, user);
-
-		if ((password != null) && (credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-			userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
-			password = null;
-		}
-
-		resourceInfo = this.credentialStore.getResourceInfo(resource);
-
-		if (resourceInfo == null) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND), resource));
-		}
-
-		if ((user != null) && (resourceInfo.user != null) && !user.equals(resourceInfo.user)) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourceInfo.user, resource));
-		}
-
-		if (user == null) {
-			user = resourceInfo.user;
-		}
-
-		if (user == null) {
-			user = this.credentialStore.getDefaultUser(resource);
-		}
-
-		/*
-		 * Here, if password != null, user cannot be null either.
-		 */
-
-		if (password != null) {
-			credentials = new Credentials();
-			credentials.resource = resource;
-			credentials.user = user;
-			credentials.password = password;
-			credentials.indUserSpecificResource = (resourceInfo.user != null);
-			return credentials;
-		}
-
-		indSetDefaultUser = (user == null);
-
-		do {
-			boolean indSetPassword;
-
-			if (user == null) {
-				if (userInteractionCallbackPlugin.isBatchMode()) {
-					return null;
-				} else {
-					String defaultUser;
-
-					defaultUser = System.getProperty("user.name");
-
-					user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourceInfo.realm, defaultUser), defaultUser);
-				}
-			}
-
-			indSetPassword = false;
-
-			password = this.credentialStore.getPassword(resource, user);
-
-			if (password == null) {
-				if (userInteractionCallbackPlugin.isBatchMode()) {
-					return null;
-				} else {
-					password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourceInfo.realm));
-					indSetPassword = true;
-				}
-			}
-
-			if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
-				continue;
-			}
-
-			if (indSetDefaultUser) {
-				this.credentialStore.setDefaultUser(resource, user);
-			}
-
-			if (indSetPassword) {
-				this.credentialStore.setPassword(resource, user, password);
-			}
-
-			credentials = new Credentials();
-			credentials.resource = resource;
-			credentials.user = user;
-			credentials.password = password;
-			credentials.indUserSpecificResource = (resourceInfo.user != null);
-			return credentials;
-		} while (true);
-	}
-
-	@Override
-	public void resetCredentials(String resource, String user) {
-		this.credentialStore.deletePassword(resource, user);
-	}
+  @Override
+  public boolean isCredentialsExist(String resource, String user, CredentialValidator credentialValidator) {
+    return this.getCredentialsInternal(resource, user, credentialValidator) != null;
+  }
+
+  @Override
+  public Credentials getCredentials(String resource, String user, CredentialValidator credentialValidator) {
+    Credentials credentials;
+
+    credentials = this.getCredentialsInternal(resource, user, credentialValidator);
+
+    if (credentials == null) {
+      throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_PASSWORD_NOT_AVAILABLE), user, resource));
+    }
+
+    return credentials;
+  }
+
+  /**
+   * The code for {@link #isCredentialsExist} and {@link #getCredentials} is very
+   * similar and is factored out here.
+   * <p>
+   * The difference between this method and getCredentials is that this one returns
+   * null if the requested credentials are not available, making it usable for
+   * isCredentialsExist.
+   *
+   * @param resource Resource.
+   * @param user User. Can be null.
+   * @param credentialValidator CredentialValidator.
+   * @return Credentials. null if not available.s
+   */
+  public Credentials getCredentialsInternal(String resource, String user, CredentialValidator credentialValidator) {
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    String password;
+    Credentials credentials;
+    CredentialStore.ResourceInfo resourceInfo;
+    boolean indSetDefaultUser;
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    password = this.credentialStore.getPassword(resource, user);
+
+    if ((password != null) && (credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
+      password = null;
+    }
+
+    resourceInfo = this.credentialStore.getResourceInfo(resource);
+
+    if (resourceInfo == null) {
+      throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_NO_RESOURCE_REALM_MAPPING_FOUND), resource));
+    }
+
+    if ((user != null) && (resourceInfo.user != null) && !user.equals(resourceInfo.user)) {
+      throw new RuntimeExceptionUserError(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_NOT_SAME_AS_RESOURCE), user, resourceInfo.user, resource));
+    }
+
+    if (user == null) {
+      user = resourceInfo.user;
+    }
+
+    if (user == null) {
+      user = this.credentialStore.getDefaultUser(resource);
+    }
+
+    /*
+     * Here, if password != null, user cannot be null either.
+     */
+
+    if (password != null) {
+      credentials = new Credentials();
+      credentials.resource = resource;
+      credentials.user = user;
+      credentials.password = password;
+      credentials.indUserSpecificResource = (resourceInfo.user != null);
+      return credentials;
+    }
+
+    indSetDefaultUser = (user == null);
+
+    do {
+      boolean indSetPassword;
+
+      if (user == null) {
+        if (userInteractionCallbackPlugin.isBatchMode()) {
+          return null;
+        } else {
+          String defaultUser;
+
+          defaultUser = System.getProperty("user.name");
+
+          user = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE), resource, resourceInfo.realm, defaultUser), defaultUser);
+        }
+      }
+
+      indSetPassword = false;
+
+      password = this.credentialStore.getPassword(resource, user);
+
+      if (password == null) {
+        if (userInteractionCallbackPlugin.isBatchMode()) {
+          return null;
+        } else {
+          password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourceInfo.realm));
+          indSetPassword = true;
+        }
+      }
+
+      if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
+        continue;
+      }
+
+      if (indSetDefaultUser) {
+        this.credentialStore.setDefaultUser(resource, user);
+      }
+
+      if (indSetPassword) {
+        this.credentialStore.setPassword(resource, user, password);
+      }
+
+      credentials = new Credentials();
+      credentials.resource = resource;
+      credentials.user = user;
+      credentials.password = password;
+      credentials.indUserSpecificResource = (resourceInfo.user != null);
+      return credentials;
+    } while (true);
+  }
+
+  @Override
+  public void resetCredentials(String resource, String user) {
+    this.credentialStore.deletePassword(resource, user);
+  }
 }

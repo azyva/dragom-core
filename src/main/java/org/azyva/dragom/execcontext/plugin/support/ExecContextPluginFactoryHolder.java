@@ -80,108 +80,108 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class ExecContextPluginFactoryHolder {
-	/**
-	 * Prefix of the system property specifying the default
-	 * {@link ExecContextPluginFactory} implementation class to use for a given
-	 * {@link ExecContextPlugin} interface whose name is used as the suffix.
-	 */
-	private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY = "org.azyva.dragom.DefaultExecContextPluginFactory.";
+  /**
+   * Prefix of the system property specifying the default
+   * {@link ExecContextPluginFactory} implementation class to use for a given
+   * {@link ExecContextPlugin} interface whose name is used as the suffix.
+   */
+  private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY = "org.azyva.dragom.DefaultExecContextPluginFactory.";
 
-	/**
-	 * Prefix of the system property specifying the default {@link ExecContextPlugin}
-	 * implementation class to use for a given ExecContextPlugin interface whose name
-	 * is used as the suffix.
-	 */
-	private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL = "org.azyva.dragom.DefaultExecContextPluginImpl.";
+  /**
+   * Prefix of the system property specifying the default {@link ExecContextPlugin}
+   * implementation class to use for a given ExecContextPlugin interface whose name
+   * is used as the suffix.
+   */
+  private static final String SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL = "org.azyva.dragom.DefaultExecContextPluginImpl.";
 
-	private static Map<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>> mapExecContextPluginFactory = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>>();
+  private static Map<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>> mapExecContextPluginFactory = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPluginFactory<? extends ExecContextPlugin>>();
 
-	// Ensures that the Dragom properties are loaded into the system properties.
-	static {
-		Util.applyDragomSystemProperties();
-	}
+  // Ensures that the Dragom properties are loaded into the system properties.
+  static {
+    Util.applyDragomSystemProperties();
+  }
 
-	/**
-	 * Sets the {@link ExecContextPluginFactory} for a given {@link ExecContextPlugin}
-	 * interface.
-	 *
-	 * @param classExecContextPlugin Class of the ExecContextPlugin interface.
-	 * @param execContextPluginFactory ExecContextPluginFactory.
-	 */
-	public static <ExecContextPluginClass extends ExecContextPlugin> void setExecContextPluginFactory(Class<ExecContextPluginClass> classExecContextPlugin, ExecContextPluginFactory<ExecContextPluginClass> execContextPluginFactory) {
-		ExecContextPluginFactoryHolder.mapExecContextPluginFactory.put(classExecContextPlugin, execContextPluginFactory);
-	}
+  /**
+   * Sets the {@link ExecContextPluginFactory} for a given {@link ExecContextPlugin}
+   * interface.
+   *
+   * @param classExecContextPlugin Class of the ExecContextPlugin interface.
+   * @param execContextPluginFactory ExecContextPluginFactory.
+   */
+  public static <ExecContextPluginClass extends ExecContextPlugin> void setExecContextPluginFactory(Class<ExecContextPluginClass> classExecContextPlugin, ExecContextPluginFactory<ExecContextPluginClass> execContextPluginFactory) {
+    ExecContextPluginFactoryHolder.mapExecContextPluginFactory.put(classExecContextPlugin, execContextPluginFactory);
+  }
 
 
-	@SuppressWarnings("unchecked")
-	public static <ExecContextPluginClass extends ExecContextPlugin> ExecContextPluginFactory<ExecContextPluginClass> getExecContextPluginFactory(Class<ExecContextPluginClass> classExecContextPlugin) {
-		if (ExecContextPluginFactoryHolder.mapExecContextPluginFactory.containsKey(classExecContextPlugin)) {
-			return (ExecContextPluginFactory<ExecContextPluginClass>)ExecContextPluginFactoryHolder.mapExecContextPluginFactory.get(classExecContextPlugin);
-		} else {
-			ExecContextPluginFactory<ExecContextPluginClass> execContextPluginFactory;
-			String execContextPluginInterface;
-			String execContextPluginFactoryClass;
-			Class<ExecContextPluginFactory<ExecContextPluginClass>> classExecContextPluginFactory;
-			String execContextPluginImplClass;
-			Class<ExecContextPluginClass> classExecContextPluginImpl;
+  @SuppressWarnings("unchecked")
+  public static <ExecContextPluginClass extends ExecContextPlugin> ExecContextPluginFactory<ExecContextPluginClass> getExecContextPluginFactory(Class<ExecContextPluginClass> classExecContextPlugin) {
+    if (ExecContextPluginFactoryHolder.mapExecContextPluginFactory.containsKey(classExecContextPlugin)) {
+      return (ExecContextPluginFactory<ExecContextPluginClass>)ExecContextPluginFactoryHolder.mapExecContextPluginFactory.get(classExecContextPlugin);
+    } else {
+      ExecContextPluginFactory<ExecContextPluginClass> execContextPluginFactory;
+      String execContextPluginInterface;
+      String execContextPluginFactoryClass;
+      Class<ExecContextPluginFactory<ExecContextPluginClass>> classExecContextPluginFactory;
+      String execContextPluginImplClass;
+      Class<ExecContextPluginClass> classExecContextPluginImpl;
 
-			try {
-				execContextPluginFactory = null;
+      try {
+        execContextPluginFactory = null;
 
-				execContextPluginInterface = classExecContextPlugin.getName();
+        execContextPluginInterface = classExecContextPlugin.getName();
 
-				execContextPluginFactoryClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY + execContextPluginInterface);
+        execContextPluginFactoryClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_FACTORY + execContextPluginInterface);
 
-				if (execContextPluginFactoryClass != null) {
-					classExecContextPluginFactory = (Class<ExecContextPluginFactory<ExecContextPluginClass>>)Class.forName(execContextPluginFactoryClass);
+        if (execContextPluginFactoryClass != null) {
+          classExecContextPluginFactory = (Class<ExecContextPluginFactory<ExecContextPluginClass>>)Class.forName(execContextPluginFactoryClass);
 
-					execContextPluginFactory = classExecContextPluginFactory.newInstance();
-				} else {
-					execContextPluginImplClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL + execContextPluginInterface);
+          execContextPluginFactory = classExecContextPluginFactory.newInstance();
+        } else {
+          execContextPluginImplClass = System.getProperty(ExecContextPluginFactoryHolder.SYS_PROPERTY_PREFIX_DEFAULT_EXEC_CONTEXT_PLUGIN_IMPL + execContextPluginInterface);
 
-					if (execContextPluginImplClass != null) {
-						classExecContextPluginImpl = (Class<ExecContextPluginClass>)Class.forName(execContextPluginImplClass);
+          if (execContextPluginImplClass != null) {
+            classExecContextPluginImpl = (Class<ExecContextPluginClass>)Class.forName(execContextPluginImplClass);
 
-						execContextPluginFactory = new GenericExecContextPluginFactory<ExecContextPluginClass>(classExecContextPluginImpl);
-					} else {
-						execContextPluginFactoryClass =
-								classExecContextPlugin.getPackage().getName() +
-								".impl.Default" +
-								classExecContextPlugin.getSimpleName() +
-								"Factory";
+            execContextPluginFactory = new GenericExecContextPluginFactory<ExecContextPluginClass>(classExecContextPluginImpl);
+          } else {
+            execContextPluginFactoryClass =
+                classExecContextPlugin.getPackage().getName() +
+                ".impl.Default" +
+                classExecContextPlugin.getSimpleName() +
+                "Factory";
 
-						try {
-							classExecContextPluginFactory = (Class<ExecContextPluginFactory<ExecContextPluginClass>>)Class.forName(execContextPluginFactoryClass);
-						} catch (ClassNotFoundException cnfe) {
-							classExecContextPluginFactory = null;
-						}
+            try {
+              classExecContextPluginFactory = (Class<ExecContextPluginFactory<ExecContextPluginClass>>)Class.forName(execContextPluginFactoryClass);
+            } catch (ClassNotFoundException cnfe) {
+              classExecContextPluginFactory = null;
+            }
 
-						if (classExecContextPluginFactory != null) {
-							execContextPluginFactory = classExecContextPluginFactory.newInstance();
-						} else {
-							execContextPluginImplClass =
-									classExecContextPlugin.getPackage().getName() +
-									".impl.Default" +
-									classExecContextPlugin.getSimpleName() +
-									"Impl";
+            if (classExecContextPluginFactory != null) {
+              execContextPluginFactory = classExecContextPluginFactory.newInstance();
+            } else {
+              execContextPluginImplClass =
+                  classExecContextPlugin.getPackage().getName() +
+                  ".impl.Default" +
+                  classExecContextPlugin.getSimpleName() +
+                  "Impl";
 
-							classExecContextPluginImpl = (Class<ExecContextPluginClass>)Class.forName(execContextPluginImplClass);
+              classExecContextPluginImpl = (Class<ExecContextPluginClass>)Class.forName(execContextPluginImplClass);
 
-							execContextPluginFactory = new GenericExecContextPluginFactory<ExecContextPluginClass>(classExecContextPluginImpl);
-						}
-					}
-				}
-			} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-				throw new RuntimeException(e);
-			}
+              execContextPluginFactory = new GenericExecContextPluginFactory<ExecContextPluginClass>(classExecContextPluginImpl);
+            }
+          }
+        }
+      } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+        throw new RuntimeException(e);
+      }
 
-			if (execContextPluginFactory == null) {
-				throw new RuntimeException("ExecContextPluginFactory for " + classExecContextPlugin + " not  defined.");
-			}
+      if (execContextPluginFactory == null) {
+        throw new RuntimeException("ExecContextPluginFactory for " + classExecContextPlugin + " not  defined.");
+      }
 
-			ExecContextPluginFactoryHolder.mapExecContextPluginFactory.put(classExecContextPlugin, execContextPluginFactory);
+      ExecContextPluginFactoryHolder.mapExecContextPluginFactory.put(classExecContextPlugin, execContextPluginFactory);
 
-			return execContextPluginFactory;
-		}
-	}
+      return execContextPluginFactory;
+    }
+  }
 }

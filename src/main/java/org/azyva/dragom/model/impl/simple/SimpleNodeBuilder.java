@@ -25,71 +25,85 @@ import org.azyva.dragom.model.NodeBuilder;
 
 /**
  *
+ * @param <NodeSubType> {@link Node} subclass.
  * @author David Raymond
  */
 public class SimpleNodeBuilder<NodeSubType extends Node> implements NodeBuilder<NodeSubType> {
-	private SimpleNode simpleNode;
+  /**
+   * SimpleNode being built.
+   */
+  private SimpleNode simpleNode;
 
-	protected SimpleNodeBuilder() {
-	}
-
-	protected void setSimpleNode(SimpleNode simpleNode) {
-		this.simpleNode = simpleNode;
-	}
-
-	@Override
-	public NodeBuilder<NodeSubType> setClassificationNodeParent(ClassificationNode classificationNodeParent) {
-		this.simpleNode.setSimpleClassificationNodeParent((SimpleClassificationNode)classificationNodeParent);
-
-		return this;
-	}
-
-	@Override
-	public NodeBuilder<NodeSubType> setName(String name) {
-		this.simpleNode.setName(name);
-
-		return this;
-	}
-
-	@Override
-	public NodeBuilder<NodeSubType> setProperty(String name, String value, boolean indOnlyThisNode) {
-		this.simpleNode.setProperty(name, value, indOnlyThisNode);
-
-		return this;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public NodeSubType getPartial() {
-		if (this.simpleNode.getName() == null) {
-			throw new RuntimeException("The name of the node has not been set.");
-		}
-
-		if (this.simpleNode.getClassificationNodeParent() == null) {
-			throw new RuntimeException("The parent classification node has not been set.");
-		}
-
-		return (NodeSubType)this.simpleNode;
-	}
+  /**
+   * Constructor.
+   */
+  protected SimpleNodeBuilder() {}
 
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public NodeSubType create() {
-		SimpleNode simpleNode;
+  /**
+   * Sets the {@link SimpleNode} being built.
+   *
+   * <p>To be used by the constructor of subclasses.
+   *
+   * @param simpleNode SimpleNode.
+   */
+  protected void setSimpleNode(SimpleNode simpleNode) {
+    this.simpleNode = simpleNode;
+  }
 
-		// To take advantage of the validations performed by getPartial.
-		this.getPartial();
+  @Override
+  public NodeBuilder<NodeSubType> setClassificationNodeParent(ClassificationNode classificationNodeParent) {
+    this.simpleNode.setSimpleClassificationNodeParent((SimpleClassificationNode)classificationNodeParent);
 
-		((SimpleClassificationNode)this.simpleNode.getClassificationNodeParent()).addNodeChild(this.simpleNode);
-		this.simpleNode.init();
+    return this;
+  }
 
-		simpleNode = this.simpleNode;
+  @Override
+  public NodeBuilder<NodeSubType> setName(String name) {
+    this.simpleNode.setName(name);
 
-		// Once the Node is created it must not be possible to use the NodeBuilder
-		// anymore.
-		this.simpleNode = null;
+    return this;
+  }
 
-		return (NodeSubType)simpleNode;
-	}
+  @Override
+  public NodeBuilder<NodeSubType> setProperty(String name, String value, boolean indOnlyThisNode) {
+    this.simpleNode.setProperty(name, value, indOnlyThisNode);
+
+    return this;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public NodeSubType getPartial() {
+    if (this.simpleNode.getName() == null) {
+      throw new RuntimeException("The name of the node has not been set.");
+    }
+
+    if (this.simpleNode.getClassificationNodeParent() == null) {
+      throw new RuntimeException("The parent classification node has not been set.");
+    }
+
+    return (NodeSubType)this.simpleNode;
+  }
+
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public NodeSubType create() {
+    SimpleNode simpleNode;
+
+    // To take advantage of the validations performed by getPartial.
+    this.getPartial();
+
+    ((SimpleClassificationNode)this.simpleNode.getClassificationNodeParent()).addNodeChild(this.simpleNode);
+    this.simpleNode.init();
+
+    simpleNode = this.simpleNode;
+
+    // Once the Node is created it must not be possible to use the NodeBuilder
+    // anymore.
+    this.simpleNode = null;
+
+    return (NodeSubType)simpleNode;
+  }
 }

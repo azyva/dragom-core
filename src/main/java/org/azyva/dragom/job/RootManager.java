@@ -60,371 +60,371 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  * @author David Raymond
  */
 public class RootManager {
-	/**
-	 * ExecContext property that holds the list of root MovuleVersion's.
-	 *
-	 * The value of this property is a space-separated list of stringified
-	 * ModuleVersion.
-	 */
-	private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "root-module-versions";
-
-	/**
-	 * Prefix of the properties that hold the global ReferencePathMatcherOr.
-	 *
-	 * This prefix suffixed with a 1-based index specifies a
-	 * ReferencePathMatcherByElement.
-	 *
-	 * The ReferencePathMatcherByElement's are represented with their literal form.
-	 */
-	private static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
-
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
-
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootManager.class.getName() + "ResourceBundle");
-
-	/**
-	 * @return List of root {@link ModuleVersion}'s.
-	 */
-	@SuppressWarnings("unchecked")
-	public static List<ModuleVersion> getListModuleVersion() {
-		ExecContext execContext;
-		List<ModuleVersion> listModuleVersion;
-
-		execContext = ExecContextHolder.get();
-
-		listModuleVersion = (List<ModuleVersion>)execContext.getTransientData(RootManager.class.getName() + ".ListModuleVersion");
-
-		if (listModuleVersion == null) {
-			String roots;
-
-			roots = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS);
-
-			if (roots == null) {
-				listModuleVersion = new ArrayList<ModuleVersion>();
-			} else {
-				listModuleVersion = new ArrayList<ModuleVersion>();
-
-				for (String root: roots.split(",")) {
-					listModuleVersion.add(new ModuleVersion(root));
-				}
-			}
-
-			execContext.setTransientData(RootManager.class.getName() + ".ListModuleVersion", listModuleVersion);
-		}
-
-		return listModuleVersion;
-	}
-
-	/**
-	 * Verifies if a ModuleVersion is contained in the list of ModuleVersion.
-	 *
-	 * @return See description.
-	 */
-	public static boolean containsModuleVersion(ModuleVersion moduleVersion) {
-		return RootManager.getListModuleVersion().contains(moduleVersion);
-	}
-
-	/**
-	 * Returns the ModuleVersion corresponding to a NodePath or null
-	 * if none.
-	 *
-	 * Useful for managing the list when duplicate modules are not allowed.
-	 *
-	 * @return See description.
-	 */
-	public static ModuleVersion getModuleVersion(NodePath nodePathModule) {
-		List<ModuleVersion> listModuleVersion;
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		for (ModuleVersion moduleVersion: listModuleVersion) {
-			if (moduleVersion.getNodePath().equals(nodePathModule)) {
-				return moduleVersion;
-			}
-		}
-
-		return null;
-	}
-
-	/**
-	 * Adds a ModuleVersion to the list of root ModuleVersion.
-	 *
-	 * If a ModuleVersion for the same Module is already a root and indAllowDuplicate
-	 * is false, the ModuleVersion is not added. replaceModuleVersion must be called in
-	 * that case.
-	 *
-	 * @param moduleVersion New root ModuleVersion.
-	 * @param indAllowDuplicateModule Indicates if duplicate Module are allowed.
-	 * @return Indicates if the ModuleVersion was actually added (it maybe a
-	 *   duplicate).
-	 */
-	public static boolean addModuleVersion(ModuleVersion moduleVersion, boolean indAllowDuplicateModule) {
-		List<ModuleVersion> listModuleVersion;
-
-		RootManager.validateModuleVersion(moduleVersion);
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if (listModuleVersion.contains(moduleVersion)) {
-			return false;
-		}
-
-		if (!indAllowDuplicateModule) {
-			for (int i = 0; i < listModuleVersion.size(); i++) {
-				if (listModuleVersion.get(i).getNodePath().equals(moduleVersion.getNodePath())) {
-					return false;
-				}
-			}
-		}
-
-		listModuleVersion.add(moduleVersion);
-		RootManager.saveListModuleVersion();
-
-		return true;
-	}
-
-	/**
-	 * Remove a ModuleVersion from the list of root ModuleVersion.
-	 *
-	 * @param moduleVersion ModuleVersion to remove.
-	 * @return Indicates if the ModuleVersion was actually removed (it may not be
-	 *   present in the list).
-	 */
-	public static boolean removeModuleVersion(ModuleVersion moduleVersion) {
-		List<ModuleVersion> listModuleVersion;
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if (!listModuleVersion.contains(moduleVersion)) {
-			return false;
-		}
-
-		listModuleVersion.remove(moduleVersion);
-		RootManager.saveListModuleVersion();
-
-		return true;
-	}
-
-	/**
-	 * Remove all ModuleVersion's from the list of root ModuleVersion.
-	 */
-	public static void removeAllModuleVersion() {
-		RootManager.getListModuleVersion().clear();
-		RootManager.saveListModuleVersion();
-	}
-
-	/**
-	 * Replaces a ModuleVersion with a new one (presumably having the same Module but
-	 * a different Version) in the list of root ModuleVersion.
-	 *
-	 * @param moduleVersionOrg Original ModuleVersion.
-	 * @param moduleVersionNew New ModuleVersion.
-	 * @return Indicates if the ModuleVersion was actually replaced (it may not be
-	 *   present in the list).
-	 */
-	public static boolean replaceModuleVersion(ModuleVersion moduleVersionOrg, ModuleVersion moduleVersionNew) {
-		List<ModuleVersion> listModuleVersion;
-
-		RootManager.validateModuleVersion(moduleVersionNew);
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if (!listModuleVersion.contains(moduleVersionOrg)) {
-			return false;
-		}
-
-		listModuleVersion.set(listModuleVersion.indexOf(moduleVersionOrg), moduleVersionNew);
-		RootManager.saveListModuleVersion();
-
-		return true;
-	}
-
-	/**
-	 * Moves a ModuleVersion first in the list of root ModuleVersion.
-	 *
-	 * @param moduleVersion ModuleVersion to move first.
-	 * @return Indicates if the ModuleVersion was actually moved (it may not be
-	 *   present in the list).
-	 */
-	public static boolean moveFirst(ModuleVersion moduleVersion) {
-		List<ModuleVersion> listModuleVersion;
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if (!listModuleVersion.contains(moduleVersion)) {
-			return false;
-		}
-
-		listModuleVersion.remove(moduleVersion);
-		listModuleVersion.add(0, moduleVersion);
-		RootManager.saveListModuleVersion();
-
-		return true;
-	}
-
-	/**
-	 * Moves a ModuleVersion last in the list of root ModuleVersion.
-	 *
-	 * @param moduleVersion ModuleVersion to move last.
-	 * @return Indicates if the ModuleVersion was actually moved (it may not be
-	 *   present in the list).
-	 */
-	public static boolean moveLast(ModuleVersion moduleVersion) {
-		List<ModuleVersion> listModuleVersion;
-
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if (!listModuleVersion.contains(moduleVersion)) {
-			return false;
-		}
-
-		listModuleVersion.remove(moduleVersion);
-		listModuleVersion.add(listModuleVersion.size(), moduleVersion);
-		RootManager.saveListModuleVersion();
-
-		return true;
-	}
-
-	private static void validateModuleVersion(ModuleVersion moduleVersion) {
-		ExecContext execContext;
-		Model model;
-		Module module;
-		ScmPlugin scmPlugin;
-
-		execContext = ExecContextHolder.get();
-		model = execContext.getModel();
-		module = model.getModule(moduleVersion.getNodePath());
-
-		if (module == null) {
-			throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST), moduleVersion));
-		}
-
-		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-
-		// We assume the default version, when getVersion returns null, always exists.
-		if (moduleVersion.getVersion() != null) {
-			if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-				throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), moduleVersion));
-			}
-		}
-	}
-
-	/**
-	 * Persists the list of root ModuleVersion's in the ExecContext.
-	 *
-	 * This class does not provide a safe encapsulation of the List of root
-	 * ModuleVersion's. If the caller wants to modify the List other than with the
-	 * methods provided by this class, it is expected to obtain it with the
-	 * getListModuleVersion method and then call this method after having modified
-	 * it. Is it not possible for the caller to create a new List and set it as
-	 * the List of root ModuleVesion's within the class.
-	 */
-	public static void saveListModuleVersion() {
-		List<ModuleVersion> listModuleVersion;
-		StringBuilder stringBuilderRoots;
-		ExecContext execContext;
-
-		execContext = ExecContextHolder.get();
-		listModuleVersion = RootManager.getListModuleVersion();
-
-		if ((listModuleVersion == null) || listModuleVersion.isEmpty()) {
-			execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, null);
-		} else {
-			stringBuilderRoots = new StringBuilder();
-
-			for (ModuleVersion moduleVersion: listModuleVersion) {
-				if (stringBuilderRoots.length() != 0) {
-					stringBuilderRoots.append(',');
-				}
-
-				stringBuilderRoots.append(moduleVersion.toString());
-			}
-
-			execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, stringBuilderRoots.toString());
-		}
-	}
-
-	/**
-	 * Returns the global ReferencePathMatcherOr.
-	 *
-	 * If the caller modifies the ReferencePathMatcherOr returned it should call the
-	 * setReferencePathMatcherOr to ensure that it is persisted within the
-	 * ExecContext.
-	 *
-	 * @return See description.
-	 */
-	public static ReferencePathMatcherOr getReferencePathMatcherOr() {
-		ExecContext execContext;
-		ReferencePathMatcherOr referencePathMatcherOr;
-
-		execContext = ExecContextHolder.get();
-
-		referencePathMatcherOr = (ReferencePathMatcherOr)execContext.getTransientData(RootManager.class.getName() + ".ReferencePathMatcherOr");
-
-		if (referencePathMatcherOr == null) {
-			int index;
-
-			referencePathMatcherOr = new ReferencePathMatcherOr();
-
-			index = 1;
-
-			do {
-				String stringReferencePathMatcherByElement;
-
-				stringReferencePathMatcherByElement = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + index);
-
-				if (stringReferencePathMatcherByElement == null) {
-					index = 0;
-				} else {
-					referencePathMatcherOr.addReferencePathMatcher(new ReferencePathMatcherByElement(stringReferencePathMatcherByElement, execContext.getModel()));
-				}
-			} while (index++ != 0);
-
-			execContext.setTransientData(RootManager.class.getName() + ".ReferencePathMatcherOr", referencePathMatcherOr);
-		}
-
-		return referencePathMatcherOr;
-	}
-
-	/**
-	 * Persists the ReferencePathMatcherOr within the ExecContext.
-	 *
-	 * This class does not provide a safe encapsulation of the ReferencePathMatcherOr.
-	 * If the caller wants to modify the ReferencePathMatcherOr other than with the
-	 * methods provided by this class, it is expected to obtain it with the
-	 * getReferencePathMatcherOr method and then call this method after having
-	 * modified it. Is it not possible for the caller to create a new
-	 * ReferencePathMatcherOr and set it as the global ReferencePathMatcherOr within
-	 * the class.
-	 *
-	 * Also, only ReferencePathMatcherByElement are supported in this List.
-	 */
-	public static void saveReferencePathMatcherOr() {
-		ReferencePathMatcherOr referencePathMatcherOr;
-		ExecContext execContext;
-		int index;
-
-		referencePathMatcherOr = RootManager.getReferencePathMatcherOr();
-
-		execContext = ExecContextHolder.get();
-
-		execContext.removeProperties(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER);
-
-		index = 1;
-
-		for (ReferencePathMatcher referencePathMatcher: referencePathMatcherOr.getListReferencePathMatcher()) {
-			execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + (index++), ReferencePathMatcherByElement.class.cast(referencePathMatcher).toString());
-		}
-	}
+  /**
+   * ExecContext property that holds the list of root MovuleVersion's.
+   *
+   * The value of this property is a space-separated list of stringified
+   * ModuleVersion.
+   */
+  private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "root-module-versions";
+
+  /**
+   * Prefix of the properties that hold the global ReferencePathMatcherOr.
+   *
+   * This prefix suffixed with a 1-based index specifies a
+   * ReferencePathMatcherByElement.
+   *
+   * The ReferencePathMatcherByElement's are represented with their literal form.
+   */
+  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST = "MODULE_DOES_NOT_EXIST";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
+
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootManager.class.getName() + "ResourceBundle");
+
+  /**
+   * @return List of root {@link ModuleVersion}'s.
+   */
+  @SuppressWarnings("unchecked")
+  public static List<ModuleVersion> getListModuleVersion() {
+    ExecContext execContext;
+    List<ModuleVersion> listModuleVersion;
+
+    execContext = ExecContextHolder.get();
+
+    listModuleVersion = (List<ModuleVersion>)execContext.getTransientData(RootManager.class.getName() + ".ListModuleVersion");
+
+    if (listModuleVersion == null) {
+      String roots;
+
+      roots = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS);
+
+      if (roots == null) {
+        listModuleVersion = new ArrayList<ModuleVersion>();
+      } else {
+        listModuleVersion = new ArrayList<ModuleVersion>();
+
+        for (String root: roots.split(",")) {
+          listModuleVersion.add(new ModuleVersion(root));
+        }
+      }
+
+      execContext.setTransientData(RootManager.class.getName() + ".ListModuleVersion", listModuleVersion);
+    }
+
+    return listModuleVersion;
+  }
+
+  /**
+   * Verifies if a ModuleVersion is contained in the list of ModuleVersion.
+   *
+   * @return See description.
+   */
+  public static boolean containsModuleVersion(ModuleVersion moduleVersion) {
+    return RootManager.getListModuleVersion().contains(moduleVersion);
+  }
+
+  /**
+   * Returns the ModuleVersion corresponding to a NodePath or null
+   * if none.
+   *
+   * Useful for managing the list when duplicate modules are not allowed.
+   *
+   * @return See description.
+   */
+  public static ModuleVersion getModuleVersion(NodePath nodePathModule) {
+    List<ModuleVersion> listModuleVersion;
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    for (ModuleVersion moduleVersion: listModuleVersion) {
+      if (moduleVersion.getNodePath().equals(nodePathModule)) {
+        return moduleVersion;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Adds a ModuleVersion to the list of root ModuleVersion.
+   *
+   * If a ModuleVersion for the same Module is already a root and indAllowDuplicate
+   * is false, the ModuleVersion is not added. replaceModuleVersion must be called in
+   * that case.
+   *
+   * @param moduleVersion New root ModuleVersion.
+   * @param indAllowDuplicateModule Indicates if duplicate Module are allowed.
+   * @return Indicates if the ModuleVersion was actually added (it maybe a
+   *   duplicate).
+   */
+  public static boolean addModuleVersion(ModuleVersion moduleVersion, boolean indAllowDuplicateModule) {
+    List<ModuleVersion> listModuleVersion;
+
+    RootManager.validateModuleVersion(moduleVersion);
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if (listModuleVersion.contains(moduleVersion)) {
+      return false;
+    }
+
+    if (!indAllowDuplicateModule) {
+      for (int i = 0; i < listModuleVersion.size(); i++) {
+        if (listModuleVersion.get(i).getNodePath().equals(moduleVersion.getNodePath())) {
+          return false;
+        }
+      }
+    }
+
+    listModuleVersion.add(moduleVersion);
+    RootManager.saveListModuleVersion();
+
+    return true;
+  }
+
+  /**
+   * Remove a ModuleVersion from the list of root ModuleVersion.
+   *
+   * @param moduleVersion ModuleVersion to remove.
+   * @return Indicates if the ModuleVersion was actually removed (it may not be
+   *   present in the list).
+   */
+  public static boolean removeModuleVersion(ModuleVersion moduleVersion) {
+    List<ModuleVersion> listModuleVersion;
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if (!listModuleVersion.contains(moduleVersion)) {
+      return false;
+    }
+
+    listModuleVersion.remove(moduleVersion);
+    RootManager.saveListModuleVersion();
+
+    return true;
+  }
+
+  /**
+   * Remove all ModuleVersion's from the list of root ModuleVersion.
+   */
+  public static void removeAllModuleVersion() {
+    RootManager.getListModuleVersion().clear();
+    RootManager.saveListModuleVersion();
+  }
+
+  /**
+   * Replaces a ModuleVersion with a new one (presumably having the same Module but
+   * a different Version) in the list of root ModuleVersion.
+   *
+   * @param moduleVersionOrg Original ModuleVersion.
+   * @param moduleVersionNew New ModuleVersion.
+   * @return Indicates if the ModuleVersion was actually replaced (it may not be
+   *   present in the list).
+   */
+  public static boolean replaceModuleVersion(ModuleVersion moduleVersionOrg, ModuleVersion moduleVersionNew) {
+    List<ModuleVersion> listModuleVersion;
+
+    RootManager.validateModuleVersion(moduleVersionNew);
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if (!listModuleVersion.contains(moduleVersionOrg)) {
+      return false;
+    }
+
+    listModuleVersion.set(listModuleVersion.indexOf(moduleVersionOrg), moduleVersionNew);
+    RootManager.saveListModuleVersion();
+
+    return true;
+  }
+
+  /**
+   * Moves a ModuleVersion first in the list of root ModuleVersion.
+   *
+   * @param moduleVersion ModuleVersion to move first.
+   * @return Indicates if the ModuleVersion was actually moved (it may not be
+   *   present in the list).
+   */
+  public static boolean moveFirst(ModuleVersion moduleVersion) {
+    List<ModuleVersion> listModuleVersion;
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if (!listModuleVersion.contains(moduleVersion)) {
+      return false;
+    }
+
+    listModuleVersion.remove(moduleVersion);
+    listModuleVersion.add(0, moduleVersion);
+    RootManager.saveListModuleVersion();
+
+    return true;
+  }
+
+  /**
+   * Moves a ModuleVersion last in the list of root ModuleVersion.
+   *
+   * @param moduleVersion ModuleVersion to move last.
+   * @return Indicates if the ModuleVersion was actually moved (it may not be
+   *   present in the list).
+   */
+  public static boolean moveLast(ModuleVersion moduleVersion) {
+    List<ModuleVersion> listModuleVersion;
+
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if (!listModuleVersion.contains(moduleVersion)) {
+      return false;
+    }
+
+    listModuleVersion.remove(moduleVersion);
+    listModuleVersion.add(listModuleVersion.size(), moduleVersion);
+    RootManager.saveListModuleVersion();
+
+    return true;
+  }
+
+  private static void validateModuleVersion(ModuleVersion moduleVersion) {
+    ExecContext execContext;
+    Model model;
+    Module module;
+    ScmPlugin scmPlugin;
+
+    execContext = ExecContextHolder.get();
+    model = execContext.getModel();
+    module = model.getModule(moduleVersion.getNodePath());
+
+    if (module == null) {
+      throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_MODULE_DOES_NOT_EXIST), moduleVersion));
+    }
+
+    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
+    // We assume the default version, when getVersion returns null, always exists.
+    if (moduleVersion.getVersion() != null) {
+      if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
+        throw new RuntimeExceptionUserError(MessageFormat.format(RootManager.resourceBundle.getString(RootManager.MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST), moduleVersion));
+      }
+    }
+  }
+
+  /**
+   * Persists the list of root ModuleVersion's in the ExecContext.
+   *
+   * This class does not provide a safe encapsulation of the List of root
+   * ModuleVersion's. If the caller wants to modify the List other than with the
+   * methods provided by this class, it is expected to obtain it with the
+   * getListModuleVersion method and then call this method after having modified
+   * it. Is it not possible for the caller to create a new List and set it as
+   * the List of root ModuleVesion's within the class.
+   */
+  public static void saveListModuleVersion() {
+    List<ModuleVersion> listModuleVersion;
+    StringBuilder stringBuilderRoots;
+    ExecContext execContext;
+
+    execContext = ExecContextHolder.get();
+    listModuleVersion = RootManager.getListModuleVersion();
+
+    if ((listModuleVersion == null) || listModuleVersion.isEmpty()) {
+      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, null);
+    } else {
+      stringBuilderRoots = new StringBuilder();
+
+      for (ModuleVersion moduleVersion: listModuleVersion) {
+        if (stringBuilderRoots.length() != 0) {
+          stringBuilderRoots.append(',');
+        }
+
+        stringBuilderRoots.append(moduleVersion.toString());
+      }
+
+      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, stringBuilderRoots.toString());
+    }
+  }
+
+  /**
+   * Returns the global ReferencePathMatcherOr.
+   *
+   * If the caller modifies the ReferencePathMatcherOr returned it should call the
+   * setReferencePathMatcherOr to ensure that it is persisted within the
+   * ExecContext.
+   *
+   * @return See description.
+   */
+  public static ReferencePathMatcherOr getReferencePathMatcherOr() {
+    ExecContext execContext;
+    ReferencePathMatcherOr referencePathMatcherOr;
+
+    execContext = ExecContextHolder.get();
+
+    referencePathMatcherOr = (ReferencePathMatcherOr)execContext.getTransientData(RootManager.class.getName() + ".ReferencePathMatcherOr");
+
+    if (referencePathMatcherOr == null) {
+      int index;
+
+      referencePathMatcherOr = new ReferencePathMatcherOr();
+
+      index = 1;
+
+      do {
+        String stringReferencePathMatcherByElement;
+
+        stringReferencePathMatcherByElement = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + index);
+
+        if (stringReferencePathMatcherByElement == null) {
+          index = 0;
+        } else {
+          referencePathMatcherOr.addReferencePathMatcher(new ReferencePathMatcherByElement(stringReferencePathMatcherByElement, execContext.getModel()));
+        }
+      } while (index++ != 0);
+
+      execContext.setTransientData(RootManager.class.getName() + ".ReferencePathMatcherOr", referencePathMatcherOr);
+    }
+
+    return referencePathMatcherOr;
+  }
+
+  /**
+   * Persists the ReferencePathMatcherOr within the ExecContext.
+   *
+   * This class does not provide a safe encapsulation of the ReferencePathMatcherOr.
+   * If the caller wants to modify the ReferencePathMatcherOr other than with the
+   * methods provided by this class, it is expected to obtain it with the
+   * getReferencePathMatcherOr method and then call this method after having
+   * modified it. Is it not possible for the caller to create a new
+   * ReferencePathMatcherOr and set it as the global ReferencePathMatcherOr within
+   * the class.
+   *
+   * Also, only ReferencePathMatcherByElement are supported in this List.
+   */
+  public static void saveReferencePathMatcherOr() {
+    ReferencePathMatcherOr referencePathMatcherOr;
+    ExecContext execContext;
+    int index;
+
+    referencePathMatcherOr = RootManager.getReferencePathMatcherOr();
+
+    execContext = ExecContextHolder.get();
+
+    execContext.removeProperties(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER);
+
+    index = 1;
+
+    for (ReferencePathMatcher referencePathMatcher: referencePathMatcherOr.getListReferencePathMatcher()) {
+      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + (index++), ReferencePathMatcherByElement.class.cast(referencePathMatcher).toString());
+    }
+  }
 }

@@ -50,199 +50,199 @@ import org.azyva.dragom.model.event.NodeEventListener;
  * @author David Raymond
  */
 public class EventManager {
-	/**
-	 * Keys in mapNodeEventListener.
-	 */
-	private static class NodeEventListenerKey {
-		/**
-		 * Node.
-		 */
-		private Node node;
+  /**
+   * Keys in mapNodeEventListener.
+   */
+  private static class NodeEventListenerKey {
+    /**
+     * Node.
+     */
+    private Node node;
 
-		/**
-		 * Class of the NodeEvent.
-		 */
-		private Class<? extends NodeEvent> classNodeEvent;
+    /**
+     * Class of the NodeEvent.
+     */
+    private Class<? extends NodeEvent> classNodeEvent;
 
-		/**
-		 * Constructor.
-		 *
-		 * @param node Node.
-		 * @param nodeEventClass Class of the NodeEvent.
-		 */
-		private NodeEventListenerKey(Node node, Class<? extends NodeEvent> classNodeEvent) {
-			this.node = node;
-			this.classNodeEvent = classNodeEvent;
-		}
+    /**
+     * Constructor.
+     *
+     * @param node Node.
+     * @param nodeEventClass Class of the NodeEvent.
+     */
+    private NodeEventListenerKey(Node node, Class<? extends NodeEvent> classNodeEvent) {
+      this.node = node;
+      this.classNodeEvent = classNodeEvent;
+    }
 
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result;
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result;
 
-			result = 1;
-			result = (prime * result) + this.classNodeEvent.hashCode();
-			result = (prime * result) + this.node.hashCode();
+      result = 1;
+      result = (prime * result) + this.classNodeEvent.hashCode();
+      result = (prime * result) + this.node.hashCode();
 
-			return result;
-		}
+      return result;
+    }
 
-		@Override
-		public boolean equals(Object other) {
-			if (this == other) {
-				return true;
-			}
+    @Override
+    public boolean equals(Object other) {
+      if (this == other) {
+        return true;
+      }
 
-			if (other == null) {
-				return false;
-			}
+      if (other == null) {
+        return false;
+      }
 
-			if (!(other instanceof NodeEventListenerKey)) {
-				return false;
-			}
+      if (!(other instanceof NodeEventListenerKey)) {
+        return false;
+      }
 
-			NodeEventListenerKey otherNodeEventListenerKey = (NodeEventListenerKey)other;
+      NodeEventListenerKey otherNodeEventListenerKey = (NodeEventListenerKey)other;
 
-			if (this.classNodeEvent != otherNodeEventListenerKey.classNodeEvent) {
-				return false;
-			}
+      if (this.classNodeEvent != otherNodeEventListenerKey.classNodeEvent) {
+        return false;
+      }
 
-			if (!this.node.equals(otherNodeEventListenerKey.node)) {
-				return false;
-			}
+      if (!this.node.equals(otherNodeEventListenerKey.node)) {
+        return false;
+      }
 
-			return true;
-		}
-	}
+      return true;
+    }
+  }
 
-	/**
-	 * Entries in mapNodeEventListener.
-	 */
-	private static class NodeEventListenerEntry {
-		private NodeEventListener<? extends NodeEvent> nodeEventListener;
-		private boolean indChildrenAlso;
+  /**
+   * Entries in mapNodeEventListener.
+   */
+  private static class NodeEventListenerEntry {
+    private NodeEventListener<? extends NodeEvent> nodeEventListener;
+    private boolean indChildrenAlso;
 
-		/**
-		 * Constructor.
-		 *
-		 * @param nodeEventListener NodeEventListener.
-		 * @param indChildrenAlso Indicates if the NodeEventListener is interested in
-		 *   receiving events for children as well.
-		 */
-		private NodeEventListenerEntry(NodeEventListener<? extends NodeEvent> nodeEventListener, boolean indChildrenAlso) {
-			this.nodeEventListener = nodeEventListener;
-			this.indChildrenAlso = indChildrenAlso;
-		}
+    /**
+     * Constructor.
+     *
+     * @param nodeEventListener NodeEventListener.
+     * @param indChildrenAlso Indicates if the NodeEventListener is interested in
+     *   receiving events for children as well.
+     */
+    private NodeEventListenerEntry(NodeEventListener<? extends NodeEvent> nodeEventListener, boolean indChildrenAlso) {
+      this.nodeEventListener = nodeEventListener;
+      this.indChildrenAlso = indChildrenAlso;
+    }
 
-		/**
-		 * @return NodeEventListener.
-		 */
-		public NodeEventListener<? extends NodeEvent> getNodeEventListener() {
-			return this.nodeEventListener;
-		}
+    /**
+     * @return NodeEventListener.
+     */
+    public NodeEventListener<? extends NodeEvent> getNodeEventListener() {
+      return this.nodeEventListener;
+    }
 
-		/**
-		 * @return Indicates if the NodeEventListener is interested in receiving events
-		 * for children as well.
-		 */
-		public boolean isChildrenAlso() {
-			return this.indChildrenAlso;
-		}
-	}
+    /**
+     * @return Indicates if the NodeEventListener is interested in receiving events
+     * for children as well.
+     */
+    public boolean isChildrenAlso() {
+      return this.indChildrenAlso;
+    }
+  }
 
-	private Map<NodeEventListenerKey, List<NodeEventListenerEntry>> mapNodeEventListener;
+  private Map<NodeEventListenerKey, List<NodeEventListenerEntry>> mapNodeEventListener;
 
-	public <NodeEventClass extends NodeEvent> void registerListener(Node node, NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso) {
-		Class<NodeEventClass> classNodeEvent;
-		List<NodeEventListenerEntry> listNodeEventListenerEntry;
+  public <NodeEventClass extends NodeEvent> void registerListener(Node node, NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso) {
+    Class<NodeEventClass> classNodeEvent;
+    List<NodeEventListenerEntry> listNodeEventListenerEntry;
 
-		if (this.mapNodeEventListener == null) {
-			this.mapNodeEventListener = new HashMap<NodeEventListenerKey, List<NodeEventListenerEntry>>();
-		}
+    if (this.mapNodeEventListener == null) {
+      this.mapNodeEventListener = new HashMap<NodeEventListenerKey, List<NodeEventListenerEntry>>();
+    }
 
-		classNodeEvent = EventManager.getClassNodeEvent(nodeEventListener);
+    classNodeEvent = EventManager.getClassNodeEvent(nodeEventListener);
 
-		listNodeEventListenerEntry = this.mapNodeEventListener.get(classNodeEvent);
+    listNodeEventListenerEntry = this.mapNodeEventListener.get(classNodeEvent);
 
-		if (listNodeEventListenerEntry == null) {
-			listNodeEventListenerEntry = new ArrayList<NodeEventListenerEntry>();
-			this.mapNodeEventListener.put(new NodeEventListenerKey(node, classNodeEvent), listNodeEventListenerEntry);
-		}
+    if (listNodeEventListenerEntry == null) {
+      listNodeEventListenerEntry = new ArrayList<NodeEventListenerEntry>();
+      this.mapNodeEventListener.put(new NodeEventListenerKey(node, classNodeEvent), listNodeEventListenerEntry);
+    }
 
-		listNodeEventListenerEntry.add(new NodeEventListenerEntry(nodeEventListener, indChildrenAlso));
-	}
+    listNodeEventListenerEntry.add(new NodeEventListenerEntry(nodeEventListener, indChildrenAlso));
+  }
 
-	public void raiseNodeEvent(NodeEvent nodeEvent) {
-		if ((nodeEvent instanceof ModuleEvent) && (nodeEvent.getNode().getNodeType() != NodeType.MODULE)) {
-			throw new RuntimeException("Module events must be raised on modules.");
-		} else if ((nodeEvent instanceof ClassificationNodeEvent) && (nodeEvent.getNode().getNodeType() != NodeType.CLASSIFICATION)) {
-			throw new RuntimeException("Classification node events must be raised on modules.");
-		}
+  public void raiseNodeEvent(NodeEvent nodeEvent) {
+    if ((nodeEvent instanceof ModuleEvent) && (nodeEvent.getNode().getNodeType() != NodeType.MODULE)) {
+      throw new RuntimeException("Module events must be raised on modules.");
+    } else if ((nodeEvent instanceof ClassificationNodeEvent) && (nodeEvent.getNode().getNodeType() != NodeType.CLASSIFICATION)) {
+      throw new RuntimeException("Classification node events must be raised on modules.");
+    }
 
-		this.dispatchNodeEventParent(nodeEvent.getNode(), nodeEvent);
-	}
+    this.dispatchNodeEventParent(nodeEvent.getNode(), nodeEvent);
+  }
 
-	/**
-	 * Internal {@link NodeEvent} dispatching method.
-	 * <p>
-	 * {@link #raiseNodeEvent} performs some validation whereas this method does the
-	 * actual dispatching, including recursively calling the same method on the
-	 * parents so that {@link NodeEventListener}'s registered on parents with
-	 * indChildrenAlso get notified.
-	 *
-	 * @param nodeEvent NodeEvent.
-	 */
-	@SuppressWarnings("unchecked") // Not able to avoid that one.
-	private <NodeEventClass extends NodeEvent> void dispatchNodeEventParent(Node node, NodeEventClass nodeEvent) {
-		List<NodeEventListenerEntry> listNodeEventListenerEntry;
+  /**
+   * Internal {@link NodeEvent} dispatching method.
+   * <p>
+   * {@link #raiseNodeEvent} performs some validation whereas this method does the
+   * actual dispatching, including recursively calling the same method on the
+   * parents so that {@link NodeEventListener}'s registered on parents with
+   * indChildrenAlso get notified.
+   *
+   * @param nodeEvent NodeEvent.
+   */
+  @SuppressWarnings("unchecked") // Not able to avoid that one.
+  private <NodeEventClass extends NodeEvent> void dispatchNodeEventParent(Node node, NodeEventClass nodeEvent) {
+    List<NodeEventListenerEntry> listNodeEventListenerEntry;
 
-		if (this.mapNodeEventListener != null) {
-			// We iterate through the base classes since NodeEventListener's may have been
-			// registered for NoveEvent base classes.
-			for (Class<? extends Object> classNodeEvent = nodeEvent.getClass(); classNodeEvent != Object.class; classNodeEvent = classNodeEvent.getSuperclass()) {
-				listNodeEventListenerEntry = this.mapNodeEventListener.get(new NodeEventListenerKey(node, NodeEvent.class.getClass().cast(classNodeEvent)));
+    if (this.mapNodeEventListener != null) {
+      // We iterate through the base classes since NodeEventListener's may have been
+      // registered for NoveEvent base classes.
+      for (Class<? extends Object> classNodeEvent = nodeEvent.getClass(); classNodeEvent != Object.class; classNodeEvent = classNodeEvent.getSuperclass()) {
+        listNodeEventListenerEntry = this.mapNodeEventListener.get(new NodeEventListenerKey(node, NodeEvent.class.getClass().cast(classNodeEvent)));
 
-				if (listNodeEventListenerEntry != null) {
-					for (NodeEventListenerEntry nodeEventListenerEntry: listNodeEventListenerEntry) {
-						if (nodeEventListenerEntry.isChildrenAlso() || (nodeEvent.getNode() == node)) {
-							((NodeEventListener<NodeEventClass>)nodeEventListenerEntry.getNodeEventListener()).onEvent(nodeEvent);
-						}
-					}
-				}
-			}
-		}
+        if (listNodeEventListenerEntry != null) {
+          for (NodeEventListenerEntry nodeEventListenerEntry: listNodeEventListenerEntry) {
+            if (nodeEventListenerEntry.isChildrenAlso() || (nodeEvent.getNode() == node)) {
+              ((NodeEventListener<NodeEventClass>)nodeEventListenerEntry.getNodeEventListener()).onEvent(nodeEvent);
+            }
+          }
+        }
+      }
+    }
 
-		if (node.getClassificationNodeParent() != null) {
-			this.dispatchNodeEventParent(node.getClassificationNodeParent(), nodeEvent);
-		}
-	}
+    if (node.getClassificationNodeParent() != null) {
+      this.dispatchNodeEventParent(node.getClassificationNodeParent(), nodeEvent);
+    }
+  }
 
 
-	/**
-	 * Gets the {@link NodeEvent} subclass for a {@link NodeEventListener}.
-	 *
-	 * @param nodeEventListener NodeEventListener.
-	 * @return NodeEvent subclass.
-	 */
-	@SuppressWarnings("unchecked") // Not able to avoid that one.
-	public static <NodeEventClass extends NodeEvent> Class<NodeEventClass> getClassNodeEvent(NodeEventListener<NodeEventClass> nodeEventListener) {
-		Class<?> classNodeEventListener;
-		Type[] arrayTypeInterface;
+  /**
+   * Gets the {@link NodeEvent} subclass for a {@link NodeEventListener}.
+   *
+   * @param nodeEventListener NodeEventListener.
+   * @return NodeEvent subclass.
+   */
+  @SuppressWarnings("unchecked") // Not able to avoid that one.
+  public static <NodeEventClass extends NodeEvent> Class<NodeEventClass> getClassNodeEvent(NodeEventListener<NodeEventClass> nodeEventListener) {
+    Class<?> classNodeEventListener;
+    Type[] arrayTypeInterface;
 
-		classNodeEventListener = nodeEventListener.getClass();
-		arrayTypeInterface = classNodeEventListener.getGenericInterfaces();
+    classNodeEventListener = nodeEventListener.getClass();
+    arrayTypeInterface = classNodeEventListener.getGenericInterfaces();
 
-		for (Type typeInterface: arrayTypeInterface) {
-			if (typeInterface instanceof ParameterizedType) {
-				ParameterizedType parameterizedType = (ParameterizedType)typeInterface;
+    for (Type typeInterface: arrayTypeInterface) {
+      if (typeInterface instanceof ParameterizedType) {
+        ParameterizedType parameterizedType = (ParameterizedType)typeInterface;
 
-				if (parameterizedType.getRawType() == NodeEventListener.class) {
-					Type[] types = parameterizedType.getActualTypeArguments();
-					return (Class<NodeEventClass>)types[0];
-				}
-			}
-		}
+        if (parameterizedType.getRawType() == NodeEventListener.class) {
+          Type[] types = parameterizedType.getActualTypeArguments();
+          return (Class<NodeEventClass>)types[0];
+        }
+      }
+    }
 
-		throw new RuntimeException("Node event class could not be inferred.");
-	}
+    throw new RuntimeException("Node event class could not be inferred.");
+  }
 }

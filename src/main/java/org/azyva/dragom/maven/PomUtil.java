@@ -27,39 +27,39 @@ import java.util.Set;
 import org.azyva.dragom.model.ArtifactGroupId;
 
 public class PomUtil {
-	public static Set<ArtifactGroupId> getSetArtifactGroupIdAggregator(Path pathPom) {
-		Set<ArtifactGroupId> setArtifactGroupIdAggregator;
+  public static Set<ArtifactGroupId> getSetArtifactGroupIdAggregator(Path pathPom) {
+    Set<ArtifactGroupId> setArtifactGroupIdAggregator;
 
-		setArtifactGroupIdAggregator = new HashSet<ArtifactGroupId>();
+    setArtifactGroupIdAggregator = new HashSet<ArtifactGroupId>();
 
-		PomUtil.traverseSubmodulesForSetArtifactGroupIdAggregator(pathPom, setArtifactGroupIdAggregator);
+    PomUtil.traverseSubmodulesForSetArtifactGroupIdAggregator(pathPom, setArtifactGroupIdAggregator);
 
-		return setArtifactGroupIdAggregator;
-	}
+    return setArtifactGroupIdAggregator;
+  }
 
-	private static void traverseSubmodulesForSetArtifactGroupIdAggregator(Path pathPom, Set<ArtifactGroupId> setArtifactGroupIdAggregator) {
-		Pom pom;
-		String groupId;
-		String artifactId;
-		List<String> listSubmodules;
+  private static void traverseSubmodulesForSetArtifactGroupIdAggregator(Path pathPom, Set<ArtifactGroupId> setArtifactGroupIdAggregator) {
+    Pom pom;
+    String groupId;
+    String artifactId;
+    List<String> listSubmodules;
 
-		pom = new Pom();
-		pom.setPathPom(pathPom);
-		pom.loadPom();
+    pom = new Pom();
+    pom.setPathPom(pathPom);
+    pom.loadPom();
 
-		groupId = pom.getResolvedGroupId();
-		artifactId = pom.getArtifactId();
+    groupId = pom.getResolvedGroupId();
+    artifactId = pom.getArtifactId();
 
-		if ((groupId == null) || (artifactId == null)) {
-			throw new RuntimeException("The POM " + pathPom + " does not specify a groupId or an artifactId.");
-		}
+    if ((groupId == null) || (artifactId == null)) {
+      throw new RuntimeException("The POM " + pathPom + " does not specify a groupId or an artifactId.");
+    }
 
-		setArtifactGroupIdAggregator.add(new ArtifactGroupId(groupId, artifactId));
+    setArtifactGroupIdAggregator.add(new ArtifactGroupId(groupId, artifactId));
 
-		listSubmodules = pom.getListSubmodule();
+    listSubmodules = pom.getListSubmodule();
 
-		for (String submodule: listSubmodules) {
-			PomUtil.traverseSubmodulesForSetArtifactGroupIdAggregator(pathPom.getParent().resolve(submodule).resolve("pom.xml"), setArtifactGroupIdAggregator);
-		}
-	}
+    for (String submodule: listSubmodules) {
+      PomUtil.traverseSubmodulesForSetArtifactGroupIdAggregator(pathPom.getParent().resolve(submodule).resolve("pom.xml"), setArtifactGroupIdAggregator);
+    }
+  }
 }

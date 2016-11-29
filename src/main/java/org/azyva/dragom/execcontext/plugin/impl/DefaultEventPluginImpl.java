@@ -44,51 +44,51 @@ import org.azyva.dragom.model.event.support.EventManager;
  * @author David Raymond
  */
 public class DefaultEventPluginImpl implements EventPlugin, ToolLifeCycleExecContextPlugin {
-	EventManager eventManager;
-	EventManager eventManagerTransient;
+  EventManager eventManager;
+  EventManager eventManagerTransient;
 
-	public DefaultEventPluginImpl(ExecContext execContext) {
-	}
+  public DefaultEventPluginImpl(ExecContext execContext) {
+  }
 
-	@Override
-	public <NodeEventClass extends NodeEvent> void registerListener(Node node, NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso, boolean indTransient) {
-		EventManager eventManager;
+  @Override
+  public <NodeEventClass extends NodeEvent> void registerListener(Node node, NodeEventListener<NodeEventClass> nodeEventListener, boolean indChildrenAlso, boolean indTransient) {
+    EventManager eventManager;
 
-		if (indTransient) {
-			if (this.eventManagerTransient == null) {
-				this.eventManagerTransient = new EventManager();
-			}
+    if (indTransient) {
+      if (this.eventManagerTransient == null) {
+        this.eventManagerTransient = new EventManager();
+      }
 
-			eventManager = this.eventManagerTransient;
-		} else {
-			if (this.eventManager == null) {
-				this.eventManager = new EventManager();
-			}
+      eventManager = this.eventManagerTransient;
+    } else {
+      if (this.eventManager == null) {
+        this.eventManager = new EventManager();
+      }
 
-			eventManager = this.eventManager;
-		}
+      eventManager = this.eventManager;
+    }
 
-		eventManager.registerListener(node, nodeEventListener, indChildrenAlso);
-	}
+    eventManager.registerListener(node, nodeEventListener, indChildrenAlso);
+  }
 
-	@Override
-	public void raiseNodeEvent(NodeEvent nodeEvent) {
-		if (this.eventManager != null) {
-			this.eventManager.raiseNodeEvent(nodeEvent);
-		}
-	}
+  @Override
+  public void raiseNodeEvent(NodeEvent nodeEvent) {
+    if (this.eventManager != null) {
+      this.eventManager.raiseNodeEvent(nodeEvent);
+    }
+  }
 
-	@Override
-	public boolean isTransient() {
-		return false;
-	}
+  @Override
+  public boolean isTransient() {
+    return false;
+  }
 
-	@Override
-	public void startTool() {
-	}
+  @Override
+  public void startTool() {
+  }
 
-	@Override
-	public void endTool() {
-		this.eventManagerTransient = null;
-	}
+  @Override
+  public void endTool() {
+    this.eventManagerTransient = null;
+  }
 }

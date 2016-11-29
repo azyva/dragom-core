@@ -49,102 +49,102 @@ import org.azyva.dragom.execcontext.plugin.ExecContextPluginFactory;
  *   the ExecContextPluginFactory.
  */
 public class GenericExecContextPluginFactory<ExecContextPluginInterface extends ExecContextPlugin> implements ExecContextPluginFactory<ExecContextPluginInterface> {
-	/**
-	 * Keys in the Map of instantiated {@link ExecContextPlugin}'s to reuse
-	 * ExecContextPlugin instances.
-	 */
-	private static class ExecContextPluginKey {
-		/**
-		 * {@link ExecContextPlugin} implementation class.
-		 */
-		Class<? extends ExecContextPlugin> classExecContextPluginImpl;
+  /**
+   * Keys in the Map of instantiated {@link ExecContextPlugin}'s to reuse
+   * ExecContextPlugin instances.
+   */
+  private static class ExecContextPluginKey {
+    /**
+     * {@link ExecContextPlugin} implementation class.
+     */
+    Class<? extends ExecContextPlugin> classExecContextPluginImpl;
 
-		/**
-		 * {@link ExecContext}.
-		 */
-		ExecContext execContext;
+    /**
+     * {@link ExecContext}.
+     */
+    ExecContext execContext;
 
-		ExecContextPluginKey(Class<? extends ExecContextPlugin> classExecContextPluginImpl, ExecContext execContext) {
-			this.classExecContextPluginImpl = classExecContextPluginImpl;
-			this.execContext = execContext;
-		}
+    ExecContextPluginKey(Class<? extends ExecContextPlugin> classExecContextPluginImpl, ExecContext execContext) {
+      this.classExecContextPluginImpl = classExecContextPluginImpl;
+      this.execContext = execContext;
+    }
 
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result;
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result;
 
-			result = 1;
-			result = (prime * result) + this.classExecContextPluginImpl.hashCode();
-			result = (prime * result) + this.execContext.hashCode();
+      result = 1;
+      result = (prime * result) + this.classExecContextPluginImpl.hashCode();
+      result = (prime * result) + this.execContext.hashCode();
 
-			return result;
-		}
+      return result;
+    }
 
-		@Override
-		public boolean equals(Object other) {
-			ExecContextPluginKey execContextPluginKeyOther;
+    @Override
+    public boolean equals(Object other) {
+      ExecContextPluginKey execContextPluginKeyOther;
 
-			if (this == other) {
-				return true;
-			}
+      if (this == other) {
+        return true;
+      }
 
-			if (other == null) {
-				return false;
-			}
+      if (other == null) {
+        return false;
+      }
 
-			if (!(other instanceof ExecContextPluginKey)) {
-				return false;
-			}
+      if (!(other instanceof ExecContextPluginKey)) {
+        return false;
+      }
 
-			execContextPluginKeyOther = (ExecContextPluginKey)other;
+      execContextPluginKeyOther = (ExecContextPluginKey)other;
 
-			if (!this.classExecContextPluginImpl
-					.equals(execContextPluginKeyOther.classExecContextPluginImpl)) {
-				return false;
-			}
+      if (!this.classExecContextPluginImpl
+          .equals(execContextPluginKeyOther.classExecContextPluginImpl)) {
+        return false;
+      }
 
-			if (!this.execContext.equals(execContextPluginKeyOther.execContext)) {
-				return false;
-			}
+      if (!this.execContext.equals(execContextPluginKeyOther.execContext)) {
+        return false;
+      }
 
-			return true;
-		}
-	}
+      return true;
+    }
+  }
 
-	private static Map<ExecContextPluginKey, ExecContextPlugin> mapExecContextPlugin = new HashMap<ExecContextPluginKey, ExecContextPlugin>();
+  private static Map<ExecContextPluginKey, ExecContextPlugin> mapExecContextPlugin = new HashMap<ExecContextPluginKey, ExecContextPlugin>();
 
-	Class<ExecContextPluginInterface> classExecContextPluginImpl;
+  Class<ExecContextPluginInterface> classExecContextPluginImpl;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param classExecContextPluginImpl Class implementing the {@link ExecContextPlugin}.
-	 */
-	public GenericExecContextPluginFactory(Class<ExecContextPluginInterface> classExecContextPluginImpl) {
-		this.classExecContextPluginImpl = classExecContextPluginImpl;
-	}
+  /**
+   * Constructor.
+   *
+   * @param classExecContextPluginImpl Class implementing the {@link ExecContextPlugin}.
+   */
+  public GenericExecContextPluginFactory(Class<ExecContextPluginInterface> classExecContextPluginImpl) {
+    this.classExecContextPluginImpl = classExecContextPluginImpl;
+  }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public ExecContextPluginInterface getExecContextPlugin(ExecContext execContext) {
-		ExecContextPluginKey execContextPluginKey;
-		ExecContextPluginInterface execContextPlugin;
+  @Override
+  @SuppressWarnings("unchecked")
+  public ExecContextPluginInterface getExecContextPlugin(ExecContext execContext) {
+    ExecContextPluginKey execContextPluginKey;
+    ExecContextPluginInterface execContextPlugin;
 
-		execContextPluginKey = new ExecContextPluginKey(this.classExecContextPluginImpl, execContext);
-		execContextPlugin = (ExecContextPluginInterface)GenericExecContextPluginFactory.mapExecContextPlugin.get(execContextPluginKey);
+    execContextPluginKey = new ExecContextPluginKey(this.classExecContextPluginImpl, execContext);
+    execContextPlugin = (ExecContextPluginInterface)GenericExecContextPluginFactory.mapExecContextPlugin.get(execContextPluginKey);
 
-		if (execContextPlugin != null) {
-			return execContextPlugin;
-		} else {
-			try {
-				execContextPlugin = this.classExecContextPluginImpl.getConstructor(ExecContext.class).newInstance(execContext);
-				GenericExecContextPluginFactory.mapExecContextPlugin.put(execContextPluginKey, execContextPlugin);
+    if (execContextPlugin != null) {
+      return execContextPlugin;
+    } else {
+      try {
+        execContextPlugin = this.classExecContextPluginImpl.getConstructor(ExecContext.class).newInstance(execContext);
+        GenericExecContextPluginFactory.mapExecContextPlugin.put(execContextPluginKey, execContextPlugin);
 
-				return execContextPlugin;
-			} catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
+        return execContextPlugin;
+      } catch (NoSuchMethodException | IllegalAccessException | InstantiationException | InvocationTargetException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
 }

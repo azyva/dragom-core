@@ -28,26 +28,26 @@ import org.azyva.dragom.model.plugin.ClassificationNodePlugin;
  * @author David Raymond
  */
 public abstract class ClassificationNodePluginAbstractImpl extends NodePluginAbstractImpl implements ClassificationNodePlugin {
-	/**
-	 * Constructor.
-	 *
-	 * @param classificationNode ClassificationNode.
-	 */
-	protected ClassificationNodePluginAbstractImpl(ClassificationNode classificationNode) {
-		super(classificationNode);
-	}
+  /**
+   * Constructor.
+   *
+   * @param classificationNode ClassificationNode.
+   */
+  protected ClassificationNodePluginAbstractImpl(ClassificationNode classificationNode) {
+    super(classificationNode);
+  }
 
-	@Override
-	public ClassificationNode getClassificationNode() {
-		return (ClassificationNode)this.getNode();
-	}
+  @Override
+  public ClassificationNode getClassificationNode() {
+    return (ClassificationNode)this.getNode();
+  }
 
-	/**
-	 * @return String to help recognize the ClassificationNodePlugin instance, in logs
-	 * for example.
-	 */
-	@Override
-	public String toString() {
-		return this.getClass().getName() + " extends ClassificationNodePluginAbstractImpl [classificationNode=" + this.getClassificationNode() + "]";
-	}
+  /**
+   * @return String to help recognize the ClassificationNodePlugin instance, in logs
+   * for example.
+   */
+  @Override
+  public String toString() {
+    return this.getClass().getName() + " extends ClassificationNodePluginAbstractImpl [classificationNode=" + this.getClassificationNode() + "]";
+  }
 }

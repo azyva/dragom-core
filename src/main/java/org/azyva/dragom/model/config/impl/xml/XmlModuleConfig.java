@@ -35,8 +35,8 @@ import org.azyva.dragom.model.config.NodeType;
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "module")
 public class XmlModuleConfig extends XmlNodeConfig implements ModuleConfig {
-	@Override
-	public NodeType getNodeType() {
-		return NodeType.MODULE;
-	}
+  @Override
+  public NodeType getNodeType() {
+    return NodeType.MODULE;
+  }
 }

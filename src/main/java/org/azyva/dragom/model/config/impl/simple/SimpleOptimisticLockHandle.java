@@ -28,45 +28,45 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
  * @author David Raymond
  */
 public class SimpleOptimisticLockHandle implements OptimisticLockHandle {
-	/**
-	 * Revision number.
-	 * <p>
-	 * Starts at 1. 0 means the {@link OptimisticLockHandle} is not locked.
-	 */
-	private int revision;
+  /**
+   * Revision number.
+   * <p>
+   * Starts at 1. 0 means the {@link OptimisticLockHandle} is not locked.
+   */
+  private int revision;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param revision
-	 */
-	SimpleOptimisticLockHandle(int revision) {
-		this.revision = revision;
-	}
+  /**
+   * Constructor.
+   *
+   * @param revision
+   */
+  SimpleOptimisticLockHandle(int revision) {
+    this.revision = revision;
+  }
 
-	@Override
-	public boolean isLocked() {
-		return this.revision != 0;
-	}
+  @Override
+  public boolean isLocked() {
+    return this.revision != 0;
+  }
 
-	@Override
-	public void clearLock() {
-		this.revision = 0;
-	}
+  @Override
+  public void clearLock() {
+    this.revision = 0;
+  }
 
-	/**
-	 * @return Revision number.
-	 */
-	int getRevision() {
-		return this.revision;
-	}
+  /**
+   * @return Revision number.
+   */
+  int getRevision() {
+    return this.revision;
+  }
 
-	/**
-	 * Sets the revision number.
-	 *
-	 * @param See description.
-	 */
-	void setRevision(int revision) {
-		this.revision = revision;
-	}
+  /**
+   * Sets the revision number.
+   *
+   * @param See description.
+   */
+  void setRevision(int revision) {
+    this.revision = revision;
+  }
 }

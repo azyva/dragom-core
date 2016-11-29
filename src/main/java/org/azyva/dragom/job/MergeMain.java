@@ -99,11 +99,6 @@ import org.slf4j.LoggerFactory;
  * Version's of the same Module in user workspace directories, an
  * RuntimeExceptionUserError will likely be raised.
  * <p>
- * In all cases below where merge or diverging commits are mentioned, commits that
- * simply change the ArtifactVersion of the Module or the Version of its
- * references are not considered. These commits are recognized with the commit
- * attributes "dragom-version-change" and "dragom-reference-version-change".
- * <p>
  * The actual merges on the ModuleVersion's are performed using
  * {@link ScmPlugin#merge}, ignoring commits that simply change the
  * ArtifactVersion of the source Module. These commits are recognized with the
@@ -120,302 +115,302 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class MergeMain extends RootModuleVersionJobAbstractImpl {
-	/**
-	 * Logger for the class.
-	 */
-	private static final Logger logger = LoggerFactory.getLogger(MergeMain.class);
+  /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(MergeMain.class);
 
-	/**
-	 * Runtime property of type {@link AlwaysNeverAskUserResponse} that indicates if a
-	 * previously established destination {@link Version} can be reused.
-	 */
-	private static final String RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION = "CAN_REUSE_DEST_VERSION";
+  /**
+   * Runtime property of type {@link AlwaysNeverAskUserResponse} that indicates if a
+   * previously established destination {@link Version} can be reused.
+   */
+  private static final String RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION = "CAN_REUSE_DEST_VERSION";
 
-	/**
-	 * Runtime property that specifies the destination {@link Version} to reuse.
-	 */
-	private static final String RUNTIME_PROPERTY_REUSE_DEST_VERSION = "REUSE_DEST_VERSION";
+  /**
+   * Runtime property that specifies the destination {@link Version} to reuse.
+   */
+  private static final String RUNTIME_PROPERTY_REUSE_DEST_VERSION = "REUSE_DEST_VERSION";
 
-	/**
-	 * Runtime property of type {@link AlwaysNeverAskUserResponse} that specifies if
-	 * processing should continue if merge conflicts are encountered.
-	 */
-	private static final String RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS = "CONTINUE_ON_MERGE_CONFLICTS";
+  /**
+   * Runtime property of type {@link AlwaysNeverAskUserResponse} that specifies if
+   * processing should continue if merge conflicts are encountered.
+   */
+  private static final String RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS = "CONTINUE_ON_MERGE_CONFLICTS";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED = "DEST_VERSION_AUTOMATICALLY_REUSED";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED = "DEST_VERSION_AUTOMATICALLY_REUSED";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_DEST_VERSION = "INPUT_DEST_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_DEST_VERSION = "INPUT_DEST_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION = "AUTOMATICALLY_REUSE_DEST_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION = "AUTOMATICALLY_REUSE_DEST_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST = "SRC_MERGED_INTO_DEST";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST = "SRC_MERGED_INTO_DEST";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION";
 
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeMain.class.getName() + "ResourceBundle");
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeMain.class.getName() + "ResourceBundle");
 
-	/**
-	 * Constructor.
-	 *
-	 * @param listModuleVersionRoot List of root ModuleVersion's within which new
-	 *   static Version's must be created.
-	 */
-	public MergeMain(List<ModuleVersion> listModuleVersionRoot) {
-		super(listModuleVersionRoot);
+  /**
+   * Constructor.
+   *
+   * @param listModuleVersionRoot List of root ModuleVersion's within which new
+   *   static Version's must be created.
+   */
+  public MergeMain(List<ModuleVersion> listModuleVersionRoot) {
+    super(listModuleVersionRoot);
 
-		this.setupReferencePathMatcherForProjectCode();
-		this.setIndHandleDynamicVersion(false);
-	}
+    this.setupReferencePathMatcherForProjectCode();
+    this.setIndHandleDynamicVersion(false);
+  }
 
-	/**
-	 * Visits a matched {@link ModuleVersion} in the context of traversing the
-	 * ReferencePath for performing a merge. The {@link Version} of the module must be
-	 * static.
-	 *
-	 * @param reference Reference to the matched ModuleVersion for which a merge
-	 *   has to be performed.
-	 * @return Indicates if children must be visited. true is always returned as each
-	 *   matched ModuleVersion is merged independently.
-	 */
-	@Override
-	protected boolean visitMatchedModuleVersion(Reference reference) {
-		ExecContext execContext;
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		WorkspacePlugin workspacePlugin;
-		Model model;
-		ModuleVersion moduleVersionSrc;
-		Module module;
-		ScmPlugin scmPlugin;
-		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDestVersion;
-		Version versionReuseDest;
-		String runtimeProperty;
-		Version versionDest;
-		ModuleVersion moduleVersionDest;
-		WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
-		Path pathModuleWorkspace;
-		List<ScmPlugin.Commit> listCommit;
-		Iterator<ScmPlugin.Commit> iteratorCommit;
+  /**
+   * Visits a matched {@link ModuleVersion} in the context of traversing the
+   * ReferencePath for performing a merge. The {@link Version} of the module must be
+   * static.
+   *
+   * @param reference Reference to the matched ModuleVersion for which a merge
+   *   has to be performed.
+   * @return Indicates if children must be visited. true is always returned as each
+   *   matched ModuleVersion is merged independently.
+   */
+  @Override
+  protected boolean visitMatchedModuleVersion(Reference reference) {
+    ExecContext execContext;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    WorkspacePlugin workspacePlugin;
+    Model model;
+    ModuleVersion moduleVersionSrc;
+    Module module;
+    ScmPlugin scmPlugin;
+    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDestVersion;
+    Version versionReuseDest;
+    String runtimeProperty;
+    Version versionDest;
+    ModuleVersion moduleVersionDest;
+    WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
+    Path pathModuleWorkspace;
+    List<ScmPlugin.Commit> listCommit;
+    Iterator<ScmPlugin.Commit> iteratorCommit;
 
-		this.referencePath.add(reference);
+    this.referencePath.add(reference);
 
-		execContext = ExecContextHolder.get();
-		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
-		workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
-		model = execContext.getModel();
-		moduleVersionSrc = reference.getModuleVersion();
-		module = model.getModule(moduleVersionSrc.getNodePath());
-		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
+    model = execContext.getModel();
+    moduleVersionSrc = reference.getModuleVersion();
+    module = model.getModule(moduleVersionSrc.getNodePath());
+    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-		try {
-			//********************************************************************************
-			// Determine the destination Version to merge the source matched ModuleVersion
-			// into.
-			//********************************************************************************
+    try {
+      //********************************************************************************
+      // Determine the destination Version to merge the source matched ModuleVersion
+      // into.
+      //********************************************************************************
 
-			alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION));
+      alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION));
 
-			runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION);
+      runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION);
 
-			if (runtimeProperty != null) {
-				versionReuseDest = new Version(runtimeProperty);
-			} else {
-				versionReuseDest = null;
+      if (runtimeProperty != null) {
+        versionReuseDest = new Version(runtimeProperty);
+      } else {
+        versionReuseDest = null;
 
-				if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
-					// Normally if the runtime property CAN_REUSE_DEST_VERSION is ALWAYS the
-					// REUSE_DEST_VERSION runtime property should also be set. But since these
-					// properties are independent and stored externally, it can happen that they
-					// are not synchronized. We make an adjustment here to avoid problems.
-					alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.ASK;
-				}
-			}
+        if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
+          // Normally if the runtime property CAN_REUSE_DEST_VERSION is ALWAYS the
+          // REUSE_DEST_VERSION runtime property should also be set. But since these
+          // properties are independent and stored externally, it can happen that they
+          // are not synchronized. We make an adjustment here to avoid problems.
+          alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.ASK;
+        }
+      }
 
-			if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED), moduleVersionSrc, versionReuseDest));
-				versionDest = versionReuseDest;
-			} else {
-				versionDest =
-						Util.getInfoVersion(
-								null,
-								scmPlugin,
-								userInteractionCallbackPlugin,
-								MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_INPUT_DEST_VERSION), moduleVersionSrc),
-								versionReuseDest);
+      if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED), moduleVersionSrc, versionReuseDest));
+        versionDest = versionReuseDest;
+      } else {
+        versionDest =
+            Util.getInfoVersion(
+                null,
+                scmPlugin,
+                userInteractionCallbackPlugin,
+                MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_INPUT_DEST_VERSION), moduleVersionSrc),
+                versionReuseDest);
 
-				runtimePropertiesPlugin.setProperty(null, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION, versionDest.toString());
+        runtimePropertiesPlugin.setProperty(null, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION, versionDest.toString());
 
-				// The result is not useful. We only want to adjust the runtime property which
-				// will be reused the next time around.
-				Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-						runtimePropertiesPlugin,
-						MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION,
-						userInteractionCallbackPlugin,
-						MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION), versionDest));
-			}
+        // The result is not useful. We only want to adjust the runtime property which
+        // will be reused the next time around.
+        Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+            runtimePropertiesPlugin,
+            MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION,
+            userInteractionCallbackPlugin,
+            MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION), versionDest));
+      }
 
-			moduleVersionDest = new ModuleVersion(module.getNodePath(), versionDest);
+      moduleVersionDest = new ModuleVersion(module.getNodePath(), versionDest);
 
-			//********************************************************************************
-			// Ensure destination ModuleVersion is in a user workspace directory.
-			//********************************************************************************
+      //********************************************************************************
+      // Ensure destination ModuleVersion is in a user workspace directory.
+      //********************************************************************************
 
-			workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersionDest);
+      workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersionDest);
 
-			if (!workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+      if (!workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
-				try {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
+        try {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
 
-					scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
-				} catch (RuntimeException re) {
-					workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
-					pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
-					throw re;
-				} finally {
-					if (pathModuleWorkspace != null) {
-						workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-					}
-				}
-			} else {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
-			}
+          scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
+        } catch (RuntimeException re) {
+          workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
+          pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
+          throw re;
+        } finally {
+          if (pathModuleWorkspace != null) {
+            workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+          }
+        }
+      } else {
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      }
 
-			//********************************************************************************
-			// We have the source and destination ModuleVersion. We are ready to perform the
-			// actual merge.
-			//********************************************************************************
+      //********************************************************************************
+      // We have the source and destination ModuleVersion. We are ready to perform the
+      // actual merge.
+      //********************************************************************************
 
-			MergeMain.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
+      MergeMain.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
+//??? probably support specifying if diverging commits on main are allowed.
+      listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
+      iteratorCommit = listCommit.iterator();
 
-			listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
-			iteratorCommit = listCommit.iterator();
+      while (iteratorCommit.hasNext()) {
+        ScmPlugin.Commit commit;
 
-			while (iteratorCommit.hasNext()) {
-				ScmPlugin.Commit commit;
+        commit = iteratorCommit.next();
 
-				commit = iteratorCommit.next();
+        if (!commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE)) {
+          iteratorCommit.remove();
+        }
+      }
 
-				if (!commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE)) {
-					iteratorCommit.remove();
-				}
-			}
+      if (listCommit.isEmpty()) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+      } else {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, listCommit));
+      }
 
-			if (listCommit.isEmpty()) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
-			} else {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, listCommit));
-			}
+      if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
+        // The return value not important since the caller is expected to check for
+        // Util.isAbort.
+        return true;
+      }
 
-			if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
-				// The return value not important since the caller is expected to check for
-				// Util.isAbort.
-				return true;
-			}
+      // ScmPlugin.merge ensures that the working directory is synchronized.
+      if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
+        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
-			// ScmPlugin.merge ensures that the working directory is synchronized.
-			if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
-				this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+        // Will have call Util.setAbort in case we must not continue.
+        MergeMain.handleContinueOnMergeConflicts();
 
-				// Will have call Util.setAbort in case we must not continue.
-				MergeMain.handleContinueOnMergeConflicts();
+        // The return value not important since the caller is expected to check for
+        // Util.isAbort.
+        return true;
+      }
 
-				// The return value not important since the caller is expected to check for
-				// Util.isAbort.
-				return true;
-			}
+      this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+    } finally {
+      this.referencePath.removeLeafReference();
+    }
 
-			this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
-		} finally {
-			this.referencePath.removeLeafReference();
-		}
+    return true;
+  }
 
-		return true;
-	}
+  /**
+   * Handles the case where merge conflicts have occurred and we need to know if we
+   * must continue with the next matching {@link ModuleVersion}.
+   * <p>
+   * If we must not continue, {@link Util#setAbort} will have been called.
+   */
+  private static void handleContinueOnMergeConflicts() {
+    ExecContext execContext;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseContinueOnMergeConflicts;
 
-	/**
-	 * Handles the case where merge conflicts have occurred and we need to know if we
-	 * must continue with the next matching {@link ModuleVersion}.
-	 * <p>
-	 * If we must not continue, {@link Util#setAbort} will have been called.
-	 */
-	private static void handleContinueOnMergeConflicts() {
-		ExecContext execContext;
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseContinueOnMergeConflicts;
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		execContext = ExecContextHolder.get();
-		runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+        runtimePropertiesPlugin,
+        MergeMain.RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS,
+        userInteractionCallbackPlugin,
+        MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION));
 
-		alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-				runtimePropertiesPlugin,
-				MergeMain.RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS,
-				userInteractionCallbackPlugin,
-				MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION));
-
-		switch (alwaysNeverAskUserResponseContinueOnMergeConflicts) {
-		case ALWAYS:
-			userInteractionCallbackPlugin.provideInfo(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION));
-			break;
-		case NEVER:
-			Util.setAbort();
-			break;
-		case ASK:
-			break;
-		}
-	}
+    switch (alwaysNeverAskUserResponseContinueOnMergeConflicts) {
+    case ALWAYS:
+      userInteractionCallbackPlugin.provideInfo(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION));
+      break;
+    case NEVER:
+      Util.setAbort();
+      break;
+    case ASK:
+      break;
+    }
+  }
 }

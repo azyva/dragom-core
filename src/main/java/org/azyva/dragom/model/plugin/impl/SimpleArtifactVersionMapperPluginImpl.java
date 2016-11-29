@@ -34,17 +34,17 @@ import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
  * @author David Raymond
  */
 public class SimpleArtifactVersionMapperPluginImpl extends ModulePluginAbstractImpl implements ArtifactVersionMapperPlugin {
-	public SimpleArtifactVersionMapperPluginImpl(Module module) {
-		super(module);
-	}
+  public SimpleArtifactVersionMapperPluginImpl(Module module) {
+    super(module);
+  }
 
-	@Override
-	public Version mapArtifactVersionToVersion(ArtifactVersion artifactVersion) {
-		return artifactVersion.getCorrespondingVersion();
-	}
+  @Override
+  public Version mapArtifactVersionToVersion(ArtifactVersion artifactVersion) {
+    return artifactVersion.getCorrespondingVersion();
+  }
 
-	@Override
-	public ArtifactVersion mapVersionToArtifactVersion(Version version) {
-		return version.getCorrespondingArtifactVersion();
-	}
+  @Override
+  public ArtifactVersion mapVersionToArtifactVersion(Version version) {
+    return version.getCorrespondingArtifactVersion();
+  }
 }

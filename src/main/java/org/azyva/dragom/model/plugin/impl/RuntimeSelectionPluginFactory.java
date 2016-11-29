@@ -73,229 +73,229 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class RuntimeSelectionPluginFactory implements PluginFactory {
-	/**
-	 * Prefix for the runtime property specifying the specific plugin ID to delegate
-	 * to.
-	 */
-	private static final String RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID = "SPECIFIC_PLUGIN_ID.";
+  /**
+   * Prefix for the runtime property specifying the specific plugin ID to delegate
+   * to.
+   */
+  private static final String RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID = "SPECIFIC_PLUGIN_ID.";
 
-	/**
-	 * Prefix for the runtime property of that indicates if letting the user specify
-	 * the plugin ID is allowed.
-	 */
-	private static final String RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID = "IND_ALLOW_USER_SPECIFIED_PLUGIN_ID.";
+  /**
+   * Prefix for the runtime property of that indicates if letting the user specify
+   * the plugin ID is allowed.
+   */
+  private static final String RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID = "IND_ALLOW_USER_SPECIFIED_PLUGIN_ID.";
 
-	/**
-	 * Prefix for the runtime property of type AlwaysNeverAskUserResponse that
-	 * indicates if a previously selected plugin ID can be reused.
-	 */
-	private static final String RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID = "CAN_REUSE_PLUGIN_ID.";
+  /**
+   * Prefix for the runtime property of type AlwaysNeverAskUserResponse that
+   * indicates if a previously selected plugin ID can be reused.
+   */
+  private static final String RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID = "CAN_REUSE_PLUGIN_ID.";
 
-	/**
-	 * Prefix for the runtime property that specifies the plugin ID to reuse.
-	 */
-	private static final String RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID = "REUSE_PLUGIN_ID.";
+  /**
+   * Prefix for the runtime property that specifies the plugin ID to reuse.
+   */
+  private static final String RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID = "REUSE_PLUGIN_ID.";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED = "PLUGIN_ID_SPECIFIED";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED = "PLUGIN_ID_SPECIFIED";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_PLUGIN_ID_AUTOMATICALLY_REUSED = "PLUGIN_ID_AUTOMATICALLY_REUSED";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_PLUGIN_ID_AUTOMATICALLY_REUSED = "PLUGIN_ID_AUTOMATICALLY_REUSED";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_PLUGIN_ID = "INPUT_PLUGIN_ID";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_PLUGIN_ID = "INPUT_PLUGIN_ID";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT = "INPUT_PLUGIN_ID_WITH_DEFAULT";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT = "INPUT_PLUGIN_ID_WITH_DEFAULT";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID = "AUTOMATICALLY_REUSE_PLUGIN_ID";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID = "AUTOMATICALLY_REUSE_PLUGIN_ID";
 
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RuntimeSelectionPluginFactory.class.getName() + "ResourceBundle");
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RuntimeSelectionPluginFactory.class.getName() + "ResourceBundle");
 
-	/**
-	 * RuntimeSelectionPluginFactory singleton.
-	 */
-	private static RuntimeSelectionPluginFactory runtimeSelectionPluginFactory;
+  /**
+   * RuntimeSelectionPluginFactory singleton.
+   */
+  private static RuntimeSelectionPluginFactory runtimeSelectionPluginFactory;
 
-	/**
-	 * Used to detect cycles when resolving a {@link NodePlugin} at runtime.
-	 */
-	private static class CurrentPluginRequest {
-		/**
-		 * Class of the requested NodePlugin interface for which a request is being
-		 * processed on the current thread.
-		 */
-		private Class<? extends NodePlugin> classNodePlugin;
+  /**
+   * Used to detect cycles when resolving a {@link NodePlugin} at runtime.
+   */
+  private static class CurrentPluginRequest {
+    /**
+     * Class of the requested NodePlugin interface for which a request is being
+     * processed on the current thread.
+     */
+    private Class<? extends NodePlugin> classNodePlugin;
 
-		/**
-		 * Node for which a request is being processed on the current thread.
-		 */
-		private Node node;
+    /**
+     * Node for which a request is being processed on the current thread.
+     */
+    private Node node;
 
-		/**
-		 * Constructor.
-		 *
-		 * @param classNodePlugin Class of the {@link NodePlugin} interface.
-		 * @param node Node.
-		 */
-		public CurrentPluginRequest(Class<? extends NodePlugin> classNodePlugin, Node node) {
-			this.classNodePlugin = classNodePlugin;
-			this.node = node;
-		}
+    /**
+     * Constructor.
+     *
+     * @param classNodePlugin Class of the {@link NodePlugin} interface.
+     * @param node Node.
+     */
+    public CurrentPluginRequest(Class<? extends NodePlugin> classNodePlugin, Node node) {
+      this.classNodePlugin = classNodePlugin;
+      this.node = node;
+    }
 
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result;
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result;
 
-			result = 1;
+      result = 1;
 
-			result = (prime * result) + this.classNodePlugin.hashCode();
-			result = (prime * result) + this.node.hashCode();
+      result = (prime * result) + this.classNodePlugin.hashCode();
+      result = (prime * result) + this.node.hashCode();
 
-			return result;
-		}
+      return result;
+    }
 
-		@Override
-		public boolean equals(Object other) {
-			CurrentPluginRequest currentPluginRequestOther;
+    @Override
+    public boolean equals(Object other) {
+      CurrentPluginRequest currentPluginRequestOther;
 
-			currentPluginRequestOther = (CurrentPluginRequest)other;
+      currentPluginRequestOther = (CurrentPluginRequest)other;
 
-			return    (this.classNodePlugin == currentPluginRequestOther.classNodePlugin)
-			       && (this.node == currentPluginRequestOther.node);
-		}
-	}
+      return    (this.classNodePlugin == currentPluginRequestOther.classNodePlugin)
+             && (this.node == currentPluginRequestOther.node);
+    }
+  }
 
-	/**
-	 * Set of current {@link NodePlugin} requests.
-	 * <p>
-	 * Used to avoid cycles when resolving a NodePlugin at runtime.
-	 */
-	private static ThreadLocal<Set<CurrentPluginRequest>> threadLocalCurrentPluginRequest = new ThreadLocal<Set<CurrentPluginRequest>>();
+  /**
+   * Set of current {@link NodePlugin} requests.
+   * <p>
+   * Used to avoid cycles when resolving a NodePlugin at runtime.
+   */
+  private static ThreadLocal<Set<CurrentPluginRequest>> threadLocalCurrentPluginRequest = new ThreadLocal<Set<CurrentPluginRequest>>();
 
-	/**
-	 * @return The singleton {@link RuntimeSelectionPluginFactory}.
-	 */
-	public static synchronized PluginFactory getInstance() {
-		if (RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory == null) {
-			RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory = new RuntimeSelectionPluginFactory();
-		}
+  /**
+   * @return The singleton {@link RuntimeSelectionPluginFactory}.
+   */
+  public static synchronized PluginFactory getInstance() {
+    if (RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory == null) {
+      RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory = new RuntimeSelectionPluginFactory();
+    }
 
-		return RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory;
-	}
+    return RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory;
+  }
 
-	@Override
-	public Class<? extends NodePlugin> getDefaultClassNodePlugin() {
-		return null;
-	}
+  @Override
+  public Class<? extends NodePlugin> getDefaultClassNodePlugin() {
+    return null;
+  }
 
-	@Override
-	public String getDefaultPluginId(Class<? extends NodePlugin> classNodePlugin) {
-		return null;
-	}
+  @Override
+  public String getDefaultPluginId(Class<? extends NodePlugin> classNodePlugin) {
+    return null;
+  }
 
-	@Override
-	public <NodePluginInterface extends NodePlugin> boolean isPluginSupported(Class<NodePluginInterface> classNodePlugin) {
-		// Should test with a sub-interface of ModulePlugin.
-		return classNodePlugin == ModulePlugin.class;
-	}
+  @Override
+  public <NodePluginInterface extends NodePlugin> boolean isPluginSupported(Class<NodePluginInterface> classNodePlugin) {
+    // Should test with a sub-interface of ModulePlugin.
+    return classNodePlugin == ModulePlugin.class;
+  }
 
-	@Override
-	public <NodePluginInterface extends NodePlugin> NodePluginInterface getPlugin(Class<NodePluginInterface> classNodePlugin, Node node) {
-		CurrentPluginRequest currentPluginRequest;
-		Set<CurrentPluginRequest> setCurrentPluginRequest;
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		String stringClassNodePlugin;
-		String specificPluginId;
-		AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReusePluginId;
-		String reusePluginId;
-		String pluginId;
+  @Override
+  public <NodePluginInterface extends NodePlugin> NodePluginInterface getPlugin(Class<NodePluginInterface> classNodePlugin, Node node) {
+    CurrentPluginRequest currentPluginRequest;
+    Set<CurrentPluginRequest> setCurrentPluginRequest;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    String stringClassNodePlugin;
+    String specificPluginId;
+    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReusePluginId;
+    String reusePluginId;
+    String pluginId;
 
-		currentPluginRequest = new CurrentPluginRequest(classNodePlugin, node);
+    currentPluginRequest = new CurrentPluginRequest(classNodePlugin, node);
 
-		if ((setCurrentPluginRequest = RuntimeSelectionPluginFactory.threadLocalCurrentPluginRequest.get()) == null) {
+    if ((setCurrentPluginRequest = RuntimeSelectionPluginFactory.threadLocalCurrentPluginRequest.get()) == null) {
 
-			setCurrentPluginRequest = new HashSet<CurrentPluginRequest>();
+      setCurrentPluginRequest = new HashSet<CurrentPluginRequest>();
 
-			RuntimeSelectionPluginFactory.threadLocalCurrentPluginRequest.set(setCurrentPluginRequest);
-		}
+      RuntimeSelectionPluginFactory.threadLocalCurrentPluginRequest.set(setCurrentPluginRequest);
+    }
 
-		if (!setCurrentPluginRequest.add(currentPluginRequest)) {
-			throw new RuntimeException("Cycle detected when resolving NodePlugin for class " + classNodePlugin + " and Node " + node + '.');
-		}
+    if (!setCurrentPluginRequest.add(currentPluginRequest)) {
+      throw new RuntimeException("Cycle detected when resolving NodePlugin for class " + classNodePlugin + " and Node " + node + '.');
+    }
 
-		try {
-			runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-			userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    try {
+      runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+      userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-			stringClassNodePlugin = classNodePlugin.getName();
+      stringClassNodePlugin = classNodePlugin.getName();
 
-			specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID + stringClassNodePlugin);
+      specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID + stringClassNodePlugin);
 
-			if (specificPluginId != null) {
-				userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));
+      if (specificPluginId != null) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));
 
-				return node.getNodePlugin(classNodePlugin, specificPluginId);
-			}
+        return node.getNodePlugin(classNodePlugin, specificPluginId);
+      }
 
-			pluginId = null;
+      pluginId = null;
 
-			if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(node,  RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID + stringClassNodePlugin))) {
-				alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin));
+      if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(node,  RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_IND_ALLOW_USER_SPECIFIED_PLUGIN_ID + stringClassNodePlugin))) {
+        alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin));
 
-				reusePluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin);
+        reusePluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin);
 
-				if (reusePluginId == null) {
-					if (alwaysNeverAskUserResponseCanReusePluginId.isAlways()) {
-						// Normally if the runtime property CAN_REUSE_PLUGIN_ID is ALWAYS the
-						// REUSE_PLUGIN_ID runtime property should also be set. But since these
-						// properties are independent and stored externally, it can happen that they
-						// are not synchronized. We make an adjustment here to avoid problems.
-						alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.ASK;
-					}
-				}
+        if (reusePluginId == null) {
+          if (alwaysNeverAskUserResponseCanReusePluginId.isAlways()) {
+            // Normally if the runtime property CAN_REUSE_PLUGIN_ID is ALWAYS the
+            // REUSE_PLUGIN_ID runtime property should also be set. But since these
+            // properties are independent and stored externally, it can happen that they
+            // are not synchronized. We make an adjustment here to avoid problems.
+            alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.ASK;
+          }
+        }
 
-				if (alwaysNeverAskUserResponseCanReusePluginId.isAlways()) {
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_AUTOMATICALLY_REUSED), stringClassNodePlugin, node, reusePluginId));
-					pluginId = reusePluginId;
-				} else {
-					if (reusePluginId == null) {
-						pluginId = userInteractionCallbackPlugin.getInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID), stringClassNodePlugin, node));
-					} else {
-						pluginId = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT), stringClassNodePlugin, node, reusePluginId), reusePluginId);
-					}
+        if (alwaysNeverAskUserResponseCanReusePluginId.isAlways()) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_AUTOMATICALLY_REUSED), stringClassNodePlugin, node, reusePluginId));
+          pluginId = reusePluginId;
+        } else {
+          if (reusePluginId == null) {
+            pluginId = userInteractionCallbackPlugin.getInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID), stringClassNodePlugin, node));
+          } else {
+            pluginId = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT), stringClassNodePlugin, node, reusePluginId), reusePluginId);
+          }
 
-					runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin, pluginId);
+          runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin, pluginId);
 
-					// The result is not useful. We only want to adjust the runtime property which
-					// will be reused the next time around.
-					Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-							runtimePropertiesPlugin,
-							RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin,
-							userInteractionCallbackPlugin,
-							MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
-				}
-			}
+          // The result is not useful. We only want to adjust the runtime property which
+          // will be reused the next time around.
+          Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+              runtimePropertiesPlugin,
+              RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_CAN_REUSE_PLUGIN_ID + stringClassNodePlugin,
+              userInteractionCallbackPlugin,
+              MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
+        }
+      }
 
-			return node.getNodePlugin(classNodePlugin, pluginId);
-		} finally {
-			setCurrentPluginRequest.remove(currentPluginRequest);
-		}
-	}
+      return node.getNodePlugin(classNodePlugin, pluginId);
+    } finally {
+      setCurrentPluginRequest.remove(currentPluginRequest);
+    }
+  }
 }

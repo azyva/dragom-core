@@ -29,13 +29,13 @@ import org.azyva.dragom.model.ModuleVersion;
  * @author David Raymond
  */
 public class MapModuleVersionXmlAdapter extends XmlAdapter<String, ModuleVersion> {
-	@Override
-	public String marshal(ModuleVersion moduleVersion) {
-		return moduleVersion.toString();
-	}
+  @Override
+  public String marshal(ModuleVersion moduleVersion) {
+    return moduleVersion.toString();
+  }
 
-	@Override
-	public ModuleVersion unmarshal(String stringModuleVersion) {
-		return new ModuleVersion(stringModuleVersion);
-	}
+  @Override
+  public ModuleVersion unmarshal(String stringModuleVersion) {
+    return new ModuleVersion(stringModuleVersion);
+  }
 }

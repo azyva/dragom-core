@@ -40,53 +40,53 @@ import org.azyva.dragom.model.plugin.PluginFactory;
  * @author David Raymond
  */
 public class ExamplePluginFactory implements PluginFactory {
-	private class ExamplePluginImpl extends ModulePluginAbstractImpl implements ModulePlugin {
-		ExamplePluginImpl (Module module) {
-			super(module);
-		}
+  private class ExamplePluginImpl extends ModulePluginAbstractImpl implements ModulePlugin {
+    ExamplePluginImpl (Module module) {
+      super(module);
+    }
 
-		/**
-		 * This is a sample method of the {@link NodePlugin}. It should override a method
-		 * defined by a ModulePlugin sub-interface.
-		 */
-		@SuppressWarnings("unused")
-		public void examplePluginMethod() {
-		}
-	}
+    /**
+     * This is a sample method of the {@link NodePlugin}. It should override a method
+     * defined by a ModulePlugin sub-interface.
+     */
+    @SuppressWarnings("unused")
+    public void examplePluginMethod() {
+    }
+  }
 
-	@Override
-	public Class<? extends NodePlugin> getDefaultClassNodePlugin() {
-		 // Should return the Class representing a sub-interface of ModulePlugin.
-		return ModulePlugin.class;
-	}
+  @Override
+  public Class<? extends NodePlugin> getDefaultClassNodePlugin() {
+     // Should return the Class representing a sub-interface of ModulePlugin.
+    return ModulePlugin.class;
+  }
 
-	@Override
-	public String getDefaultPluginId(Class<? extends NodePlugin> classNodePlugin) {
-		// Should test with a sub-interface of ModulePlugin.
-		if (classNodePlugin != ModulePlugin.class) {
-			throw new RuntimeException("Unsupported plugin " + classNodePlugin + '.');
-		}
+  @Override
+  public String getDefaultPluginId(Class<? extends NodePlugin> classNodePlugin) {
+    // Should test with a sub-interface of ModulePlugin.
+    if (classNodePlugin != ModulePlugin.class) {
+      throw new RuntimeException("Unsupported plugin " + classNodePlugin + '.');
+    }
 
-		return null;
-	}
+    return null;
+  }
 
-	@Override
-	public <NodePluginInterface extends NodePlugin> boolean isPluginSupported(Class<NodePluginInterface> classNodePlugin) {
-		// Should test with a sub-interface of ModulePlugin.
-		return classNodePlugin == ModulePlugin.class;
-	}
+  @Override
+  public <NodePluginInterface extends NodePlugin> boolean isPluginSupported(Class<NodePluginInterface> classNodePlugin) {
+    // Should test with a sub-interface of ModulePlugin.
+    return classNodePlugin == ModulePlugin.class;
+  }
 
-	@Override
-	public <NodePluginInterface extends NodePlugin> NodePluginInterface getPlugin(Class<NodePluginInterface> classNodePlugin, Node node) {
-		if (node.getNodeType() != NodeType.MODULE) {
-			throw new RuntimeException("Node " + node + " must be a module.");
-		}
+  @Override
+  public <NodePluginInterface extends NodePlugin> NodePluginInterface getPlugin(Class<NodePluginInterface> classNodePlugin, Node node) {
+    if (node.getNodeType() != NodeType.MODULE) {
+      throw new RuntimeException("Node " + node + " must be a module.");
+    }
 
-		// Should test with a sub-interface of ModulePlugin.
-		if (classNodePlugin != ModulePlugin.class) {
-			throw new RuntimeException("Unsupported plugin " + classNodePlugin + '.');
-		}
+    // Should test with a sub-interface of ModulePlugin.
+    if (classNodePlugin != ModulePlugin.class) {
+      throw new RuntimeException("Unsupported plugin " + classNodePlugin + '.');
+    }
 
-		return classNodePlugin.cast(new ExamplePluginImpl((Module)node));
-	}
+    return classNodePlugin.cast(new ExamplePluginImpl((Module)node));
+  }
 }

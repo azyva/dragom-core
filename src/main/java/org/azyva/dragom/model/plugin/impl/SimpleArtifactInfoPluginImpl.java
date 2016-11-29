@@ -84,100 +84,100 @@ import org.json.JSONArray;
  *  @author David Raymond
  */
 public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl implements ArtifactInfoPlugin {
-	boolean isInferRuleSubmodules;
-	String groupIdInferredSubmodules;
-	Set<ArtifactGroupId> setDefiniteArtifactGroupIdProduced;
+  boolean isInferRuleSubmodules;
+  String groupIdInferredSubmodules;
+  Set<ArtifactGroupId> setDefiniteArtifactGroupIdProduced;
 
-	public SimpleArtifactInfoPluginImpl(Module module) {
-		super(module);
+  public SimpleArtifactInfoPluginImpl(Module module) {
+    super(module);
 
-		String inferenceRules;
-		boolean isInferRuleBaseArtifactId = false;
-		String baseGroupId;
-		String groupId = null;
-		String stringJsonArrayDefiniteArtifactGroupIdProduced;
+    String inferenceRules;
+    boolean isInferRuleBaseArtifactId = false;
+    String baseGroupId;
+    String groupId = null;
+    String stringJsonArrayDefiniteArtifactGroupIdProduced;
 
-		inferenceRules = module.getProperty("MODULE_NODE_PATH_INFERENCE_RULES");
+    inferenceRules = module.getProperty("MODULE_NODE_PATH_INFERENCE_RULES");
 
-		if ((inferenceRules == null) || inferenceRules.equals("ALL")) {
-			isInferRuleBaseArtifactId = true;
-			this.isInferRuleSubmodules = true;
-		} else if (inferenceRules != null) {
-			if (inferenceRules.equals("ONLY_BASE_ARTIFACT_ID")) {
-				isInferRuleBaseArtifactId = true;
-			} else if (!inferenceRules.equals("NONE")) {
-				throw new RuntimeException("Invalid value for the property " + inferenceRules + " read by plugin " + this.toString() + '.');
-			}
-		}
+    if ((inferenceRules == null) || inferenceRules.equals("ALL")) {
+      isInferRuleBaseArtifactId = true;
+      this.isInferRuleSubmodules = true;
+    } else if (inferenceRules != null) {
+      if (inferenceRules.equals("ONLY_BASE_ARTIFACT_ID")) {
+        isInferRuleBaseArtifactId = true;
+      } else if (!inferenceRules.equals("NONE")) {
+        throw new RuntimeException("Invalid value for the property " + inferenceRules + " read by plugin " + this.toString() + '.');
+      }
+    }
 
-		/* If either of the two rules must be applied, we need to know the groupId
-		 * inferred from the module node path.
-		 */
-		if (isInferRuleBaseArtifactId || this.isInferRuleSubmodules) {
-			baseGroupId = module.getProperty("BASE_GROUP_ID");
+    /* If either of the two rules must be applied, we need to know the groupId
+     * inferred from the module node path.
+     */
+    if (isInferRuleBaseArtifactId || this.isInferRuleSubmodules) {
+      baseGroupId = module.getProperty("BASE_GROUP_ID");
 
-			if (baseGroupId == null) {
-				groupId = Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
-			} else {
-				groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
-			}
-		}
+      if (baseGroupId == null) {
+        groupId = Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
+      } else {
+        groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
+      }
+    }
 
-		this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
+    this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
 
-		/* If the base artifactId rule must be applied, we simply add the ArtifactGroupId
-		 * to the set of definitively produced ArtifactGroupId.
-		 */
+    /* If the base artifactId rule must be applied, we simply add the ArtifactGroupId
+     * to the set of definitively produced ArtifactGroupId.
+     */
 
-		if (isInferRuleBaseArtifactId) {
-			this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId(groupId, module.getName()));
-		}
+    if (isInferRuleBaseArtifactId) {
+      this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId(groupId, module.getName()));
+    }
 
-		if (this.isInferRuleSubmodules) {
-			this.groupIdInferredSubmodules = groupId;
-		}
+    if (this.isInferRuleSubmodules) {
+      this.groupIdInferredSubmodules = groupId;
+    }
 
-		stringJsonArrayDefiniteArtifactGroupIdProduced = module.getProperty("ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED");
+    stringJsonArrayDefiniteArtifactGroupIdProduced = module.getProperty("ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED");
 
-		if (stringJsonArrayDefiniteArtifactGroupIdProduced != null) {
-			JSONArray jsonArrayDefiniteArtifactGroupIdProduced;
+    if (stringJsonArrayDefiniteArtifactGroupIdProduced != null) {
+      JSONArray jsonArrayDefiniteArtifactGroupIdProduced;
 
-			this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
+      this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
 
-			jsonArrayDefiniteArtifactGroupIdProduced = new JSONArray(stringJsonArrayDefiniteArtifactGroupIdProduced);
+      jsonArrayDefiniteArtifactGroupIdProduced = new JSONArray(stringJsonArrayDefiniteArtifactGroupIdProduced);
 
-			for (int i = 0; i < jsonArrayDefiniteArtifactGroupIdProduced.length(); i++) {
-				this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId((String)jsonArrayDefiniteArtifactGroupIdProduced.get(i)));
-			}
-		}
+      for (int i = 0; i < jsonArrayDefiniteArtifactGroupIdProduced.length(); i++) {
+        this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId((String)jsonArrayDefiniteArtifactGroupIdProduced.get(i)));
+      }
+    }
 
-	}
+  }
 
-	@Override
-	public boolean isArtifactGroupIdProduced(ArtifactGroupId artifactGroupId) {
-		return this.setDefiniteArtifactGroupIdProduced.contains(artifactGroupId);
-	}
+  @Override
+  public boolean isArtifactGroupIdProduced(ArtifactGroupId artifactGroupId) {
+    return this.setDefiniteArtifactGroupIdProduced.contains(artifactGroupId);
+  }
 
-	@Override
-	public boolean isArtifactGroupIdPossiblyProduced(ArtifactGroupId artifactGroupId) {
-		if (this.isArtifactGroupIdProduced(artifactGroupId)) {
-			return true;
-		}
+  @Override
+  public boolean isArtifactGroupIdPossiblyProduced(ArtifactGroupId artifactGroupId) {
+    if (this.isArtifactGroupIdProduced(artifactGroupId)) {
+      return true;
+    }
 
-		if (!artifactGroupId.getGroupId().equals(this.groupIdInferredSubmodules)) {
-			return false;
-		}
+    if (!artifactGroupId.getGroupId().equals(this.groupIdInferredSubmodules)) {
+      return false;
+    }
 
-		if (artifactGroupId.getArtifactId().startsWith(this.getModule().getName() + '-')) {
-			return true;
-		}
+    if (artifactGroupId.getArtifactId().startsWith(this.getModule().getName() + '-')) {
+      return true;
+    }
 
-		return false;
-	}
+    return false;
+  }
 
-	//??? maybe make the set immutable? Would be safer and more contract-binding, but maybe uselessly overkill.
-	@Override
-	public Set<ArtifactGroupId> getSetDefiniteArtifactGroupIdProduced() {
-		return this.setDefiniteArtifactGroupIdProduced;
-	}
+  //??? maybe make the set immutable? Would be safer and more contract-binding, but maybe uselessly overkill.
+  @Override
+  public Set<ArtifactGroupId> getSetDefiniteArtifactGroupIdProduced() {
+    return this.setDefiniteArtifactGroupIdProduced;
+  }
 }

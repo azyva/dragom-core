@@ -39,72 +39,72 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  *
  * @author David Raymond
  */
-public class MapXmlPluginDefConfigAdapter extends	XmlAdapter<ListPluginDefConfigXml, Map<PluginKey, XmlPluginDefConfig>> {
-	/**
-	 * We need to introduce a class for wrapping the List of
-	 * {@link XmlPluginDefConfig}'s, else JAXB does not know what to do with the List
-	 * itself.
-	 */
-	@XmlAccessorType(XmlAccessType.NONE)
-	public static class ListPluginDefConfigXml {
-		@XmlElement(name = "plugin")
-		private List<XmlPluginDefConfig> listPluginDefConfigXml;
+public class MapXmlPluginDefConfigAdapter extends XmlAdapter<ListPluginDefConfigXml, Map<PluginKey, XmlPluginDefConfig>> {
+  /**
+   * We need to introduce a class for wrapping the List of
+   * {@link XmlPluginDefConfig}'s, else JAXB does not know what to do with the List
+   * itself.
+   */
+  @XmlAccessorType(XmlAccessType.NONE)
+  public static class ListPluginDefConfigXml {
+    @XmlElement(name = "plugin")
+    private List<XmlPluginDefConfig> listPluginDefConfigXml;
 
-		/**
-		 * Default constructor required by JAXB.
-		 */
-		public ListPluginDefConfigXml() {
-		}
+    /**
+     * Default constructor required by JAXB.
+     */
+    public ListPluginDefConfigXml() {
+    }
 
-		/**
-		 * Constructor taking a List of XmlPluginDefConfig used when marshalling.
-		 *
-		 * @param listPluginDefConfigXml List of XmlPluginDefConfig.
-		 */
-		public ListPluginDefConfigXml(List<XmlPluginDefConfig> listPluginDefConfigXml) {
-			this.listPluginDefConfigXml = listPluginDefConfigXml;
-		}
+    /**
+     * Constructor taking a List of XmlPluginDefConfig used when marshalling.
+     *
+     * @param listPluginDefConfigXml List of XmlPluginDefConfig.
+     */
+    public ListPluginDefConfigXml(List<XmlPluginDefConfig> listPluginDefConfigXml) {
+      this.listPluginDefConfigXml = listPluginDefConfigXml;
+    }
 
-		/**
-		 * @return List of XmlPluginDefConfig.
-		 */
-		public List<XmlPluginDefConfig> getListPluginDefConfigXml() {
-			return this.listPluginDefConfigXml;
-		}
-	}
+    /**
+     * @return List of XmlPluginDefConfig.
+     */
+    public List<XmlPluginDefConfig> getListPluginDefConfigXml() {
+      return this.listPluginDefConfigXml;
+    }
+  }
 
-	/**
-	 * This method is not really useful for now since modification of
-	 * {@link XmlConfig} is not currently supported.
-	 */
-	@Override
-	public ListPluginDefConfigXml marshal(Map<PluginKey, XmlPluginDefConfig> mapPluginDefConfigXml) {
-		if ((mapPluginDefConfigXml == null) || mapPluginDefConfigXml.isEmpty()) {
-			return null;
-		}
+  /**
+   * This method is not really useful for now since modification of
+   * {@link XmlConfig} is not currently supported.
+   */
+  @Override
+  public ListPluginDefConfigXml marshal(Map<PluginKey, XmlPluginDefConfig> mapPluginDefConfigXml) {
+    if ((mapPluginDefConfigXml == null) || mapPluginDefConfigXml.isEmpty()) {
+      return null;
+    }
 
-		return new ListPluginDefConfigXml(new ArrayList<XmlPluginDefConfig>(mapPluginDefConfigXml.values()));
-	}
+    return new ListPluginDefConfigXml(new ArrayList<XmlPluginDefConfig>(mapPluginDefConfigXml.values()));
+  }
 
-	@Override
-	public Map<PluginKey, XmlPluginDefConfig> unmarshal(ListPluginDefConfigXml listPluginDefConfigXml) {
-		Map<PluginKey, XmlPluginDefConfig> mapPluginDefConfigXml;
+  @Override
+  public Map<PluginKey, XmlPluginDefConfig> unmarshal(ListPluginDefConfigXml listPluginDefConfigXml) {
+    Map<PluginKey, XmlPluginDefConfig> mapPluginDefConfigXml;
 
-		// LinkedHashMap is used to preserve insertion order.
-		mapPluginDefConfigXml = new LinkedHashMap<PluginKey, XmlPluginDefConfig>();
+    // LinkedHashMap is used to preserve insertion order.
+    mapPluginDefConfigXml = new LinkedHashMap<PluginKey, XmlPluginDefConfig>();
 
-		for (XmlPluginDefConfig xmlPluginDefConfig: listPluginDefConfigXml.getListPluginDefConfigXml()) {
-			PluginKey pluginKey;
+    for (XmlPluginDefConfig xmlPluginDefConfig: listPluginDefConfigXml.getListPluginDefConfigXml()) {
+      PluginKey pluginKey;
 
-			pluginKey = new PluginKey(xmlPluginDefConfig.getClassNodePlugin().asSubclass(NodePlugin.class), xmlPluginDefConfig.getPluginId());
+      pluginKey = new PluginKey(xmlPluginDefConfig.getClassNodePlugin().asSubclass(NodePlugin.class), xmlPluginDefConfig.getPluginId());
 
-			if (mapPluginDefConfigXml.containsKey(pluginKey)) {
-				throw new RuntimeException("Duplicate pluging definition " + xmlPluginDefConfig + '.');
-			}
+      if (mapPluginDefConfigXml.containsKey(pluginKey)) {
+        throw new RuntimeException("Duplicate pluging definition " + xmlPluginDefConfig + '.');
+      }
 
-			mapPluginDefConfigXml.put(pluginKey, xmlPluginDefConfig);
-		}
+      mapPluginDefConfigXml.put(pluginKey, xmlPluginDefConfig);
+    }
 
-		return mapPluginDefConfigXml;
-	}
+    return mapPluginDefConfigXml;
+  }
 }

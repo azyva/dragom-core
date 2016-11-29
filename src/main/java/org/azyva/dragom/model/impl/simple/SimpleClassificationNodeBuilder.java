@@ -28,14 +28,14 @@ import org.azyva.dragom.model.ModelNodeBuilderFactory;
  * @author David Raymond
  */
 public class SimpleClassificationNodeBuilder extends SimpleNodeBuilder<ClassificationNode> implements ClassificationNodeBuilder {
-	/**
-	 * This constructor has package scope to enforce the use of
-	 * {@link ModelNodeBuilderFactory#createClassificationNodeBuilder} implemented
-	 * by {@link SimpleModel} to create new {@link SimpleClassificationNode}'s.
-	 *
-	 * @param simpleModel
-	 */
-	SimpleClassificationNodeBuilder(SimpleModel simpleModel) {
-		this.setSimpleNode(new SimpleClassificationNode(simpleModel));
-	}
+  /**
+   * This constructor has package scope to enforce the use of
+   * {@link ModelNodeBuilderFactory#createClassificationNodeBuilder} implemented
+   * by {@link SimpleModel} to create new {@link SimpleClassificationNode}'s.
+   *
+   * @param simpleModel
+   */
+  SimpleClassificationNodeBuilder(SimpleModel simpleModel) {
+    this.setSimpleNode(new SimpleClassificationNode(simpleModel));
+  }
 }

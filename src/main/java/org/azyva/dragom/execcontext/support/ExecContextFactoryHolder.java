@@ -53,52 +53,52 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class ExecContextFactoryHolder {
-	/**
-	 * System property specifying the name of the default {@link ExecContextFactory}
-	 * implementation class to use.
-	 */
-	private static final String SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY = "org.azyva.dragom.DefaultExecContextFactory";
+  /**
+   * System property specifying the name of the default {@link ExecContextFactory}
+   * implementation class to use.
+   */
+  private static final String SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY = "org.azyva.dragom.DefaultExecContextFactory";
 
-	private static ExecContextFactory execContextFactory;
+  private static ExecContextFactory execContextFactory;
 
-	// Ensures that the Dragom properties are loaded into the system properties.
-	static {
-		Util.applyDragomSystemProperties();
-	}
+  // Ensures that the Dragom properties are loaded into the system properties.
+  static {
+    Util.applyDragomSystemProperties();
+  }
 
-	/**
-	 * Sets the {@link ExecContextFactory}.
-	 *
-	 * @param execContextFactory See description.
-	 */
-	public static void setExecContextFactory(ExecContextFactory execContextFactory) {
-		ExecContextFactoryHolder.execContextFactory = execContextFactory;
-	}
+  /**
+   * Sets the {@link ExecContextFactory}.
+   *
+   * @param execContextFactory See description.
+   */
+  public static void setExecContextFactory(ExecContextFactory execContextFactory) {
+    ExecContextFactoryHolder.execContextFactory = execContextFactory;
+  }
 
-	/**
-	 * @return {@link ExecContextFactory} set with {@link #setExecContextFactory} or
-	 *   the default ExecContextFactory if none has been set.
-	 */
-	public static ExecContextFactory getExecContextFactory() {
-		if (ExecContextFactoryHolder.execContextFactory == null) {
-			String execContextFactoryClass;
+  /**
+   * @return {@link ExecContextFactory} set with {@link #setExecContextFactory} or
+   *   the default ExecContextFactory if none has been set.
+   */
+  public static ExecContextFactory getExecContextFactory() {
+    if (ExecContextFactoryHolder.execContextFactory == null) {
+      String execContextFactoryClass;
 
-			execContextFactoryClass = System.getProperty(ExecContextFactoryHolder.SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY);
+      execContextFactoryClass = System.getProperty(ExecContextFactoryHolder.SYS_PROPERTY_DEFAULT_EXEC_CONTEXT_FACTORY);
 
-			if (execContextFactoryClass != null) {
-				try {
-					Class<? extends ExecContextFactory> classExecContextFactory;
+      if (execContextFactoryClass != null) {
+        try {
+          Class<? extends ExecContextFactory> classExecContextFactory;
 
-					classExecContextFactory = Class.forName(execContextFactoryClass).asSubclass(ExecContextFactory.class);
-					return classExecContextFactory.newInstance();
-				} catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-					throw new RuntimeException(e);
-				}
-			} else {
-				ExecContextFactoryHolder.execContextFactory = new DefaultExecContextFactory();
-			}
-		}
+          classExecContextFactory = Class.forName(execContextFactoryClass).asSubclass(ExecContextFactory.class);
+          return classExecContextFactory.newInstance();
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        ExecContextFactoryHolder.execContextFactory = new DefaultExecContextFactory();
+      }
+    }
 
-		return ExecContextFactoryHolder.execContextFactory;
-	}
+    return ExecContextFactoryHolder.execContextFactory;
+  }
 }

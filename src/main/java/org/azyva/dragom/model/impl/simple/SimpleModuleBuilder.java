@@ -28,14 +28,14 @@ import org.azyva.dragom.model.ModuleBuilder;
  * @author David Raymond
  */
 public class SimpleModuleBuilder extends SimpleNodeBuilder<Module> implements ModuleBuilder {
-	/**
-	 * This constructor has package scope to enforce the use of
-	 * {@link ModelNodeBuilderFactory#createModuleBuilder} implemented
-	 * by {@link SimpleModel} to create new {@link SimpleModule}'s.
-	 *
-	 * @param simpleModel
-	 */
-	protected SimpleModuleBuilder(SimpleModel simpleModel) {
-		this.setSimpleNode(new SimpleModule(simpleModel));
-	}
+  /**
+   * This constructor has package scope to enforce the use of
+   * {@link ModelNodeBuilderFactory#createModuleBuilder} implemented
+   * by {@link SimpleModel} to create new {@link SimpleModule}'s.
+   *
+   * @param simpleModel
+   */
+  protected SimpleModuleBuilder(SimpleModel simpleModel) {
+    this.setSimpleNode(new SimpleModule(simpleModel));
+  }
 }

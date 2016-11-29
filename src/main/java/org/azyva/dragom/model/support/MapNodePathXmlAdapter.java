@@ -29,13 +29,13 @@ import org.azyva.dragom.model.NodePath;
  * @author David Raymond
  */
 public class MapNodePathXmlAdapter extends XmlAdapter<String, NodePath> {
-	@Override
-	public String marshal(NodePath nodePath) {
-		return nodePath.toString();
-	}
+  @Override
+  public String marshal(NodePath nodePath) {
+    return nodePath.toString();
+  }
 
-	@Override
-	public NodePath unmarshal(String stringNodePath) {
-		return new NodePath(stringNodePath);
-	}
+  @Override
+  public NodePath unmarshal(String stringNodePath) {
+    return new NodePath(stringNodePath);
+  }
 }

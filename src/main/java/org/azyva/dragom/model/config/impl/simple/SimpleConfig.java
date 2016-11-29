@@ -32,36 +32,36 @@ import org.azyva.dragom.model.config.MutableConfig;
  * @see org.azyva.dragom.model.config.simple
  */
 public class SimpleConfig implements Config, MutableConfig {
-	/**
-	 * Root SimpleClassificationNodeConfig.
-	 */
-	SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot;
+  /**
+   * Root SimpleClassificationNodeConfig.
+   */
+  SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot;
 
-	@Override
-	public ClassificationNodeConfig getClassificationNodeConfigRoot() {
-		return this.simpleClassificationNodeConfigRoot;
-	}
+  @Override
+  public ClassificationNodeConfig getClassificationNodeConfigRoot() {
+    return this.simpleClassificationNodeConfigRoot;
+  }
 
-	/**
-	 * Sets the root {@link SimpleClassificationNodeConfig}.
-	 * <p>
-	 * This method is intended to be called by
-	 * {@link SimpleNodeConfig#setNodeConfigTransferObject}.
-	 *
-	 * @param simpleClassificationNodeConfigRoot Root SimpleClassificationNodeConfig.
-	 */
-	void setSimpleClassificationNodeConfigRoot(SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot) {
-		if (this.simpleClassificationNodeConfigRoot != null && simpleClassificationNodeConfigRoot != null) {
-			throw new RuntimeException("Replacing the root SimpleClassificationNodeConfig is not allowed.");
-		}
+  /**
+   * Sets the root {@link SimpleClassificationNodeConfig}.
+   * <p>
+   * This method is intended to be called by
+   * {@link SimpleNodeConfig#setNodeConfigTransferObject}.
+   *
+   * @param simpleClassificationNodeConfigRoot Root SimpleClassificationNodeConfig.
+   */
+  void setSimpleClassificationNodeConfigRoot(SimpleClassificationNodeConfig simpleClassificationNodeConfigRoot) {
+    if (this.simpleClassificationNodeConfigRoot != null && simpleClassificationNodeConfigRoot != null) {
+      throw new RuntimeException("Replacing the root SimpleClassificationNodeConfig is not allowed.");
+    }
 
-		// Setting this.simplClassificationNodeRoot to null is allowed since this
-		// can happen when deleting the root SimpleClassificationNode.
-		this.simpleClassificationNodeConfigRoot = simpleClassificationNodeConfigRoot;
-	}
+    // Setting this.simplClassificationNodeRoot to null is allowed since this
+    // can happen when deleting the root SimpleClassificationNode.
+    this.simpleClassificationNodeConfigRoot = simpleClassificationNodeConfigRoot;
+  }
 
-	@Override
-	public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
-		return new SimpleClassificationNodeConfig(this);
-	}
+  @Override
+  public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
+    return new SimpleClassificationNodeConfig(this);
+  }
 }

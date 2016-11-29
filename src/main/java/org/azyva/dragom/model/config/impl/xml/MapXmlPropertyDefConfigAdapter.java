@@ -73,117 +73,117 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map<String, XmlPropertyDefConfig>> {
-	private static final Logger logger = LoggerFactory.getLogger(MapXmlPropertyDefConfigAdapter.class);
+  private static final Logger logger = LoggerFactory.getLogger(MapXmlPropertyDefConfigAdapter.class);
 
-	/**
-	 * We need to introduce a class for wrapping the List of JAXBElement's, else JAXB
-	 * does not know what to do with the List itself.
-	 */
-	@XmlAccessorType(XmlAccessType.NONE)
-	public static class ListProperty {
-		/*
-		 * The fact of having List<JAXBElement> is the optimal and most logical
-		 * configuration. It works for marshal since JAXB knows how to marshal a
-		 * JAXBElement. But for unmarshal, since the elements are variable, JAXB cannot
-		 * map them to a known type and does not attempt to create JAXBElement's. In
-		 * unmarshal we therefore have a List<Node>, despite the declaration.
-		 */
-		@XmlAnyElement
-		private List<JAXBElement<String>> listProperty;
+  /**
+   * We need to introduce a class for wrapping the List of JAXBElement's, else JAXB
+   * does not know what to do with the List itself.
+   */
+  @XmlAccessorType(XmlAccessType.NONE)
+  public static class ListProperty {
+    /*
+     * The fact of having List<JAXBElement> is the optimal and most logical
+     * configuration. It works for marshal since JAXB knows how to marshal a
+     * JAXBElement. But for unmarshal, since the elements are variable, JAXB cannot
+     * map them to a known type and does not attempt to create JAXBElement's. In
+     * unmarshal we therefore have a List<Node>, despite the declaration.
+     */
+    @XmlAnyElement
+    private List<JAXBElement<String>> listProperty;
 
-		/**
-		 * Default constructor required by JAXB.
-		 */
-		public ListProperty() {
-		}
+    /**
+     * Default constructor required by JAXB.
+     */
+    public ListProperty() {
+    }
 
-		/**
-		 * Constructor taking a List of properties used when marshalling.
-		 *
-		 * @param listProperty List of properties.
-		 */
-		public ListProperty(List<JAXBElement<String>> listProperty) {
-			this.listProperty = listProperty;
-		}
+    /**
+     * Constructor taking a List of properties used when marshalling.
+     *
+     * @param listProperty List of properties.
+     */
+    public ListProperty(List<JAXBElement<String>> listProperty) {
+      this.listProperty = listProperty;
+    }
 
-		/**
-		 * @return List of properties.
-		 */
-		public List<JAXBElement<String>> getListProperty() {
-			return this.listProperty;
-		}
-	}
+    /**
+     * @return List of properties.
+     */
+    public List<JAXBElement<String>> getListProperty() {
+      return this.listProperty;
+    }
+  }
 
-	/**
-	 * TODO:
-	 * This method is not really useful for now since modification of
-	 * {@link XmlConfig} is not currently supported.
-	 * <p>
-	 * In fact this method is incomplete as it does not support the indOnlyThisNode
-	 * property which must be marshalled as an attribute of the property.
-	 * <p>
-	 * I believe the solution revolves around:
-	 * <p>
-	 * <li>Making the type of listProperty org.w3c.dom.Node instead of JAXBelement;<li>
-	 * <li>Using DocumentBuilderFactory (.newInstance()) to build a Node representing
-	 *     property with the correct attribute;</li>
-	 */
-	@Override
-	public ListProperty marshal(Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml) {
-		List<JAXBElement<String>> listProperty;
+  /**
+   * TODO:
+   * This method is not really useful for now since modification of
+   * {@link XmlConfig} is not currently supported.
+   * <p>
+   * In fact this method is incomplete as it does not support the indOnlyThisNode
+   * property which must be marshalled as an attribute of the property.
+   * <p>
+   * I believe the solution revolves around:
+   * <p>
+   * <li>Making the type of listProperty org.w3c.dom.Node instead of JAXBelement;<li>
+   * <li>Using DocumentBuilderFactory (.newInstance()) to build a Node representing
+   *     property with the correct attribute;</li>
+   */
+  @Override
+  public ListProperty marshal(Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml) {
+    List<JAXBElement<String>> listProperty;
 
-		if ((mapPropertyDefConfigXml == null) || mapPropertyDefConfigXml.isEmpty()) {
-			return null;
-		}
+    if ((mapPropertyDefConfigXml == null) || mapPropertyDefConfigXml.isEmpty()) {
+      return null;
+    }
 
-		listProperty = new ArrayList<JAXBElement<String>>();
+    listProperty = new ArrayList<JAXBElement<String>>();
 
-		for (XmlPropertyDefConfig xmlPropertyDefConfig: mapPropertyDefConfigXml.values()) {
-			listProperty.add(new JAXBElement<String>(new QName(xmlPropertyDefConfig.getName()), String.class, xmlPropertyDefConfig.getValue()));
-		}
+    for (XmlPropertyDefConfig xmlPropertyDefConfig: mapPropertyDefConfigXml.values()) {
+      listProperty.add(new JAXBElement<String>(new QName(xmlPropertyDefConfig.getName()), String.class, xmlPropertyDefConfig.getValue()));
+    }
 
-		return new ListProperty(listProperty);
-	}
+    return new ListProperty(listProperty);
+  }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Map<String, XmlPropertyDefConfig> unmarshal(ListProperty listProperty) {
-		Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml;
+  @Override
+  @SuppressWarnings("unchecked")
+  public Map<String, XmlPropertyDefConfig> unmarshal(ListProperty listProperty) {
+    Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml;
 
 
-		// LinkedHashMap is used to preserve insertion order.
-		mapPropertyDefConfigXml = new LinkedHashMap<String, XmlPropertyDefConfig>();
+    // LinkedHashMap is used to preserve insertion order.
+    mapPropertyDefConfigXml = new LinkedHashMap<String, XmlPropertyDefConfig>();
 
-		// In unmarshal, the List is in fact a List<Node> and not a List<JAXBElement> as
-		// declared. It seems we must live with this incoherence if elements with variable
-		// names are to be supported.
-		for (org.w3c.dom.Node property: (List<org.w3c.dom.Node>)(List<?>)listProperty.getListProperty()) {
-			try {
-				org.w3c.dom.Node attributeIndOnlyThisNode;
-				XmlPropertyDefConfig xmlPropertyDefConfig;
+    // In unmarshal, the List is in fact a List<Node> and not a List<JAXBElement> as
+    // declared. It seems we must live with this incoherence if elements with variable
+    // names are to be supported.
+    for (org.w3c.dom.Node property: (List<org.w3c.dom.Node>)(List<?>)listProperty.getListProperty()) {
+      try {
+        org.w3c.dom.Node attributeIndOnlyThisNode;
+        XmlPropertyDefConfig xmlPropertyDefConfig;
 
-				attributeIndOnlyThisNode = property.getAttributes().getNamedItem("ind-only-this-node");
+        attributeIndOnlyThisNode = property.getAttributes().getNamedItem("ind-only-this-node");
 
-				xmlPropertyDefConfig = new XmlPropertyDefConfig(property.getLocalName(), property.getFirstChild().getTextContent(), (attributeIndOnlyThisNode == null) ? false : Boolean.parseBoolean(attributeIndOnlyThisNode.getTextContent()));
+        xmlPropertyDefConfig = new XmlPropertyDefConfig(property.getLocalName(), property.getFirstChild().getTextContent(), (attributeIndOnlyThisNode == null) ? false : Boolean.parseBoolean(attributeIndOnlyThisNode.getTextContent()));
 
-				if (mapPropertyDefConfigXml.containsKey(property.getLocalName())) {
-					throw new RuntimeException("Duplicate property definition " + xmlPropertyDefConfig + '.');
-				}
+        if (mapPropertyDefConfigXml.containsKey(property.getLocalName())) {
+          throw new RuntimeException("Duplicate property definition " + xmlPropertyDefConfig + '.');
+        }
 
-				mapPropertyDefConfigXml.put(property.getLocalName(), xmlPropertyDefConfig);
-			} catch (Exception e) {
-				// Unfortunately it seems like JAXB silently discards these exceptions. We at
-				// least log them.
-				MapXmlPropertyDefConfigAdapter.logger.error("An exception was thrown in an XmlAdapter and JAXB silently discards exceptions in this context.", e);
+        mapPropertyDefConfigXml.put(property.getLocalName(), xmlPropertyDefConfig);
+      } catch (Exception e) {
+        // Unfortunately it seems like JAXB silently discards these exceptions. We at
+        // least log them.
+        MapXmlPropertyDefConfigAdapter.logger.error("An exception was thrown in an XmlAdapter and JAXB silently discards exceptions in this context.", e);
 
-				if (e instanceof RuntimeException) {
-					throw (RuntimeException)e;
-				} else {
-					throw new RuntimeException(e);
-				}
-			}
-		}
+        if (e instanceof RuntimeException) {
+          throw (RuntimeException)e;
+        } else {
+          throw new RuntimeException(e);
+        }
+      }
+    }
 
-		return mapPropertyDefConfigXml;
-	}
+    return mapPropertyDefConfigXml;
+  }
 }

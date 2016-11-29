@@ -28,19 +28,19 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @author David Raymond
  */
 public abstract class NodePluginAbstractImpl implements NodePlugin {
-	private Node node;
+  private Node node;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param classificationNode ClassificationNode.
-	 */
-	protected NodePluginAbstractImpl(Node node) {
-		this.node = node;
-	}
+  /**
+   * Constructor.
+   *
+   * @param classificationNode ClassificationNode.
+   */
+  protected NodePluginAbstractImpl(Node node) {
+    this.node = node;
+  }
 
-	@Override
-	public Node getNode() {
-		return this.node;
-	}
+  @Override
+  public Node getNode() {
+    return this.node;
+  }
 }

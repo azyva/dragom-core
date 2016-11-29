@@ -75,305 +75,305 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class Checkout extends RootModuleVersionJobAbstractImpl {
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION = "COMPUTING_LIST_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION = "COMPUTING_LIST_MODULE_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS = "MULTIPLE_MODULE_VERSIONS";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS = "MULTIPLE_MODULE_VERSIONS";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP = "INPUT_MODULE_VERSION_TO_KEEP";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP = "INPUT_MODULE_VERSION_TO_KEEP";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS = "VERSION_INDEX_OUT_OF_BOUNDS";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS = "VERSION_INDEX_OUT_OF_BOUNDS";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION = "CHECKING_OUT_MODULE_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES = "CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES = "CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION = "DO_YOU_WANT_TO_SWITCH_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION = "DO_YOU_WANT_TO_SWITCH_MODULE_VERSION";
 
-	/**
-	 * See description in ResourceBundle.
-	 */
-	private static final String MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION = "SWITCHING_MODULE_VERSION";
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION = "SWITCHING_MODULE_VERSION";
 
-	/**
-	 * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
-	 * to switch the {@link Version} of a {@link Module} when a workspace directory
-	 * already exists for another Version of the same Module.
-	 */
-	private static final String RUNTIME_PROPERTY_SWITCH_MODULE_VERSION = "SWITCH_MODULE_VERSION";
+  /**
+   * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
+   * to switch the {@link Version} of a {@link Module} when a workspace directory
+   * already exists for another Version of the same Module.
+   */
+  private static final String RUNTIME_PROPERTY_SWITCH_MODULE_VERSION = "SWITCH_MODULE_VERSION";
 
-	/**
-	 * ResourceBundle specific to this class.
-	 */
-	private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Checkout.class.getName() + "ResourceBundle");
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Checkout.class.getName() + "ResourceBundle");
 
-	/**
-	 * Constructor.
-	 *
-	 * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
-	 *   the traversal of the reference graphs.
-	 */
-	public Checkout(List<ModuleVersion> listModuleVersionRoot) {
-		super(listModuleVersionRoot);
+  /**
+   * Constructor.
+   *
+   * @param listModuleVersionRoot List of root ModuleVersion's on which to initiate
+   *   the traversal of the reference graphs.
+   */
+  public Checkout(List<ModuleVersion> listModuleVersionRoot) {
+    super(listModuleVersionRoot);
 
-		this.setupReferencePathMatcherForProjectCode();
-	}
+    this.setupReferencePathMatcherForProjectCode();
+  }
 
-	/**
-	 * We override the main method since we do not really reuse the base class'
-	 * functionality. See main description of this class.
-	 */
-	@Override
-	public void performJob() {
-		ExecContext execContext;
-		UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-		BuildReferenceGraph buildReferenceGraph;
-		ReferenceGraph referenceGraph;
-		List<ModuleVersion> listModuleVersion;
-		WorkspacePlugin workspacePlugin;
+  /**
+   * We override the main method since we do not really reuse the base class'
+   * functionality. See main description of this class.
+   */
+  @Override
+  public void performJob() {
+    ExecContext execContext;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    BuildReferenceGraph buildReferenceGraph;
+    ReferenceGraph referenceGraph;
+    List<ModuleVersion> listModuleVersion;
+    WorkspacePlugin workspacePlugin;
 
-		execContext = ExecContextHolder.get();
-		userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    execContext = ExecContextHolder.get();
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-		/* *******************************************************************************
-		 * Compute the List of ModuleVersion to checkout based on the matched
-		 * ModuleVersion's and if the WorkspacePlugin does not support multiple Version's
-		 * for the same Module, we let the user specify which Version's to actually
-		 * checkout.
-		 * We do not handle the fact that a Version of a Module may already be checked out
-		 * and a switch may be required. This is handled below, independently of the
-		 * selection of the single Version for each Module.
-		 * *******************************************************************************/
+    /* *******************************************************************************
+     * Compute the List of ModuleVersion to checkout based on the matched
+     * ModuleVersion's and if the WorkspacePlugin does not support multiple Version's
+     * for the same Module, we let the user specify which Version's to actually
+     * checkout.
+     * We do not handle the fact that a Version of a Module may already be checked out
+     * and a switch may be required. This is handled below, independently of the
+     * selection of the single Version for each Module.
+     * *******************************************************************************/
 
-		userInteractionCallbackPlugin.provideInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION));
+    userInteractionCallbackPlugin.provideInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION));
 
-		buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
-		buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
-		buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
-		buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
-		buildReferenceGraph.performJob();
+    buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
+    buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
+    buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
+    buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
+    buildReferenceGraph.performJob();
 
-		if (buildReferenceGraph.isListModuleVersionRootChanged()) {
-			this.setIndListModuleVersionRootChanged();
-		}
+    if (buildReferenceGraph.isListModuleVersionRootChanged()) {
+      this.setIndListModuleVersionRootChanged();
+    }
 
-		referenceGraph = buildReferenceGraph.getReferenceGraph();
+    referenceGraph = buildReferenceGraph.getReferenceGraph();
 
-		// Here, listModuleVersion contains the matched ModuleVersion's.
-		listModuleVersion = referenceGraph.getListModuleVersionMatched();
+    // Here, listModuleVersion contains the matched ModuleVersion's.
+    listModuleVersion = referenceGraph.getListModuleVersionMatched();
 
-		workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
-		if (!workspacePlugin.isSupportMultipleModuleVersion()) {
-			Map<NodePath, List<Version>> mapModuleVersion;
+    if (!workspacePlugin.isSupportMultipleModuleVersion()) {
+      Map<NodePath, List<Version>> mapModuleVersion;
 
-			// If the WorkspacePlugin does not support multiple Version's for the same Module,
-			// we transform the List of ModuleVersion's into a Map from the Module's
-			// NodePath's to the List of Version's for each Module.
+      // If the WorkspacePlugin does not support multiple Version's for the same Module,
+      // we transform the List of ModuleVersion's into a Map from the Module's
+      // NodePath's to the List of Version's for each Module.
 
-			mapModuleVersion = new LinkedHashMap<NodePath, List<Version>>();
+      mapModuleVersion = new LinkedHashMap<NodePath, List<Version>>();
 
-			for (ModuleVersion moduleVersion: listModuleVersion) {
-				List<Version> listVersion;
+      for (ModuleVersion moduleVersion: listModuleVersion) {
+        List<Version> listVersion;
 
-				listVersion = mapModuleVersion.get(moduleVersion.getNodePath());
+        listVersion = mapModuleVersion.get(moduleVersion.getNodePath());
 
-				if (listVersion == null) {
-					listVersion = new ArrayList<Version>();
-					mapModuleVersion.put(moduleVersion.getNodePath(),  listVersion);
-				}
+        if (listVersion == null) {
+          listVersion = new ArrayList<Version>();
+          mapModuleVersion.put(moduleVersion.getNodePath(),  listVersion);
+        }
 
-				listVersion.add(moduleVersion.getVersion());
-			}
+        listVersion.add(moduleVersion.getVersion());
+      }
 
-			// We reuse listModuleVersion for the new List of selected ModuleVersion's that
-			// will be built.
-			listModuleVersion = new ArrayList<ModuleVersion>();
+      // We reuse listModuleVersion for the new List of selected ModuleVersion's that
+      // will be built.
+      listModuleVersion = new ArrayList<ModuleVersion>();
 
-			for (Map.Entry<NodePath, List<Version>> mapEntry: mapModuleVersion.entrySet()) {
-				if (mapEntry.getValue().size() > 1) {
-					StringBuilder stringBuilder;
-					int index;
-					String selectedVersion;
-					Version versionSelected;
+      for (Map.Entry<NodePath, List<Version>> mapEntry: mapModuleVersion.entrySet()) {
+        if (mapEntry.getValue().size() > 1) {
+          StringBuilder stringBuilder;
+          int index;
+          String selectedVersion;
+          Version versionSelected;
 
-					// If there is more than one Version, we must interact with the user to let him
-					// select the desired one.
+          // If there is more than one Version, we must interact with the user to let him
+          // select the desired one.
 
-					stringBuilder = new StringBuilder();
-					index = 1;
+          stringBuilder = new StringBuilder();
+          index = 1;
 
-					for (Version version: mapEntry.getValue()) {
-						if (index != 1) {
-							stringBuilder.append('\n');
-						}
+          for (Version version: mapEntry.getValue()) {
+            if (index != 1) {
+              stringBuilder.append('\n');
+            }
 
-						stringBuilder.append(index++).append(" - ").append(version);
-					}
+            stringBuilder.append(index++).append(" - ").append(version);
+          }
 
-					userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS), mapEntry.getKey(), stringBuilder));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS), mapEntry.getKey(), stringBuilder));
 
-					versionSelected = null;
+          versionSelected = null;
 
-					do {
-						selectedVersion = userInteractionCallbackPlugin.getInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP));
+          do {
+            selectedVersion = userInteractionCallbackPlugin.getInfo(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_INPUT_MODULE_VERSION_TO_KEEP));
 
-						try {
-							index = Integer.parseInt(selectedVersion);
+            try {
+              index = Integer.parseInt(selectedVersion);
 
-							if ((index < 1) || (index > mapEntry.getValue().size())) {
-								userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS), selectedVersion, 1, mapEntry.getValue().size()));
-							} else {
-								versionSelected = mapEntry.getValue().get(index - 1);
-							}
-						} catch (NumberFormatException nfe) {
-						}
+              if ((index < 1) || (index > mapEntry.getValue().size())) {
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS), selectedVersion, 1, mapEntry.getValue().size()));
+              } else {
+                versionSelected = mapEntry.getValue().get(index - 1);
+              }
+            } catch (NumberFormatException nfe) {
+            }
 
-						if (versionSelected == null) {
-							try {
-								versionSelected = Version.parse(selectedVersion);
-							} catch (ParseException pe) {
-								userInteractionCallbackPlugin.provideInfo(pe.getMessage());
-							}
-						}
-						if (versionSelected == null) {
-							userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_TRY_AGAIN));
-						}
-					} while (versionSelected == null);
+            if (versionSelected == null) {
+              try {
+                versionSelected = Version.parse(selectedVersion);
+              } catch (ParseException pe) {
+                userInteractionCallbackPlugin.provideInfo(pe.getMessage());
+              }
+            }
+            if (versionSelected == null) {
+              userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_TRY_AGAIN));
+            }
+          } while (versionSelected == null);
 
 
-					listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
-				} else {
-					// If there is only one Version for the Module, we use it.
-					listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), mapEntry.getValue().get(0)));
-				}
-			}
-		}
+          listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
+        } else {
+          // If there is only one Version for the Module, we use it.
+          listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), mapEntry.getValue().get(0)));
+        }
+      }
+    }
 
-		/* *******************************************************************************
-		 * Perform the actual checkout for the selected ModuleVersion's
-		 * *******************************************************************************/
+    /* *******************************************************************************
+     * Perform the actual checkout for the selected ModuleVersion's
+     * *******************************************************************************/
 
-		for (ModuleVersion moduleVersion: listModuleVersion) {
-			RuntimePropertiesPlugin runtimePropertiesPlugin;
-			Module module;
-			ScmPlugin scmPlugin;
-			WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
-			WorkspaceDirUserModuleVersion workspaceDirUserModuleVersionConflict;
-			AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
-			Path pathModuleWorkspace;
+    for (ModuleVersion moduleVersion: listModuleVersion) {
+      RuntimePropertiesPlugin runtimePropertiesPlugin;
+      Module module;
+      ScmPlugin scmPlugin;
+      WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
+      WorkspaceDirUserModuleVersion workspaceDirUserModuleVersionConflict;
+      AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
+      Path pathModuleWorkspace;
 
-			runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-			module = ExecContextHolder.get().getModel().getModule(moduleVersion.getNodePath());
-			scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+      runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+      module = ExecContextHolder.get().getModel().getModule(moduleVersion.getNodePath());
+      scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-			workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);
-			workspaceDirUserModuleVersionConflict = (WorkspaceDirUserModuleVersion)workspacePlugin.getWorkspaceDirConflict(workspaceDirUserModuleVersion);
+      workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);
+      workspaceDirUserModuleVersionConflict = (WorkspaceDirUserModuleVersion)workspacePlugin.getWorkspaceDirConflict(workspaceDirUserModuleVersion);
 
-			if ((workspaceDirUserModuleVersionConflict != null) && !workspaceDirUserModuleVersionConflict.getModuleVersion().getNodePath().equals(moduleVersion.getNodePath())) {
-				throw new RuntimeException("Workspace conflicts where two different Module's share the same workspace directory (same Module name) are not supported.");
-			}
+      if ((workspaceDirUserModuleVersionConflict != null) && !workspaceDirUserModuleVersionConflict.getModuleVersion().getNodePath().equals(moduleVersion.getNodePath())) {
+        throw new RuntimeException("Workspace conflicts where two different Module's share the same workspace directory (same Module name) are not supported.");
+      }
 
-			if (workspacePlugin.isSupportMultipleModuleVersion() || (workspaceDirUserModuleVersionConflict == null)) {
-				if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-					pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      if (workspacePlugin.isSupportMultipleModuleVersion() || (workspaceDirUserModuleVersionConflict == null)) {
+        if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
+          pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-					try {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
-					} finally {
-						if (pathModuleWorkspace != null) {
-							workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-						}
-					}
+          try {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
+          } finally {
+            if (pathModuleWorkspace != null) {
+              workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+            }
+          }
 
-					// We do not handle workspace directory synchronization here since this has
-					// implicitly been handled when building the ReferenceGraph.
-				} else {
-					pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+          // We do not handle workspace directory synchronization here since this has
+          // implicitly been handled when building the ReferenceGraph.
+        } else {
+          pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
-					try {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));
+          try {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));
 
-						scmPlugin.checkout(moduleVersion.getVersion(), pathModuleWorkspace);
-					} catch (RuntimeException re) {
-						workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
-						pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
-						throw re;
-					} finally {
-						if (pathModuleWorkspace != null) {
-							workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-						}
-					}
-				}
-			} else {
-				pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersionConflict, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+            scmPlugin.checkout(moduleVersion.getVersion(), pathModuleWorkspace);
+          } catch (RuntimeException re) {
+            workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
+            pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
+            throw re;
+          } finally {
+            if (pathModuleWorkspace != null) {
+              workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+            }
+          }
+        }
+      } else {
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersionConflict, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-				try {
-					// TODO: The code below is not really useful since BuildReferenceGraph that is
-					// used above ensures that the workspace directories are all synchronized when
-					// building the ReferenceGraph. For now we still leave it there, just in case the
-					// logic eventually changes and it becomes useful.
+        try {
+          // TODO: The code below is not really useful since BuildReferenceGraph that is
+          // used above ensures that the workspace directories are all synchronized when
+          // building the ReferenceGraph. For now we still leave it there, just in case the
+          // logic eventually changes and it becomes useful.
 
-					// Workspace directory synchronization was implicitly handled when building the
-					// ReferenceGraph. But in the case a ModuleVersion must be switched, the Version
-					// in the user workspace directory is not the one that was used when building the
-					// ReferenceGraph so synchronization has not been handled.
-					if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
-						throw new RuntimeExceptionUserError(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
-					}
+          // Workspace directory synchronization was implicitly handled when building the
+          // ReferenceGraph. But in the case a ModuleVersion must be switched, the Version
+          // in the user workspace directory is not the one that was used when building the
+          // ReferenceGraph so synchronization has not been handled.
+          if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
+            throw new RuntimeExceptionUserError(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+          }
 
-					alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
-							runtimePropertiesPlugin,
-							Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
-							userInteractionCallbackPlugin,
-							MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+          alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
+              runtimePropertiesPlugin,
+              Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
+              userInteractionCallbackPlugin,
+              MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
 
-					if (alwaysNeverYesNoAskUserResponse.isYes()) {
-						userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION), workspaceDirUserModuleVersionConflict.getModuleVersion(), pathModuleWorkspace, moduleVersion.getVersion()));
+          if (alwaysNeverYesNoAskUserResponse.isYes()) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION), workspaceDirUserModuleVersionConflict.getModuleVersion(), pathModuleWorkspace, moduleVersion.getVersion()));
 
-						scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
+            scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
 
-						// We could be tempted to handle updating the list of root ModuleVersion's since
-						// when switching the Version of a ModuleVersion, it may be a root. But the list
-						// of ModuleVersion's to checkout is derived from such a list of root
-						// ModuleVersion's so that they are by definition already correct. This job does
-						// handle switching the Version of a ModuleVersion, but not in the sense of
-						// switching the Version of an existing ModuleVersion as SwitchToDynamicVersion
-						// does. It simply handles the case where when performing a fully specified
-						// checkout operation along with root ModuleVerion's, some ModuleVersion's may
-						// already be present in the workspace.
-					}
-				} finally {
-					if (pathModuleWorkspace != null) {
-						workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-					}
-				}
-			}
-		}
-	}
+            // We could be tempted to handle updating the list of root ModuleVersion's since
+            // when switching the Version of a ModuleVersion, it may be a root. But the list
+            // of ModuleVersion's to checkout is derived from such a list of root
+            // ModuleVersion's so that they are by definition already correct. This job does
+            // handle switching the Version of a ModuleVersion, but not in the sense of
+            // switching the Version of an existing ModuleVersion as SwitchToDynamicVersion
+            // does. It simply handles the case where when performing a fully specified
+            // checkout operation along with root ModuleVerion's, some ModuleVersion's may
+            // already be present in the workspace.
+          }
+        } finally {
+          if (pathModuleWorkspace != null) {
+            workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+          }
+        }
+      }
+    }
+  }
 }

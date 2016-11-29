@@ -74,57 +74,57 @@ import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
  * @author David Raymond
  */
 public class PhaseSelectStaticVersionPluginImpl extends SelectStaticVersionPluginBaseImpl implements SelectStaticVersionPlugin {
-	private static final String RUNTIME_PROPERTY_CURRENT_PHASE = "CURRENT_PHASE";
+  private static final String RUNTIME_PROPERTY_CURRENT_PHASE = "CURRENT_PHASE";
 
-	public PhaseSelectStaticVersionPluginImpl(Module module) {
-		super(module);
-	}
+  public PhaseSelectStaticVersionPluginImpl(Module module) {
+    super(module);
+  }
 
-	@Override
-	public Version selectStaticVersion(Version versionDynamic) {
-		Version versionStaticSelected;
-		RuntimePropertiesPlugin runtimePropertiesPlugin;
-		String currentPhase;
-		ScmPlugin scmPlugin;
+  @Override
+  public Version selectStaticVersion(Version versionDynamic) {
+    Version versionStaticSelected;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    String currentPhase;
+    ScmPlugin scmPlugin;
 
-		this.validateVersionDynamic(versionDynamic);
+    this.validateVersionDynamic(versionDynamic);
 
-		runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-		currentPhase = runtimePropertiesPlugin.getProperty(this.getModule(), PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE);
+    runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
+    currentPhase = runtimePropertiesPlugin.getProperty(this.getModule(), PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE);
 
-		if (currentPhase == null) {
-			throw new RuntimeException("The property " + PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE + " must be defined in the context of module " + this.getModule() + '.');
-		}
+    if (currentPhase == null) {
+      throw new RuntimeException("The property " + PhaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_CURRENT_PHASE + " must be defined in the context of module " + this.getModule() + '.');
+    }
 
-		versionStaticSelected = new Version(VersionType.STATIC, versionDynamic.getVersion() + '-' + currentPhase);
+    versionStaticSelected = new Version(VersionType.STATIC, versionDynamic.getVersion() + '-' + currentPhase);
 
-		scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
+    scmPlugin = this.getModule().getNodePlugin(ScmPlugin.class, null);
 
-		if (!scmPlugin.isVersionExists(versionStaticSelected)) {
-			ArtifactVersionManagerPlugin artifactVersionManagerPlugin;
+    if (!scmPlugin.isVersionExists(versionStaticSelected)) {
+      ArtifactVersionManagerPlugin artifactVersionManagerPlugin;
 
-			artifactVersionManagerPlugin = this.getModule().getNodePlugin(ArtifactVersionManagerPlugin.class, null);
+      artifactVersionManagerPlugin = this.getModule().getNodePlugin(ArtifactVersionManagerPlugin.class, null);
 
-			if (artifactVersionManagerPlugin != null) {
-				Path pathModuleWorkspace;
-				ArtifactVersion artifactVersion;
-				ArtifactVersion artifactVersionFromSelectedStaticVersion;
-				ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
-				WorkspacePlugin workspacePlugin;
+      if (artifactVersionManagerPlugin != null) {
+        Path pathModuleWorkspace;
+        ArtifactVersion artifactVersion;
+        ArtifactVersion artifactVersionFromSelectedStaticVersion;
+        ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
+        WorkspacePlugin workspacePlugin;
 
-				pathModuleWorkspace = scmPlugin.checkoutSystem(versionDynamic);
-				artifactVersion = artifactVersionManagerPlugin.getArtifactVersion(pathModuleWorkspace);
-				workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-				workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-				artifactVersionMapperPlugin = this.getModule().getNodePlugin(ArtifactVersionMapperPlugin.class, null);
-				artifactVersionFromSelectedStaticVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(versionStaticSelected);
+        pathModuleWorkspace = scmPlugin.checkoutSystem(versionDynamic);
+        artifactVersion = artifactVersionManagerPlugin.getArtifactVersion(pathModuleWorkspace);
+        workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+        workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+        artifactVersionMapperPlugin = this.getModule().getNodePlugin(ArtifactVersionMapperPlugin.class, null);
+        artifactVersionFromSelectedStaticVersion = artifactVersionMapperPlugin.mapVersionToArtifactVersion(versionStaticSelected);
 
-				if (!artifactVersion.equals(artifactVersionFromSelectedStaticVersion)) {
-					throw new RuntimeException("The current artifact version " + artifactVersion + " for the dynamic version " + versionDynamic + " of module " + this.getModule() + " does not correspond to the artifact version " + artifactVersionFromSelectedStaticVersion + " mapped from the new static version " + versionStaticSelected + '.');
-				}
-			}
-		}
+        if (!artifactVersion.equals(artifactVersionFromSelectedStaticVersion)) {
+          throw new RuntimeException("The current artifact version " + artifactVersion + " for the dynamic version " + versionDynamic + " of module " + this.getModule() + " does not correspond to the artifact version " + artifactVersionFromSelectedStaticVersion + " mapped from the new static version " + versionStaticSelected + '.');
+        }
+      }
+    }
 
-		return versionStaticSelected;
-	}
+    return versionStaticSelected;
+  }
 }

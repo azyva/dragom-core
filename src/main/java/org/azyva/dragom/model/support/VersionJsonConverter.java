@@ -29,8 +29,8 @@ import com.fasterxml.jackson.databind.util.StdConverter;
  * @author David Raymond
  */
 public class VersionJsonConverter extends StdConverter<Version, String> {
-	@Override
-	public String convert(Version version) {
-		return version.toString();
-	}
+  @Override
+  public String convert(Version version) {
+    return version.toString();
+  }
 }

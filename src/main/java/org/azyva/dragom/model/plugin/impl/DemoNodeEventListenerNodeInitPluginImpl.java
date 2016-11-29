@@ -35,24 +35,24 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class DemoNodeEventListenerNodeInitPluginImpl extends NodePluginAbstractImpl implements NodeInitPlugin {
-	/**
-	 * Logger for the class.
-	 */
-	private static final Logger logger = LoggerFactory.getLogger(DemoNodeEventListenerNodeInitPluginImpl.class);
+  /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(DemoNodeEventListenerNodeInitPluginImpl.class);
 
-	private class NodeEventListenerDemo implements NodeEventListener<NodeEvent> {
-		@Override
-		public void onEvent(NodeEvent nodeEvent) {
-			DemoNodeEventListenerNodeInitPluginImpl.logger.info("NodeEvent was received: " + nodeEvent);
-		}
-	}
+  private class NodeEventListenerDemo implements NodeEventListener<NodeEvent> {
+    @Override
+    public void onEvent(NodeEvent nodeEvent) {
+      DemoNodeEventListenerNodeInitPluginImpl.logger.info("NodeEvent was received: " + nodeEvent);
+    }
+  }
 
-	public DemoNodeEventListenerNodeInitPluginImpl(Node node) {
-		super(node);
-	}
+  public DemoNodeEventListenerNodeInitPluginImpl(Node node) {
+    super(node);
+  }
 
-	@Override
-	public void init() {
-		this.getNode().registerListener(new NodeEventListenerDemo(), true);
-	}
+  @Override
+  public void init() {
+    this.getNode().registerListener(new NodeEventListenerDemo(), true);
+  }
 }

@@ -23,54 +23,54 @@ package org.azyva.dragom.util;
  * Enumerates the possible responses to a Always/Never/Ask type of user input.
  */
 public enum AlwaysNeverAskUserResponse {
-	/**
-	 * Indicates to silently assume a positive response.
-	 */
-	ALWAYS,
+  /**
+   * Indicates to silently assume a positive response.
+   */
+  ALWAYS,
 
-	/**
-	 * Indicates to silently assume a negative response.
-	 */
-	NEVER,
+  /**
+   * Indicates to silently assume a negative response.
+   */
+  NEVER,
 
-	/**
-	 * Indicates to ask the user.
-	 */
-	ASK;
+  /**
+   * Indicates to ask the user.
+   */
+  ASK;
 
-	/**
-	 * @return Indicates if ALWAYS.
-	 */
-	public boolean isAlways() {
-		return this == ALWAYS;
-	}
+  /**
+   * @return Indicates if ALWAYS.
+   */
+  public boolean isAlways() {
+    return this == ALWAYS;
+  }
 
-	/**
-	 * @return Indicates if NEVER.
-	 */
-	public boolean isNever() {
-		return this == NEVER;
-	}
+  /**
+   * @return Indicates if NEVER.
+   */
+  public boolean isNever() {
+    return this == NEVER;
+  }
 
-	/**
-	 * @return Indicates if ASK.
-	 */
-	public boolean isAsk() {
-		return this == ASK;
-	}
+  /**
+   * @return Indicates if ASK.
+   */
+  public boolean isAsk() {
+    return this == ASK;
+  }
 
-	/**
-	 * Facilitates parsing a String representation of this enum when the String can be
-	 * null.
-	 *
-	 * @param value Value. Can be null.
-	 * @return AlwaysNeverAskUserResponse. ASK if value is null.
-	 */
-	public static AlwaysNeverAskUserResponse valueOfWithAskDefault(String value) {
-		if (value == null) {
-			return AlwaysNeverAskUserResponse.ASK;
-		} else {
-			return AlwaysNeverAskUserResponse.valueOf(value);
-		}
-	}
+  /**
+   * Facilitates parsing a String representation of this enum when the String can be
+   * null.
+   *
+   * @param value Value. Can be null.
+   * @return AlwaysNeverAskUserResponse. ASK if value is null.
+   */
+  public static AlwaysNeverAskUserResponse valueOfWithAskDefault(String value) {
+    if (value == null) {
+      return AlwaysNeverAskUserResponse.ASK;
+    } else {
+      return AlwaysNeverAskUserResponse.valueOf(value);
+    }
+  }
 };

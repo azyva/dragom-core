@@ -39,58 +39,58 @@ import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
  * @author David Raymond
  */
 public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends ClassificationNodePluginAbstractImpl implements UndefinedDescendantNodeManagerPlugin {
-	public UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl(ClassificationNode classificationNode) {
-		super(classificationNode);
-	}
+  public UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl(ClassificationNode classificationNode) {
+    super(classificationNode);
+  }
 
-	@Override
-	public ClassificationNode requestClassificationNode(String name) {
-		/*
-		 * This UndefinedDescendantNodeManagerPlugin does not support dynamically creating
-		 * ClassificationNode's as validating the existence of a ClassificationNode is not
-		 * generically possible. Other implementations may be possible though.
-		 */
-		return null;
-	}
+  @Override
+  public ClassificationNode requestClassificationNode(String name) {
+    /*
+     * This UndefinedDescendantNodeManagerPlugin does not support dynamically creating
+     * ClassificationNode's as validating the existence of a ClassificationNode is not
+     * generically possible. Other implementations may be possible though.
+     */
+    return null;
+  }
 
-	@Override
-	public Module requestModule(String name) {
-		Model model;
-		ModelNodeBuilderFactory modelNodeBuilderFactory;
-		ModuleBuilder moduleBuilder;
-		Module module;
-		ScmPlugin scmPlugin;
+  @Override
+  public Module requestModule(String name) {
+    Model model;
+    ModelNodeBuilderFactory modelNodeBuilderFactory;
+    ModuleBuilder moduleBuilder;
+    Module module;
+    ScmPlugin scmPlugin;
 
-		model = this.getClassificationNode().getModel();
+    model = this.getClassificationNode().getModel();
 
-		if (!(model instanceof ModelNodeBuilderFactory)) {
-			return null;
-		}
+    if (!(model instanceof ModelNodeBuilderFactory)) {
+      return null;
+    }
 
-		modelNodeBuilderFactory = (ModelNodeBuilderFactory)model;
-		moduleBuilder = modelNodeBuilderFactory.createModuleBuilder();
-		moduleBuilder.setClassificationNodeParent(this.getClassificationNode());
-		moduleBuilder.setName(name);
-		module = moduleBuilder.getPartial();
+    modelNodeBuilderFactory = (ModelNodeBuilderFactory)model;
+    moduleBuilder = modelNodeBuilderFactory.createModuleBuilder();
+    moduleBuilder.setClassificationNodeParent(this.getClassificationNode());
+    moduleBuilder.setName(name);
+    module = moduleBuilder.getPartial();
 
-		/*
-		 * At this point, the setup for the new Module is not complete as its parent does
-		 * not include it as a child. This is sufficient for the ScmPlugin.isModuleExists
-		 * method. If ever the Module is not valid, it will not be added within the parent
-		 * and will remain unreferenced.
-		 */
+    /*
+     * At this point, the setup for the new Module is not complete as its parent does
+     * not include it as a child. This is sufficient for the ScmPlugin.isModuleExists
+     * method. If ever the Module is not valid, it will not be added within the parent
+     * and will remain unreferenced.
+     */
 
-		scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-		if (!scmPlugin.isModuleExists()) {
-			return null;
-		}
+    if (!scmPlugin.isModuleExists()) {
+      return null;
+    }
 
-		/*
-		 * Here we know the Module is valid. Before returning it we must add it within the
-		 * parent.
-		 */
+    /*
+     * Here we know the Module is valid. Before returning it we must add it within the
+     * parent.
+     */
 
-		return moduleBuilder.create();
-	}
+    return moduleBuilder.create();
+  }
 }

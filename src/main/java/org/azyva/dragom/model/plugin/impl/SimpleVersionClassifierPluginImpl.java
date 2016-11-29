@@ -64,178 +64,178 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class SimpleVersionClassifierPluginImpl extends ModulePluginAbstractImpl implements VersionClassifierPlugin {
-	/**
-	 * Model property specifying the prefix used for static {@link Version}'s.
-	 */
-	private static final String MODEL_PROPERTY_STATIC_VERSION_PREFIX = "STATIC_VERSION_PREFIX";
+  /**
+   * Model property specifying the prefix used for static {@link Version}'s.
+   */
+  private static final String MODEL_PROPERTY_STATIC_VERSION_PREFIX = "STATIC_VERSION_PREFIX";
 
-	/**
-	 * Static {@link Version} prefix.
-	 */
-	private String staticVersionPrefix;
+  /**
+   * Static {@link Version} prefix.
+   */
+  private String staticVersionPrefix;
 
-	public SimpleVersionClassifierPluginImpl(Module module) {
-		super(module);
+  public SimpleVersionClassifierPluginImpl(Module module) {
+    super(module);
 
-		this.staticVersionPrefix = module.getProperty(SimpleVersionClassifierPluginImpl.MODEL_PROPERTY_STATIC_VERSION_PREFIX);
-	}
+    this.staticVersionPrefix = module.getProperty(SimpleVersionClassifierPluginImpl.MODEL_PROPERTY_STATIC_VERSION_PREFIX);
+  }
 
-	@Override
-	public int compare(Version version1, Version version2) {
-		String stringVersion1;
-		String stringVersion2;
-		String[] arrayVersion1Token;
-		String[] arrayVersion2Token;
-		int index;
+  @Override
+  public int compare(Version version1, Version version2) {
+    String stringVersion1;
+    String stringVersion2;
+    String[] arrayVersion1Token;
+    String[] arrayVersion2Token;
+    int index;
 
-		if (version1.equals(version2)) {
-			return 0;
-		}
+    if (version1.equals(version2)) {
+      return 0;
+    }
 
-		if (version1.getVersionType() != version2.getVersionType()) {
-			if (version1.getVersionType() == VersionType.STATIC){
-				return -1;
-			} else {
-				return 1;
-			}
-		}
+    if (version1.getVersionType() != version2.getVersionType()) {
+      if (version1.getVersionType() == VersionType.STATIC){
+        return -1;
+      } else {
+        return 1;
+      }
+    }
 
-		if (version1.getVersionType() == VersionType.DYNAMIC) { // && (version2.getVersionType() == VersionType.DYNAMIC)
-			return version1.getVersion().compareTo(version1.getVersion());
-		}
+    if (version1.getVersionType() == VersionType.DYNAMIC) { // && (version2.getVersionType() == VersionType.DYNAMIC)
+      return version1.getVersion().compareTo(version1.getVersion());
+    }
 
-		stringVersion1 = version1.getVersion();
-		stringVersion2 = version2.getVersion();
+    stringVersion1 = version1.getVersion();
+    stringVersion2 = version2.getVersion();
 
-		if (this.staticVersionPrefix != null) {
-			boolean indVersion1Prefix;
-			boolean indVersion2Prefix;
+    if (this.staticVersionPrefix != null) {
+      boolean indVersion1Prefix;
+      boolean indVersion2Prefix;
 
-			if (version1.getVersion().startsWith(this.staticVersionPrefix)) {
-				stringVersion1 = stringVersion1.substring(this.staticVersionPrefix.length());
-				indVersion1Prefix = true;
-			} else {
-				indVersion1Prefix = false;
-			}
+      if (version1.getVersion().startsWith(this.staticVersionPrefix)) {
+        stringVersion1 = stringVersion1.substring(this.staticVersionPrefix.length());
+        indVersion1Prefix = true;
+      } else {
+        indVersion1Prefix = false;
+      }
 
-			if (stringVersion2.startsWith(this.staticVersionPrefix)) {
-				stringVersion2 = stringVersion2.substring(this.staticVersionPrefix.length());
-				indVersion2Prefix = true;
-			} else {
-				indVersion2Prefix = false;
-			}
+      if (stringVersion2.startsWith(this.staticVersionPrefix)) {
+        stringVersion2 = stringVersion2.substring(this.staticVersionPrefix.length());
+        indVersion2Prefix = true;
+      } else {
+        indVersion2Prefix = false;
+      }
 
-			if (indVersion1Prefix != indVersion2Prefix) {
-				if (indVersion1Prefix) {
-					return -1;
-				} else {
-					return 1;
-				}
-			}
+      if (indVersion1Prefix != indVersion2Prefix) {
+        if (indVersion1Prefix) {
+          return -1;
+        } else {
+          return 1;
+        }
+      }
 
-			if (!indVersion1Prefix) { // && !indVersion2Prefix
-				return stringVersion1.compareTo(stringVersion2);
-			}
-		}
+      if (!indVersion1Prefix) { // && !indVersion2Prefix
+        return stringVersion1.compareTo(stringVersion2);
+      }
+    }
 
-		arrayVersion1Token = stringVersion1.split("((?<=\\.|-)|(?=\\.|-))");
-		arrayVersion2Token = stringVersion2.split("((?<=\\.|-)|(?=\\.|-))");
-		index = 0;
+    arrayVersion1Token = stringVersion1.split("((?<=\\.|-)|(?=\\.|-))");
+    arrayVersion2Token = stringVersion2.split("((?<=\\.|-)|(?=\\.|-))");
+    index = 0;
 
-		for(;;) {
-			String token1;
-			String token2;
-			int compareResult;
+    for(;;) {
+      String token1;
+      String token2;
+      int compareResult;
 
-			if (index >= arrayVersion1Token.length) {
-				if (index > arrayVersion2Token.length) {
-					return 0;
-				} else {
-					return 1;
-				}
-			} else if (index >= arrayVersion2Token.length) {
-				return -1;
-			}
+      if (index >= arrayVersion1Token.length) {
+        if (index > arrayVersion2Token.length) {
+          return 0;
+        } else {
+          return 1;
+        }
+      } else if (index >= arrayVersion2Token.length) {
+        return -1;
+      }
 
-			token1 = arrayVersion1Token[index];
-			token2 = arrayVersion2Token[index];
+      token1 = arrayVersion1Token[index];
+      token2 = arrayVersion2Token[index];
 
-			if (!Util.isDigits(token1) || !Util.isDigits(token2)) {
-				compareResult = token1.compareTo(token2);
-			} else {
-				compareResult = new Integer(token1).compareTo(new Integer(token2));
-			}
+      if (!Util.isDigits(token1) || !Util.isDigits(token2)) {
+        compareResult = token1.compareTo(token2);
+      } else {
+        compareResult = new Integer(token1).compareTo(new Integer(token2));
+      }
 
-			if (compareResult != 0) {
-				return compareResult;
-			}
+      if (compareResult != 0) {
+        return compareResult;
+      }
 
-			index++;
+      index++;
 
-			// Eat all separators, if there are multiple consecutive separators.
-			for (;;) {
-				if (index >= arrayVersion1Token.length) {
-					if (index > arrayVersion2Token.length) {
-						return 0;
-					} else {
-						return 1;
-					}
-				} else if (index >= arrayVersion2Token.length) {
-					return -1;
-				}
+      // Eat all separators, if there are multiple consecutive separators.
+      for (;;) {
+        if (index >= arrayVersion1Token.length) {
+          if (index > arrayVersion2Token.length) {
+            return 0;
+          } else {
+            return 1;
+          }
+        } else if (index >= arrayVersion2Token.length) {
+          return -1;
+        }
 
-				token1 = arrayVersion1Token[index];
-				token2 = arrayVersion2Token[index];
+        token1 = arrayVersion1Token[index];
+        token2 = arrayVersion2Token[index];
 
-				if (token1.equals(".")) {
-					if (!token2.equals(".")) {
-						// token2 should be "-" here.
-						return 1;
-					}
-				} else if (token1.equals("-")) {
-					if (token2.equals(".")) {
-						return -1;
-					} else if (!token2.equals("-")) {
-						// token2 should be "." here.
-						return 1;
-					}
-				} else if (token2.equals(".") || token2.equals("-")) {
-					return -1;
-				} else {
-					// Break out of this inner loop since we have regular tokens.
-					break;
-				}
+        if (token1.equals(".")) {
+          if (!token2.equals(".")) {
+            // token2 should be "-" here.
+            return 1;
+          }
+        } else if (token1.equals("-")) {
+          if (token2.equals(".")) {
+            return -1;
+          } else if (!token2.equals("-")) {
+            // token2 should be "." here.
+            return 1;
+          }
+        } else if (token2.equals(".") || token2.equals("-")) {
+          return -1;
+        } else {
+          // Break out of this inner loop since we have regular tokens.
+          break;
+        }
 
-				index++;
-			}
-		}
-	}
+        index++;
+      }
+    }
+  }
 
-	@Override
-	public String getEvolutionPath(Version version) {
-		return null;
-	}
+  @Override
+  public String getEvolutionPath(Version version) {
+    return null;
+  }
 
-	@Override
-	public int compareEvolutionPaths(String evolutionPath1, String evolutionPath2) {
-		throw new UnsupportedOperationException();
-	}
+  @Override
+  public int compareEvolutionPaths(String evolutionPath1, String evolutionPath2) {
+    throw new UnsupportedOperationException();
+  }
 
-	public static void main(String[] args) {
-		VersionClassifierPlugin vc;
-		//Not clean. Need to disable fetching model property in constructor.
-		vc = new SimpleVersionClassifierPluginImpl(null);
-		System.out.println("S/1.2.3, S/1.2.3: " + vc.compare(new Version("S/1.2.3"),  new Version("S/1.2.3")));
-		System.out.println("S/1.2.3, S/v-1.2.3: " + vc.compare(new Version("S/1.2.3"),  new Version("S/v-1.2.3")));
-		System.out.println("S/v-1.2.3, S/v-1.2.3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2.3")));
-		System.out.println("S/v-1.2.3, S/1.2.3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/1.2.3")));
-		System.out.println("S/v-1.2.3, S/v-1.2.4: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2.4")));
-		System.out.println("S/v-1.2.5, S/v-1.2.4: " + vc.compare(new Version("S/v-1.2.5"),  new Version("S/v-1.2.4")));
-		System.out.println("S/v-1.2.3, S/v-1.2-3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2-3")));
-		System.out.println("S/v-1.2-3, S/v-1.2.3: " + vc.compare(new Version("S/v-1.2-3"),  new Version("S/v-1.2.3")));
-		System.out.println("S/v-1.10, S/v-1.2.3: " + vc.compare(new Version("S/v-1.10"),  new Version("S/v-1.2.3")));
-		System.out.println("S/v-1..1, S/v-1.1: " + vc.compare(new Version("S/v-1..1"),  new Version("S/v-1.1")));
-		System.out.println("S/v-1.1, S/v-1..1: " + vc.compare(new Version("S/v-1.1"),  new Version("S/v-1..1")));
-		System.out.println("S/v-1.alpha.3, S/1.beta.3: " + vc.compare(new Version("S/v-1.alpha.3"),  new Version("S/1.beta.3")));
-	}
+  public static void main(String[] args) {
+    VersionClassifierPlugin vc;
+    //Not clean. Need to disable fetching model property in constructor.
+    vc = new SimpleVersionClassifierPluginImpl(null);
+    System.out.println("S/1.2.3, S/1.2.3: " + vc.compare(new Version("S/1.2.3"),  new Version("S/1.2.3")));
+    System.out.println("S/1.2.3, S/v-1.2.3: " + vc.compare(new Version("S/1.2.3"),  new Version("S/v-1.2.3")));
+    System.out.println("S/v-1.2.3, S/v-1.2.3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2.3")));
+    System.out.println("S/v-1.2.3, S/1.2.3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/1.2.3")));
+    System.out.println("S/v-1.2.3, S/v-1.2.4: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2.4")));
+    System.out.println("S/v-1.2.5, S/v-1.2.4: " + vc.compare(new Version("S/v-1.2.5"),  new Version("S/v-1.2.4")));
+    System.out.println("S/v-1.2.3, S/v-1.2-3: " + vc.compare(new Version("S/v-1.2.3"),  new Version("S/v-1.2-3")));
+    System.out.println("S/v-1.2-3, S/v-1.2.3: " + vc.compare(new Version("S/v-1.2-3"),  new Version("S/v-1.2.3")));
+    System.out.println("S/v-1.10, S/v-1.2.3: " + vc.compare(new Version("S/v-1.10"),  new Version("S/v-1.2.3")));
+    System.out.println("S/v-1..1, S/v-1.1: " + vc.compare(new Version("S/v-1..1"),  new Version("S/v-1.1")));
+    System.out.println("S/v-1.1, S/v-1..1: " + vc.compare(new Version("S/v-1.1"),  new Version("S/v-1..1")));
+    System.out.println("S/v-1.alpha.3, S/1.beta.3: " + vc.compare(new Version("S/v-1.alpha.3"),  new Version("S/1.beta.3")));
+  }
 }
