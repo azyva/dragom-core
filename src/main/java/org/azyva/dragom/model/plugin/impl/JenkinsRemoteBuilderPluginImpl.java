@@ -20,6 +20,7 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import org.azyva.dragom.model.Module;
+import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.RemoteBuilderPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,4 +55,15 @@ public class JenkinsRemoteBuilderPluginImpl extends ModulePluginAbstractImpl imp
     super(module);
   }
 
+  @Override
+  public RemoteBuildHandle submitBuild(Version version) {
+    //TODO: To implement.
+    return null;
+  }
+
+  @Override
+  public boolean isBuildNeeded(Version version) {
+    // TODO Auto-generated method stub
+    return false;
+  }
 }

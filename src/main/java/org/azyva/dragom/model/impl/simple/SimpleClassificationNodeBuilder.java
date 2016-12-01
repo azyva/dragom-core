@@ -33,7 +33,7 @@ public class SimpleClassificationNodeBuilder extends SimpleNodeBuilder<Classific
    * {@link ModelNodeBuilderFactory#createClassificationNodeBuilder} implemented
    * by {@link SimpleModel} to create new {@link SimpleClassificationNode}'s.
    *
-   * @param simpleModel
+   * @param simpleModel SimpleModel.
    */
   SimpleClassificationNodeBuilder(SimpleModel simpleModel) {
     this.setSimpleNode(new SimpleClassificationNode(simpleModel));

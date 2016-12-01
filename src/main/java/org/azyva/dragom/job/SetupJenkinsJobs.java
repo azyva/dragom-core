@@ -54,7 +54,7 @@ import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.ServiceLocator;
 
 /**
- * Sets up jobs in Jenkins based on the {@link ModuleVersion's} in a
+ * Sets up jobs in Jenkins based on the {@link ModuleVersion}'s in a
  * {@link ReferenceGraph}.
  * <p>
  * Although creating jobs in a tool such as Jenkins based on a ReferenceGraph is a
@@ -72,7 +72,7 @@ import org.azyva.dragom.util.ServiceLocator;
  * {@link ExistingItemsCreatedFileMode}. The default items created file, if
  * {@link #setPathItemsCreatedFile} is not called, is jenkins-items-created.txt in
  * the metadata directory of the workspace. The default
- * ExistingItemsCreatedFileMode, if {@link #setItemsCreatedFileMode} is not
+ * ExistingItemsCreatedFileMode, if {@link #setExistingItemsCreatedFileMode} is not
  * called, is {@link ExistingItemsCreatedFileMode#MERGE}.
  *
  * @author David Raymond
@@ -278,7 +278,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobAbstractImpl {
      * This includes those from the existing items created file and those added.
      * <p>
      * To {@link ExistingItemsCreatedFileMode#IGNORE} the items created file, this
-     * method can be called without having called {@link loadIfExists}.
+     * method can be called without having called {@link #loadIfExists}.
      */
     public void save() {
       BufferedWriter bufferedWriter;
@@ -434,7 +434,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobAbstractImpl {
   /**
    * Constructor.
    *
-   * @param referenceGraph ReferenceGraph.
+   * @param listModuleVersionRoot List of root ModuleVersion's.
    */
   public SetupJenkinsJobs(List<ModuleVersion> listModuleVersionRoot) {
     super(listModuleVersionRoot);
@@ -508,7 +508,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobAbstractImpl {
   }
 
   /**
-   * {@link ReferenceGraph.Visitor} used to
+   * {@link org.azyva.dragom.reference.ReferenceGraph.Visitor} used to
    */
   private class ReferenceGraphVisitorSetupJob implements ReferenceGraph.Visitor {
     /**

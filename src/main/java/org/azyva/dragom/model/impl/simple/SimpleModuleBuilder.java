@@ -33,7 +33,7 @@ public class SimpleModuleBuilder extends SimpleNodeBuilder<Module> implements Mo
    * {@link ModelNodeBuilderFactory#createModuleBuilder} implemented
    * by {@link SimpleModel} to create new {@link SimpleModule}'s.
    *
-   * @param simpleModel
+   * @param simpleModel SimpleModel.
    */
   protected SimpleModuleBuilder(SimpleModel simpleModel) {
     this.setSimpleNode(new SimpleModule(simpleModel));

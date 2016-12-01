@@ -30,7 +30,7 @@ import org.azyva.dragom.model.event.support.EventManager;
 /**
  * Default {@link EventPlugin} implementation.
  * <p>
- * The {@link NodeEventListerner}'s must be registered explicitly and are kept in
+ * The {@link NodeEventListener}'s must be registered explicitly and are kept in
  * memory only, either in workspace or tool scope.
  * <p>
  * {@link ToolLifeCycleExecContextPlugin} is implemented so that the plugin is

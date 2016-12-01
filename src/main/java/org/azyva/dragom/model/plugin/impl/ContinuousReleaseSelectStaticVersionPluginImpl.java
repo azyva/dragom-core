@@ -62,14 +62,14 @@ import org.slf4j.LoggerFactory;
  * (e.g., D/master) and for each build a new unique static Version would be
  * released (e.g., S/v-1.#####). In such a case, the mapping could be:
  * <p>
- * D/master -> S/v-1.
+ * D/master -&gt; S/v-1.
  * <p>
  * In practice, it is often required to distinguish multiple development lines
  * producing incompatible versions of the {@link Module}. In such a case,
  * development can be done on development line dynamic Versions and the mapping
  * could be:
  * <p>
- * D/develop-cd-(.+) -> S/v-$1.
+ * D/develop-cd-(.+) -&gt; S/v-$1.
  * <p>
  * If development occurs on dynamic Version D/develop-cd-2 (branch develop-cd-2),
  * the released static Version could be S/v-2.#####, where ##### is an incremental

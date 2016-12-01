@@ -60,7 +60,7 @@ import org.azyva.dragom.util.Util;
  * A static Map of workspace Path to ExecContext instances is used in order to
  * reuse ExecContext instances. This is useful in case a single JVM instance is
  * used for multiple tool executions
- * (<a href="http://www.martiansoftware.com/nailgun/">NaigGun<a> can be useful in
+ * (<a href="http://www.martiansoftware.com/nailgun/">NaigGun</a> can be useful in
  * that regard).
  * <p>
  * This ExecContextFactory supports the workspace directory concept and therefore
@@ -522,7 +522,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
    * this method returns an {@link ExecContext} corresponding to the workspace
    * directory.
    *
-   * @param Properties propertiesInit Initialization properties.
+   * @param propertiesInit Initialization properties.
    * @return ExecContext.
    */
   @Override

@@ -253,7 +253,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * implementation detail of GitScmPluginImpl.
    * <p>
    * This information is used by {@link #getBaseVersion} to complete
-   * {@link ScmPlugin.BaseVersion} fields.
+   * {@link org.azyva.dragom.model.plugin.ScmPlugin.BaseVersion} fields.
    */
   private static final String VERSION_ATTR_BASE_VERSION_COMMIT_ID = "dragom-base-version-commit-id";
 
@@ -838,7 +838,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    *
    * TODO: Need to talk about temporary dynamic Version and its impact here.
    *
-   * @return
+   * @return Path to the module within the workspace.
    */
   private Path getPathModuleWorkspace() {
     WorkspacePlugin workspacePlugin;

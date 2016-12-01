@@ -31,7 +31,7 @@ public abstract class ModulePluginAbstractImpl extends NodePluginAbstractImpl im
   /**
    * Constructor.
    *
-   * @param Module module.
+   * @param module Module.
    */
   protected ModulePluginAbstractImpl(Module module) {
     super(module);

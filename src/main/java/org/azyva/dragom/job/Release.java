@@ -48,6 +48,7 @@ import org.azyva.dragom.model.plugin.BuilderPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
+import org.azyva.dragom.model.plugin.impl.ContinuousReleaseSelectStaticVersionPluginImpl;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
@@ -251,7 +252,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
      * <p>
      * This mode is useful in a continuous delivery context when used with
      * {@link MainModuleVersionWorkspacePluginFactory} and
-     * {@link ContinuousReleaseSelectStaticVersionPlugin}.
+     * {@link ContinuousReleaseSelectStaticVersionPluginImpl}.
      */
     USE_TEMP_DYNAMIC_VERSION
   }

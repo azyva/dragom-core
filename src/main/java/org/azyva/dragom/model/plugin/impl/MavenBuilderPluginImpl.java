@@ -294,10 +294,10 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
   /**
    * Base with respect to which a relative log file path is evaluated. The possible
    * values are:
-   * <p>
-   * <li>WORKSPACE: Represents the root workspace directory. This is the default;</li>
-   * <li>MODULE: Represents the module workspace directory.</li>
-   * <p>
+   * <ul>
+   * <li>WORKSPACE: Represents the root workspace directory. This is the default;
+   * <li>MODULE: Represents the module workspace directory.
+   * </ul>
    * Can also be overridden in the dragom.properties source file of a {@link Module}.
    */
   private static final String RUNTIME_PROPERTY_RELATIVE_LOG_FILE_BASE = "MAVEN_RELATIVE_LOG_FILE_BASE";
@@ -730,6 +730,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * intended to be called once at the beginning of a main method (build or clean)
    * of this plugin.
    *
+   * @param pathModuleWorkspace Path to the Module in the workspace.
    * @return See description.
    */
   private Properties loadModuleProperties(Path pathModuleWorkspace) {

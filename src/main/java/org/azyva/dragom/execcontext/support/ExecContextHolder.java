@@ -46,7 +46,7 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  * Dragom tools are meant to be single-threaded, but thread-safe, meaning that
  * multiple independent instances of such tools should be allowed to execute
  * simultaneously within a single JVM if so desired (within a
- * <a href="http://www.martiansoftware.com/nailgun/">NaigGun<a> server for
+ * <a href="http://www.martiansoftware.com/nailgun/">NaigGun</a> server for
  * example). Therefore, the ExecContext is held in thread-local storage instead of
  * in a truly global static variable. If a tool is multi-threaded, it is its
  * responsibility to copy the ExecContext from one thread to the other using
@@ -204,7 +204,7 @@ public class ExecContextHolder {
    * Since a {@link Model} is an integral part of the ExecContext, it is specified
    * here as an argument to be associated with the ExecContext.
    *
-   * @param Model Model.
+   * @param model Model.
    * @return Dummy ExecContext.
    */
   public static ExecContext setDummy(Model model) {
@@ -268,9 +268,9 @@ public class ExecContextHolder {
    * Force-unsets an {@link ExecContext}. Used as a last resort after a tool
    * ends abnormally, leaving the ExecContext in the used state.
    * <p>
-   * The ExecContext cannot be obtained with {@link ExecContext#get} since this
-   * method is generally not called on the same thread as the one that previously
-   * set the ExecContext without releasing it.
+   * The ExecContext cannot be obtained with {@link #get} since this method is
+   * generally not called on the same thread as the one that previously set the
+   * ExecContext without releasing it.
    *
    * @param execContext ExecContext.
    */

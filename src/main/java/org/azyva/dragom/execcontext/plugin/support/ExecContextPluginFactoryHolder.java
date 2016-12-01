@@ -48,17 +48,17 @@ import org.azyva.dragom.util.Util;
  * <p>
  * As a convenience, if no ExecContextPluginFactory is set for a given
  * {@link ExecContextPlugin} interface, the following strategy is used:
- * <p>
+ * <ul>
  * <li>If the org.azyva.dragom.DefaultExecContextPluginFactory.&lt;interface&gt;
  *     system property is defined the identified class is used and instantiated
  *     using the default constructor. Example:
- *     org.azyva.dragom.DefaultExecContextPluginFactory.org.azyva.dragom.execontext.plugin.WorkspacePlugin=com.acme.MyWorkspacePluginFactory;<li>;</li>
+ *     org.azyva.dragom.DefaultExecContextPluginFactory.org.azyva.dragom.execontext.plugin.WorkspacePlugin=com.acme.MyWorkspacePluginFactory
  * <li>Otherwise, if the
  *     org.azyva.dragom.DefaultExecContextPluginImpl.&lt;interface&gt; system
  *     property is defined, {@link GenericExecContextPluginFactory} is used to
  *     wrap the identified ExecContextPlugin implementation class as an
  *     ExecContextPluginFactory. Example:
- *     org.azyva.dragom.DefaultExecContextPluginImpl.org.azyva.dragom.execontext.plugin.WorkspacePlugin=com.acme.MyWorkspaePluginImpl;<li>
+ *     org.azyva.dragom.DefaultExecContextPluginImpl.org.azyva.dragom.execontext.plugin.WorkspacePlugin=com.acme.MyWorkspaePluginImpl
  * <li>Otherwise an ExecContextPluginFactory implementation class name is
  *     constructed by taking the ExecContextPlugin interface name, adding the
  *     "impl" sub-package and completing the name with the "Default" prefix and
@@ -66,7 +66,7 @@ import org.azyva.dragom.util.Util;
  *     the ExecContextPlugin interface
  *     org.azyva.dragom.execcontext.plugin.WorkspacePlugin, the
  *     ExecContextPluginFactory class would be
- *     org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory.</li>
+ *     org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory.
  * <li>Otherwise an ExecContextPlugin implementation class name is constructed by
  *     taking the ExecContextPlugin interface name, adding the "impl" sub-package
  *     and completing the name with the "Default" prefix and "Impl" suffix and the
@@ -75,7 +75,8 @@ import org.azyva.dragom.util.Util;
  *     Given the ExecContextPlugin interface
  *     org.azyva.dragom.execcontext.plugin.WorkspacePlugin, the ExecContextPlugin
  *     implementation class would be
- *     org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginImpl.</li>
+ *     org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginImpl.
+ * </ul>
  *
  * @author David Raymond
  */
@@ -105,6 +106,7 @@ public class ExecContextPluginFactoryHolder {
    * Sets the {@link ExecContextPluginFactory} for a given {@link ExecContextPlugin}
    * interface.
    *
+   * @param <ExecContextPluginClass> ExecContextPlugin interface class.
    * @param classExecContextPlugin Class of the ExecContextPlugin interface.
    * @param execContextPluginFactory ExecContextPluginFactory.
    */

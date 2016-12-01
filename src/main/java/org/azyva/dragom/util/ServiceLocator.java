@@ -43,26 +43,27 @@ import org.azyva.dragom.jenkins.JenkinsClient;
  * <p>
  * This class implements the following algorithm to provide service
  * implementations to callers:
- * <p>
+ * <ul>
  * <li>Services factories can be registered using {@link #setServiceFactory}. This
  *     method could be called by a dependency injection framework such as
  *     Spring. If a service factory is registered for a service interface, it is used
- *     to create instances of the service interface;</li>
+ *     to create instances of the service interface;
  * <li>If a requested service does not have a registered factory, a system property
  *     "org.azyva.dragom.DefaultServiceFactory.&lt;service interface name&gt;" is
  *     used to obtain the name of a service factory class which must have a static
- *     "getService" method that returns an instance of the service interface;</li>
+ *     "getService" method that returns an instance of the service interface;
  * <li>If a system property for the service factory class is not defined, a system
  *     property "org.azyva.dragom.DefaultServiceImpl.&lt;service interface name&gt;"
  *     is used to obtain the name of an implementation class which must have a
- *     no-argument constructor;</li>
+ *     no-argument constructor;
  * <li>If a system property for the service implementation class is not defined, a
  *     default service factory class
  *     "&lt;service interface package&gt;.impl.Default&lt;service interface simple name&gt;Factory"
- *     is used;</li>
+ *     is used;
  * <li>If a default factory class is not available, a default implementation class
  *     "&lt;service interface package&gt;.impl.Default&lt;service interface simple name&gt;Impl" is
- *     used.</li>
+ *     used.
+ * </ul>
  *
  * @author David Raymond
  */

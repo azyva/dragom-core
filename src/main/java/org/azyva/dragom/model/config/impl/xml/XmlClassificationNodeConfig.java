@@ -40,7 +40,7 @@ import org.azyva.dragom.model.config.NodeType;
  * that allows reading from an XML file.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.xml
+ * @see org.azyva.dragom.model.config.impl.xml
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "classification-node")

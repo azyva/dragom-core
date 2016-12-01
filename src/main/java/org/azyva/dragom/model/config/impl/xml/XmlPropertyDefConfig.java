@@ -40,7 +40,7 @@ import org.azyva.dragom.model.config.PropertyDefConfig;
  * See {@link MapXmlPropertyDefConfigAdapter}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.xml
+ * @see org.azyva.dragom.model.config.impl.xml
  */
 public class XmlPropertyDefConfig implements PropertyDefConfig {
   String name;

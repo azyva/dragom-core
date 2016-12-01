@@ -38,7 +38,7 @@ public class SimpleOptimisticLockHandle implements OptimisticLockHandle {
   /**
    * Constructor.
    *
-   * @param revision
+   * @param revision Revision number.
    */
   SimpleOptimisticLockHandle(int revision) {
     this.revision = revision;
@@ -64,7 +64,7 @@ public class SimpleOptimisticLockHandle implements OptimisticLockHandle {
   /**
    * Sets the revision number.
    *
-   * @param See description.
+   * @param revision See description.
    */
   void setRevision(int revision) {
     this.revision = revision;

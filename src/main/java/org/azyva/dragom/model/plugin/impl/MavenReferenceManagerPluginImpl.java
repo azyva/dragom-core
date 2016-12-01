@@ -80,11 +80,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     /**
      * Constructor.
      *
-     * @param moduleVersion ModuleVersion.
-     * @param artifactGroupId ArtifactGroupId.
-     * @param artifactVersion Artifact version.
      * @param pathPom Path to the pom.
-     * @param referencedArtifact ReferencedArtifact.
+     * @param referencedArtifactType ReferencedArtifactType.
      */
     public ReferenceImplData(Path pathPom, Pom.ReferencedArtifactType referencedArtifactType) {
       this.pathPom = pathPom;

@@ -39,7 +39,7 @@ import org.azyva.dragom.util.Util;
  * <p>
  * A static Map of URL to Model instances is used in order to reuse Model
  * instances. This is useful in case a single JVM instance is used for multiple
- * tool executions (<a href="http://www.martiansoftware.com/nailgun/">NaigGun<a>
+ * tool executions (<a href="http://www.martiansoftware.com/nailgun/">NaigGun</a>
  * can be useful in that regard).
  * <p>
  * The model URL is defined by the initialization property property

@@ -58,8 +58,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * See the help information displayed by the {@link MergeReferenceGraphTool#help}
- * method.
+ * See the help information displayed by MergeReferenceGraphTool.help from
+ * dragom-cli-tools.
  * <p>
  * The principle of operation of this class is to traverse reference graphs in the
  * standard way using a List of root {@link ModuleVersion}'s and a
@@ -79,14 +79,14 @@ import org.slf4j.LoggerFactory;
  * {@link MergeMain}.
  * <p>
  * The type of merge performed by this class is used, for example, when:
- * <p>
+ * <ul>
  * <li>Retrofitting production changes present in the main dynamic {@link Version}
  *     or the release static Version of a {@link Module}, into a dynamic Version
- *     used for an ongoing development effort;</li>
+ *     used for an ongoing development effort;
  * <li>Integrating changes done on a project dynamic Version of a Module, that
  *     ModuleVersion being the root of a complete reference graph, into a release
- *     dynamic Version with it own reference graph.</li>
- * <p>
+ *     dynamic Version with it own reference graph.
+ * </ul>
  * For each main ModuleVersion that is matched in the main traversal, a merge
  * process is initiated. This merge process is driven by traversing the reference
  * graph rooted at the matched destination ModuleVersion, considering only
@@ -123,9 +123,9 @@ import org.slf4j.LoggerFactory;
  * algorithm. Note that a corresponding reference in the source ModuleVersion
  * may not exist and there is nothing we can do. The presence or absence of a
  * corresponding reference is handled by the merge process itself at the SCM level.
- * <p>
+ *
  * <h2>Source and destination are static</h2>
- * <p>
+ *
  * If the source and destination reference Versions are static and the same, no
  * merge is required. If they are not the same we establish whether source and/or
  * destination references have diverging commits. This is done recursively on each
@@ -149,9 +149,9 @@ import org.slf4j.LoggerFactory;
  * If both the source and destination reference graphs diverge we have a merge
  * conflict at the reference graph level. We inform the user and abort the merge
  * process.
- * <p>
+ *
  * <h2>Source is dynamic and destination static</h2>
- * <p>
+ *
  * If the source reference Version is dynamic and destination static, establish
  * whether source and/or destination reference have diverging commits in the same
  * way as above.
@@ -168,9 +168,9 @@ import org.slf4j.LoggerFactory;
  * expect the switched-to dynamic Version to also include these diverging commits.
  * <p>
  * If only the destination reference graph diverges, no merge is required.
- * <p>
+ *
  * <h2>Destination is dynamic (regardless of source)</h2>
- * <p>
+ *
  * Recurse using the two ModuleVersion corresponding to the source and destination
  * child references.
  *
@@ -389,7 +389,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
      * Constructor.
      *
      * @param moduleVersionDest Destination {@link ModuleVersion}.
-     * @param versionSrc Source {@link Version).
+     * @param versionSrc Source {@link Version}.
      */
     public ModuleVersionMerge(ModuleVersion moduleVersionDest, Version versionSrc) {
       this.moduleVersionDest = moduleVersionDest;

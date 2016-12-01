@@ -35,7 +35,7 @@ import org.azyva.dragom.util.ServiceLocator;
  * Implementations of this interface are intended to be obtained using
  * {@link ServiceLocator} so they can easily be doubled for testing purposes. The
  * main implementation is {@link DefaultJenkinsClientImpl} which therefore has a
- * no-argument constructor. This is why setup methods such as {@link $setBaseUrl}
+ * no-argument constructor. This is why setup methods such as {@link #setBaseUrl}
  * are part of this interface.
  *
  * @author David Raymond
@@ -156,7 +156,7 @@ public interface JenkinsClient {
   /**
    * Represents a build.
    * <p>
-   * Instances are created by {@link JenkinsClient#build).
+   * Instances are created by {@link JenkinsClient#build}.
    * <p>
    * Allows getting information about the build while it progresses to completion.
    */

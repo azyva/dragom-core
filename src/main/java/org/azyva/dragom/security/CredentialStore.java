@@ -62,20 +62,20 @@ import org.azyva.dragom.execcontext.plugin.impl.DefaultCredentialStorePluginImpl
  * <p>
  * Credentials are managed in a Properties file whose containing 2 types of
  * entries:
- * <p>
- * <li>{@code <REALM>.<user>.Password=<encrypted-password>}</li>
- * <li>{@code <REALM>.DefaultUser=<default-user>}</li>
- * <p>
+ * <ul>
+ * <li>{@code <REALM>.<user>.Password=<encrypted-password>}
+ * <li>{@code <REALM>.DefaultUser=<default-user>}
+ * </ul>
  * The first defines a password for a user in a realm. The second defines a
  * default user for a realm. See below for more information about realms.
  * <p>
  * The passwords are encrypted using a key that is constructed from three parts
  * of key material:
- * <p>
- * <li>A constant password hardcoded in this class<li>
- * <li>The current user name (system property user.name)</li>
- * <li>A random password stored in a master password file</li>
- * <p>
+ * <ul>
+ * <li>A constant password hardcoded in this class
+ * <li>The current user name (system property user.name)
+ * <li>A random password stored in a master password file
+ * </ul>
  * If the master password file does not exist, it is created with newly generated
  * random password.
  * <p>

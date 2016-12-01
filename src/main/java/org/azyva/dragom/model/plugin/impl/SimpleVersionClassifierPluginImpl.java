@@ -28,34 +28,34 @@ import org.azyva.dragom.util.Util;
 /**
  * Simple VersionClassifierPlugin that happens to support a wide range of
  * versioning strategies, including semantic. Here are some details:
- * <p>
- * <li>Evolution paths are not supported;</li>
+ * <ul>
+ * <li>Evolution paths are not supported;
  * <li>If the Version's are equal as per Version.equals, they are considered
- *     equal;</li>
+ *     equal;
  * <li>If the Version's are of different {@link VersionType}, dynamic Version's
- *     are considered greater than static Version's;</li>
- * <li>If the Version's are dynamic, they are compared lexicographically;</li>
+ *     are considered greater than static Version's;
+ * <li>If the Version's are dynamic, they are compared lexicographically;
  * <li>If the Version's are static they are expected to start with the prefix
- *     defined within the STATIC_VERSION_PREFIX model property;</li>
+ *     defined within the STATIC_VERSION_PREFIX model property;
  * <li>If one version starts with the prefix and not the other, the one that does
- *     is considered smaller;<li>
+ *     is considered smaller;
  * <li>If no version start with the prefix, they are compared
- *     lexicographically;</li>
+ *     lexicographically;
  * <li>If they both start with the prefix (or if no prefix is defined), they are
- *     split into tokens on "." and "-";</li>
- * <li>The tokens are considered in sequence;</li>
- * <li>If 2 tokens to be compared are numeric, they are compared numerically;</li>
- * <li>Otherwise they are compared lexicographically;</li>
+ *     split into tokens on "." and "-";
+ * <li>The tokens are considered in sequence;
+ * <li>If 2 tokens to be compared are numeric, they are compared numerically;
+ * <li>Otherwise they are compared lexicographically;
  * <li>As soon as 2 tokens to be compared are not deemed equal, the comparison
- *     stops with the result of the comparison;</li>
+ *     stops with the result of the comparison;
  * <li>If 2 tokens are equal, if they are both separated from the next token with
  *     the same separator ("." or "-"), comparison continues with the following
- *     tokens;</li>
+ *     tokens;
  * <li>If they are not separated with the same separator, the one which has the
- *     "." separator is deemed greater than the other one;</li>
+ *     "." separator is deemed greater than the other one;
  * <li>If one Version is out of tokens before the other, the one that has more
- *     tokens is deemed greater.</li>
- * <p>
+ *     tokens is deemed greater.
+ * </ul>
  * Note that this resembles the comparison algorithm used by Maven (see
  * <a href="https://maven.apache.org/ref/3.3.3/maven-artifact/apidocs/org/apache/maven/artifact/versioning/ComparableVersion.html">ComparableVersion</a>)
  * but does not break tokens on transition between characters and digits, and does

@@ -24,11 +24,12 @@ package org.azyva.dragom.util;
  * input.
  * <p>
  * More precisely, this is a 4-state input:
- * <p>
- * <li>Yes, always (do not ask again)</li>
- * <li>No, never (do not ask again)</li>
- * <li>Yes (but ask again)</li>
- * <li>No (but ask again)</li>
+ * <ul>
+ * <li>Yes, always (do not ask again)
+ * <li>No, never (do not ask again)
+ * <li>Yes (but ask again)
+ * <li>No (but ask again)
+ * </ul>
  */
 public enum AlwaysNeverYesNoAskUserResponse {
   /**

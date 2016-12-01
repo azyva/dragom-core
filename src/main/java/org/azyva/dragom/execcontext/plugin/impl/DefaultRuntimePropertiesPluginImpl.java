@@ -31,22 +31,20 @@ import org.azyva.dragom.model.NodePath;
  * This default implementation of {@link RuntimePropertiesPlugin} considers the
  * following sources for the properties, in precedence order (the first one that
  * provides a requested property is used):
- * <p>
+ * <ul>
  * <li>Transient data within the {@link ExecContext}
- *     ({@link ExecContext#getTransientData}) having the prefix
- *     "runtime-property"</li>
+ *     ({@link ExecContext#getTransientData}) having the prefix "runtime-property"
  * <li>Tool properties ({@link ToolLifeCycleExecContext#getToolProperty}) having
  *     the prefix "runtime-property", if the ExecContext implements
- *     {@link ToolLifeCycleExecContext}</li>
+ *     {@link ToolLifeCycleExecContext}
  * <li>ExecContext properties ({@link ExecContext#getProperty}) having the prefix
- *     "runtime-property"</li>
+ *     "runtime-property"
  * <li>ExecContext initialization properties
- *     ({@link ExecContext#getInitProperty}) having the prefix
- *     "runtime-property"</li>
+ *     ({@link ExecContext#getInitProperty}) having the prefix "runtime-property"
  * <li>System properties (System.getProperty) having the prefix
- *     "org.azyva.dragom.runtime-property"</li>
+ *     "org.azyva.dragom.runtime-property"
  * <li>{@link Node} properties within the {@link Model} (@link Node#getProperty}.
- * <p>
+ * </ul>
  * The name of the property following the prefix is the the NodePath of the node
  * with "." separating the nodes and with the last token being the actual property
  * name. For example the following tool initialization property:
@@ -67,7 +65,7 @@ import org.azyva.dragom.model.NodePath;
  * also the Model may support this.
  * <p>
  * Properties are always set as transient data
- * ({@link ExecContext.setTransientData}).
+ * ({@link ExecContext#setTransientData}).
  *
  * @author David Raymond
  */

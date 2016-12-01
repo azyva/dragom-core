@@ -33,7 +33,7 @@ public abstract class NodePluginAbstractImpl implements NodePlugin {
   /**
    * Constructor.
    *
-   * @param classificationNode ClassificationNode.
+   * @param node Node.
    */
   protected NodePluginAbstractImpl(Node node) {
     this.node = node;

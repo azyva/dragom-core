@@ -32,7 +32,6 @@ import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferenceGraph;
-import org.azyva.dragom.reference.ReferenceGraph.VisitControl;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.util.ModuleReentryAvoider;
 
@@ -58,7 +57,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
     public ModuleVersion moduleVersion;
 
     /**
-     * List of {@link ReferenceGraph.Referrer}'s.
+     * List of {@link org.azyva.dragom.reference.ReferenceGraph.Referrer}'s.
      */
     public List<ReferenceGraph.Referrer> listReferrer;
     public List<Reference> listReference;
@@ -226,12 +225,13 @@ public class SimpleReferenceGraph implements ReferenceGraph {
    *   parent-first.
    * @param moduleReentryAvoider ModuleReentryAvoider to be used to avoid reentry or
    *   to simply know if a {@link ModuleVersion} is being reentered. Used for all
-   *   {@link ReentryMode}.
+   *   {@link org.azyva.dragom.reference.ReferenceGraph.ReentryMode}.
    * @param reentryMode ReentryMode.
    * @param visitor Visitor.
    * @return VisitControl. Value returned by {@link ReferenceGraph.Visitor#visit}
-   *   used to control recursion. {@link VisitControl#SKIP_CHILDREN} cannot be
-   *   returned as this situation is handled internally in this method.
+   *   used to control recursion.
+   *   {@link org.azyva.dragom.reference.ReferenceGraph.VisitControl#SKIP_CHILDREN}
+   *   cannot be returned as this situation is handled internally in this method.
    */
   private VisitControl traverseReferenceGraph(ReferencePath referencePath, Reference reference, boolean indDepthFirst, ReentryMode reentryMode, ModuleReentryAvoider moduleReentryAvoider, Visitor visitor) {
     boolean isAlreadyProcessed;
@@ -331,9 +331,10 @@ public class SimpleReferenceGraph implements ReferenceGraph {
    *   {@link ModuleVersion}.
    * @param moduleVersion Visited ModuleVersion.
    * @param visitor Visitor.
-   * @return VisitControl. Either {@link VisitControl.CONTINUE} or
-   *   {@link VisitControl.ABORT} depending on the value returned by
-   *   {@link ReferenceGraph.Visitor#visit}.
+   * @return VisitControl. Either
+   *   {@link org.azyva.dragom.reference.ReferenceGraph.VisitControl#CONTINUE} or
+   *   {@link org.azyva.dragom.reference.ReferenceGraph.VisitControl#ABORT}
+   *   depending on the value returned by {@link ReferenceGraph.Visitor#visit}.
    */
   private VisitControl traverseReferenceGraphForLeafModuleVersionReferencePaths(ReferencePath referencePath, ModuleVersion moduleVersion, Visitor visitor) {
     ReferencePath referencePathIncludingParent;

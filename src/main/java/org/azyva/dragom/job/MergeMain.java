@@ -47,7 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * See the help information displayed by the {@link MergeMainTool#help} method.
+ * See the help information displayed by the MergeMainTool.help from
+ * dragom-cli-tools.
  * <p>
  * The principle of operation of this class is to traverse reference graphs in the
  * standard way using a List of root {@link ModuleVersion}'s and a

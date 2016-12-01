@@ -31,7 +31,7 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
  * Simple implementation for {@link ModuleConfig}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.simple
+ * @see org.azyva.dragom.model.config.impl.simple
  */
 public class SimpleModuleConfig extends SimpleNodeConfig implements ModuleConfig, MutableModuleConfig  {
   /**

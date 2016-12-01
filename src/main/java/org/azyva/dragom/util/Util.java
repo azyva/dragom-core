@@ -40,6 +40,8 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.job.MergeReferenceGraph;
+import org.azyva.dragom.model.ClassificationNode;
+import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
@@ -47,7 +49,7 @@ import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.NodePlugin;
-import org.azyva.dragom.model.plugin.PluginFactory;
+import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.ReferencePath;
 import org.json.JSONObject;
@@ -153,7 +155,7 @@ public final class Util {
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES = "SWITCH_WITH_UNSYNC_LOCAL_CHANGES";
 
   /**
-   * Context for {@link Util#handleDoYouWantToCOntinue} that represents the fact
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
    * that during the switch to a hotfix dynamic {@link Version}, the
    * {@link ReferencePath} contains non-static Versions. which may be OK if they
    * were created in the context of the hotfix.
@@ -357,12 +359,15 @@ public final class Util {
   /**
    * Infers a groupId segment from a module node path.
    *
-   * We talk about the groupId segment since a complete groupId will generally be
-   * some prefix plus a . to which the value returned is appended.
+   * <p>We talk about the groupId segment since a complete groupId will generally be
+   * some prefix plus a "." to which the value returned is appended.
    *
-   * Only the node path is used. The module node path can be partial or not.
+   * <p>If the NodePath is not partial (see {@link NodePath#isPartial}), meaning
+   * that it refers to a {@link Module} and not a {@link ClassificationNode}, the
+   * parent NodePath is used (that of the parent ClassificationNode of the Module).
    *
-   * @param nodePath
+   * @param nodePath NodePath.
+   * @return GroupId segment.
    */
   public static String inferGroupIdSegmentFromNodePath(NodePath nodePath) {
     StringBuilder stringBuilder;
@@ -484,10 +489,10 @@ public final class Util {
    * This is intended to be used for storing arbitrary attributes within commit
    * and other messages in SCM's.
    *
-   * @param message
+   * @param message Message.
    * @param mapAttr Map that will be filled in and returned. If null, a new Map is
-   * created, in which case it should not be modified by the caller (it may be
-   * immutable, especially if empty).
+   *   created, in which case it should not be modified by the caller (it may be
+   *   immutable, especially if empty).
    * @return Map of attributes.
    */
   public static Map<String, String> getJsonAttr(String message, Map<String, String> mapAttr) {
@@ -569,8 +574,8 @@ public final class Util {
    * Facilitates letting the user input a AlwaysNeverAskUserResponse.
    *
    * If info ends with "*" it is replaced with
-   * " (Y(es always), N(ever), A(sk again)) [<default>]? " where <default> is
-   * "Y", "N" or "A" depending on alwaysNeverAskUserResponseDefaultValue.
+   * " (Y(es always), N(ever), A(sk again)) [&lt;default&gt;]? " where &lt;default&gt;
+   * is "Y", "N" or "A" depending on alwaysNeverAskUserResponseDefaultValue.
    *
    * As a convenience, "1" and "0" can also be entered by the user to mean "Yes
    * always" and "Never" respectively.
@@ -691,8 +696,8 @@ public final class Util {
    * Facilitates letting the user input a AlwaysNeverYesNoAskUserResponse.
    *
    * If info ends with "*" it is replaced with
-   * " (Y(es always), N(ever), YA (Yes, Ask again), NA (No, Ask again)) [<default>]? " where <default> is
-   * "Y", "N", "YA" or "NA" depending on alwaysNeverYesNoAskUserResponseDefaultValue.
+   * " (Y(es always), N(ever), YA (Yes, Ask again), NA (No, Ask again)) [&lt;default&gt;]? "
+   * where &lt;default&gt; is "Y", "N", "YA" or "NA" depending on alwaysNeverYesNoAskUserResponseDefaultValue.
    *
    * As a convenience, "1" and "0" can also be entered by the user to mean "Yes
    * always" and "Never" respectively.
@@ -827,7 +832,7 @@ public final class Util {
    * Facilitates letting the user input a YesAlwaysNoUserResponse.
    *
    * If info ends with "*" it is replaced with
-   * " (Y(es), A(ways), N(o)) [<default>]? " where <default> is
+   * " (Y(es), A(ways), N(o)) [&lt;default&gt;]? " where &lt;default&gt; is
    * "Y", "A" or "N" depending on yesAlwaysNoUserResponseDefaultValue.
    *
    * As a convenience, "1" and "0" can also be entered by the user to mean "Yes"
@@ -915,7 +920,7 @@ public final class Util {
    * "no" and "abort" responses.
    *
    * If info ends with "*" it is replaced with
-   * " (Y(es), A(ways), N(o), B(aBort)) [<default>]? " where <default> is
+   * " (Y(es), A(ways), N(o), B(aBort)) [&lt;default&gt;]? " where &lt;default&gt; is
    * "Y", "A", "N" or "B" depending on yesAlwaysNoUserResponseDefaultValue.
    *
    * As a convenience, "1" and "0" can also be entered by the user to mean "Yes"
@@ -1089,11 +1094,11 @@ public final class Util {
    * the Version.
    *
    * If scmPlugin is not null that text is
-   * " (use the format <format>/<version>; version must exist) [<default>]? "
-   * where <format> is "S", "D" or "S/D" depending on whether versionType is
-   * VersionType.STATIC, VersionType.DYNAMIC or null, and where <default> is
+   * " (use the format &lt;format&gt;/&lt;version&gt;; version must exist) [&lt;default&gt;]? "
+   * where &lt;format&gt; is "S", "D" or "S/D" depending on whether versionType is
+   * VersionType.STATIC, VersionType.DYNAMIC or null, and where &lt;default&gt; is
    * versionDefaultValue. If versionDefaultValue is null, the last part
-   * " [<default>]" is not included.
+   * " [&lt;default&gt;]" is not included.
    *
    * If scmPlugin is null that text is similar, but excludes that part saying
    * that the Version must exist.
@@ -1103,8 +1108,8 @@ public final class Util {
    *
    * If scmPlugin is not null, the existence of the Version will be validated.
    *
-   * @param versionType
-   * @param scmPlugin
+   * @param versionType VersionType.
+   * @param scmPlugin ScmPlugin.
    * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
    * @param prompt See corresponding parameter in
    *   UserInteractionCallbackPlugin.getInfo.
@@ -1183,37 +1188,42 @@ public final class Util {
   }
 
   /**
-   * Gets an instance of PluginFactory for a plugin implementation class.
-   * <p>
-   * This method factors out the algorithm that verifies if the class has a
-   * getInstance static method, if so calls it to obtain the PluginFactory and
+   * Gets an instance of NodePluginFactory for a plugin implementation class.
+   *
+   * <p>It is assumed the NodePlugin implementation class implements
+   * NodePluginFactory. The caller must have verified if the NodePlugin
+   * implementation class uses the constructor pattern and if so, not call this
+   * method.
+   *
+   * <p>This method factors out the algorithm that verifies if the class has a
+   * getInstance static method, if so calls it to obtain the NodePluginFactory and
    * otherwise simply instantiates the class.
    * <p>
-   * This s used by the {@link #getDefaultClassNodePlugin} and
-   * {@link #getDefaultPluginId} methods, as well as the
-   * {@link SimpleNode#getNodePlugin method.
+   * This s used by {@link #getDefaultClassNodePlugin} and
+   * {@link #getDefaultPluginId}, as well as {@link SimpleNode#getNodePlugin}.
    *
-   * @param pluginClass Plugin implementation class. Must implement PluginFactory.
-   * @return PluginFactory.
+   * @param stringClassNodePlugin NodePlugin implementation class. Must implement
+   *   NodePluginFactory.
+   * @return NodePluginFactory.
    */
-  public static PluginFactory getPluginFactory(String pluginClass) {
-    Class<?> classPlugin;
+  public static NodePluginFactory getNodePluginFactory(String stringClassNodePlugin) {
+    Class<?> classNodePlugin;
     Method methodGetInstance;
 
     // Any Exception thrown that is not a RuntimeException is wrapped in a
     // RuntimeException. This is done globally to make the method simpler.
     try {
-      classPlugin = Class.forName(pluginClass);
-      methodGetInstance = classPlugin.getMethod("getInstance", (Class<?>[])null);
+      classNodePlugin = Class.forName(stringClassNodePlugin);
+      methodGetInstance = classNodePlugin.getMethod("getInstance", (Class<?>[])null);
 
       if (methodGetInstance != null) {
-        return PluginFactory.class.cast(methodGetInstance.invoke(null));
+        return NodePluginFactory.class.cast(methodGetInstance.invoke(null));
       } else {
-        Class<? extends PluginFactory> classPluginFactory;
+        Class<? extends NodePluginFactory> classNodePluginFactory;
 
-        classPluginFactory = classPlugin.asSubclass(PluginFactory.class);
+        classNodePluginFactory = classNodePlugin.asSubclass(NodePluginFactory.class);
 
-        return classPluginFactory.newInstance();
+        return classNodePluginFactory.newInstance();
       }
     } catch (RuntimeException rte) {
       throw rte;
@@ -1239,10 +1249,10 @@ public final class Util {
     try {
       classPlugin = Class.forName(pluginClass);
 
-      if (PluginFactory.class.isAssignableFrom(classPlugin)) {
-        PluginFactory pluginFactory;
+      if (NodePluginFactory.class.isAssignableFrom(classPlugin)) {
+        NodePluginFactory pluginFactory;
 
-        pluginFactory = Util.getPluginFactory(pluginClass);
+        pluginFactory = Util.getNodePluginFactory(pluginClass);
 
         return pluginFactory.getDefaultClassNodePlugin();
       } else if (NodePlugin.class.isAssignableFrom(classPlugin)) {
@@ -1270,7 +1280,7 @@ public final class Util {
           throw new RuntimeException("The plugin class " + pluginClass + " does not implement a sub-interface of NodePlugin.");
         }
       } else {
-        throw new RuntimeException("The plugin class " + pluginClass + " does not implement PluginFactory and cannot be instantiated as a NodePlugin.");
+        throw new RuntimeException("The plugin class " + pluginClass + " does not implement NodePluginFactory and cannot be instantiated as a NodePlugin.");
       }
     } catch (RuntimeException rte) {
       throw rte;
@@ -1298,10 +1308,10 @@ public final class Util {
     try {
       classPlugin = Class.forName(pluginClass);
 
-      if (PluginFactory.class.isAssignableFrom(classPlugin)) {
-        PluginFactory pluginFactory;
+      if (NodePluginFactory.class.isAssignableFrom(classPlugin)) {
+        NodePluginFactory pluginFactory;
 
-        pluginFactory = Util.getPluginFactory(pluginClass);
+        pluginFactory = Util.getNodePluginFactory(pluginClass);
 
         return pluginFactory.getDefaultPluginId(classNodePlugin);
       } else if (NodePlugin.class.isAssignableFrom(classPlugin)) {
@@ -1319,7 +1329,7 @@ public final class Util {
           return null;
         }
       } else {
-        throw new RuntimeException("The plugin class " + pluginClass + " does not implement PluginFactory and cannot be instantiated as a NodePlugin.");
+        throw new RuntimeException("The plugin class " + pluginClass + " does not implement NodePluginFactory and cannot be instantiated as a NodePlugin.");
       }
     } catch (RuntimeException rte) {
       throw rte;
@@ -1437,7 +1447,7 @@ public final class Util {
 
   /**
    * @return The value of the IND_ABORT runtime property which can be set by
-   * {@link Util.handleDoYouWantToContinue} or {@link Util#setAbort).
+   *   {@link Util#handleDoYouWantToContinue} or {@link Util#setAbort}.
    */
   public static boolean isAbort() {
     RuntimePropertiesPlugin runtimePropertiesPlugin;
@@ -1459,9 +1469,9 @@ public final class Util {
   }
 
   /**
-   * Verifies if a token contains only ASCII digits.
+   * Verifies if a String contains only ASCII digits.
    *
-   * @param token Token.
+   * @param string String.
    * @return true if the token contains only ASCII digits.
    */
   public static boolean isDigits(String string) {

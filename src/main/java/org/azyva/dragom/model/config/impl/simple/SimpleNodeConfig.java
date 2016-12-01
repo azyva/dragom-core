@@ -41,7 +41,7 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * Simple implementation for {@link NodeConfig} and {@link MutableNodeConfig}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.simple
+ * @see org.azyva.dragom.model.config.impl.simple
  */
 public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig {
   /**
@@ -215,7 +215,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
    * them within the SimpleNodeConfig.
    * <p>
    * Uses the indNew variable, but does not reset it. It is intended to be reset by
-   * the subclass caller method, {@link MutableNodeConfig#setNodeConfigValueTransferObject}.
+   * the subclass caller method, {@link MutableNodeConfig#setNodeConfigTransferObject}.
    * <p>
    * The reason for not directly implementing
    * MutableNodeConfig.setNodeConfigValueTransferObject is that subclasses can have
@@ -234,7 +234,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
    * @throws OptimisticLockException Can be thrown only if optimisticLockHandle is
    *   not null. This is a RuntimeException that may be of interest to
    *   the caller.
-   * @throws DuplicateNodeExcpeption When the new configuration data would introduce
+   * @throws DuplicateNodeException When the new configuration data would introduce
    *   a duplicate {@link MutableNode} within the parent. This is a RuntimeException
    *   that may be of interest to the caller.
    */

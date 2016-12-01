@@ -41,10 +41,10 @@ import org.azyva.dragom.model.event.NodeEventListener;
  * <p>
  * There is more than one occurrence where NodeEventListener's and NodeEvent need
  * to be managed:
- * <p>
- * <li>Within {@link Node}'s;</li>
- * <li>Within the {@link ExecContext}, with {@link EventPlugin}.</li>
- * <p>
+ * <ul>
+ * <li>Within {@link Node}'s;
+ * <li>Within the {@link ExecContext}, with {@link EventPlugin}.
+ * </ul>
  * This class factors the common code.
  *
  * @author David Raymond
@@ -68,7 +68,7 @@ public class EventManager {
      * Constructor.
      *
      * @param node Node.
-     * @param nodeEventClass Class of the NodeEvent.
+     * @param classNodeEvent Class of the NodeEvent.
      */
     private NodeEventListenerKey(Node node, Class<? extends NodeEvent> classNodeEvent) {
       this.node = node;
@@ -190,6 +190,8 @@ public class EventManager {
    * parents so that {@link NodeEventListener}'s registered on parents with
    * indChildrenAlso get notified.
    *
+   * @param <NodeEventClass> NodeEvent class.
+   * @param node Node.
    * @param nodeEvent NodeEvent.
    */
   @SuppressWarnings("unchecked") // Not able to avoid that one.
@@ -221,6 +223,7 @@ public class EventManager {
   /**
    * Gets the {@link NodeEvent} subclass for a {@link NodeEventListener}.
    *
+   * @param <NodeEventClass> NodeEvent class.
    * @param nodeEventListener NodeEventListener.
    * @return NodeEvent subclass.
    */

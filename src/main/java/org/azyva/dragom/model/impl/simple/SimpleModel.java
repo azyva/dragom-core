@@ -289,6 +289,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    * {@link ModelNodeBuilderFactory} methods to create new {@link SimpleNode}'s.
    *
    * @param config Config.
+   * @param propertiesInit Initialization properties.
    */
   public SimpleModel(Config config, Properties propertiesInit) {
     this.propertiesInit = propertiesInit;
@@ -509,7 +510,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    * cleaned so that the SimpleModel can clean any cached reference to the
    * SimpleNode.
    *
-   * @param simpleNode
+   * @param simpleNode SimpleModel.
    */
   void cleanCaches(SimpleNode simpleNode) {
     if (simpleNode.getNodeType() == NodeType.MODULE) {

@@ -57,6 +57,7 @@ import org.azyva.dragom.execcontext.plugin.support.GenericExecContextPluginFacto
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
+import org.azyva.dragom.model.plugin.impl.ContinuousReleaseSelectStaticVersionPluginImpl;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,8 +73,8 @@ import org.slf4j.LoggerFactory;
  * workspace directory. It will not have its own totally independent workspace
  * directory.
  * <p>
- * The other ModuleVersions ({@link WorkspaceDirSystemModuleVersion}) required
- * during Dragom's execution will be within that metadata directory.
+ * The other ModuleVersions ({@link WorkspaceDirSystemModule}) required during
+ * Dragom's execution will be within that metadata directory.
  * <p>
  * This is useful in a continuous delivery context where a single ModuleVersion
  * needs to be released, independently of the other ModuleVersion's which may be
@@ -217,10 +218,11 @@ public class MainModuleVersionWorkspacePluginFactory implements ExecContextPlugi
 
     /**
      * Map {@link WorkspaceDir} access modes. The entries have the following meanings:
-     * <p>
-     * <li>Key not present: No access</li>
-     * <li>0: Write access</li>
-     * <li>1+: Read access with read count</li>
+     * <ul>
+     * <li>Key not present: No access
+     * <li>0: Write access
+     * <li>1+: Read access with read count
+     * </ul>
      */
     private Map<WorkspaceDir, Integer> mapWorkspaceDirAccessMode;
 
@@ -240,7 +242,7 @@ public class MainModuleVersionWorkspacePluginFactory implements ExecContextPlugi
      *
      * @param pathWorkspace Path to the workspace directory.
      * @param pathDragomMetadataDir Path to the Dragom metadata directory.
-     * @param moduleVersionMain Main {@link ModuleVersion].
+     * @param moduleVersionMain Main {@link ModuleVersion}.
      */
     public DefaultWorkspaceImpl(Path pathWorkspace, Path pathDragomMetadataDir, ModuleVersion moduleVersionMain) {
       this();
@@ -396,7 +398,8 @@ public class MainModuleVersionWorkspacePluginFactory implements ExecContextPlugi
      * Returns the Path corresponding to a WorkspaceDirSystemModule.
      *
      * @param workspaceDirSystemModule WorkspaceDirSystemModule.
-     * @param enumSetGetWorkspaceDirMode EnumSet of {@link GetWorkspaceDirMode}.
+     * @param enumSetGetWorkspaceDirMode EnumSet of
+     * {@link org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode}.
      * @return Path
      */
     private Path getWorkspaceDirSystemModule(WorkspaceDirSystemModule workspaceDirSystemModule, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {

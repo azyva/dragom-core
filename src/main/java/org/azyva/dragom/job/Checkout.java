@@ -54,9 +54,10 @@ import org.azyva.dragom.util.Util;
  * ReferencePathMatcher. It basically expects to be able to checkout any
  * ModuleVersion in a user workspace directory. If the intent of the user is
  * to replace the workspace directories currently occupied by other
- * {@link Version}'s of the same {@link Module}'s, {@link WorkspaceManagerTool}
- * can be used after the checkout tool to clean user workspace directories for
- * ModuleVersion's that are not reachable from the root ModuleVersion's.
+ * {@link Version}'s of the same {@link Module}'s, WorkspaceManagerTool from
+ * dragom-cli-tools can be used after the checkout tool to clean user workspace
+ * directories for ModuleVersion's that are not reachable from the root
+ * ModuleVersion's.
  * <p>
  * But this job nevertheless gracefully supports the case where the
  * {@link WorkspacePlugin} does not support multiple ModuleVersion's for the same

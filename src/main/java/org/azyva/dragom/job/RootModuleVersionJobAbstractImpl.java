@@ -36,6 +36,7 @@ import org.azyva.dragom.execcontext.plugin.WorkspaceDir;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
@@ -57,7 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for implementing jobs based on root {@link ModuleVersions}'s and
+ * Base class for implementing jobs based on root {@link ModuleVersion}'s and
  * which traverse the reference graph by checking out the {@link ModuleVersion}
  * source code and using {@link ReferenceManagerPlugin} and other
  * (@link NodePlugin}'s to obtain {@link Reference}'s.
@@ -99,13 +100,13 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * (@link SwitchToDynamicVesion} can optionnally specify a project code as a
    * Version attribute for newly created dynamic Versions. Similarly with
    * {@link Release} for static Versions. And for may other jobs which traverse
-   * a ReferenceGraph ({@link Checout}, {@link MergeMain}, etc.), this same project
+   * a ReferenceGraph ({@link Checkout}, {@link MergeMain}, etc.), this same project
    * code specified by this runtime property is used for matching
    * {@link ModuleVersion}'s based on their Version's project code attribute, in
    * addition to the matching performed by {@link ReferencePathMatcher}'s
    * (implied "and").
    * <p>
-   * Accessed on the root {@link ClasificationNode}.
+   * Accessed on the root {@link ClassificationNode}.
    */
   // TODO: Eventually this may be handled with generic expression-language-based matchers.
   protected static final String RUNTIME_PROPERTY_PROJECT_CODE = "PROJECT_CODE";
@@ -286,7 +287,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
   /**
    * {@link ModuleReentryAvoider}.
    * <p>
-   * Used by this class when matching {@link ReferenceGraphPath} if
+   * Used by this class when matching {@link ReferencePath} if
    * indAvoidReentry. Available to subclasses as well independently of
    * indAvoidReentry.
    */
@@ -354,7 +355,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
   }
 
   /**
-   * Setup the {@link ReferencePathMatcher} so that only {@link ModuleVersions}
+   * Setup the {@link ReferencePathMatcher} so that only {@link ModuleVersion}'s
    * having the {@link Version} attribute dragom-project-code equal to that
    * defined by the runtime property PROJECT_CODE are matched.
    */
@@ -371,7 +372,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
   /**
    * @return ReferencePathMatcher to use for matching the {@link ReferencePath}'s.
    *   "and" combination of the ReferencePathMatcher provided with
-   *   {@link #setReferencePathMatcher} and that setup by
+   *   {@link #setReferencePathMatcherProvided} and that setup by
    *   {@link #setupReferencePathMatcherForProjectCode}.
    */
   protected ReferencePathMatcher getReferencePathMatcher() {
@@ -437,16 +438,16 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * @param unsyncChangesBehaviorLocal Behavior related to unsynchronized local
    * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
    */
-  public void setUnsyncChangesBehaviorLocal(UnsyncChangesBehavior unsyncChangeBehaviorLocal) {
-    this.unsyncChangesBehaviorLocal = unsyncChangeBehaviorLocal;
+  public void setUnsyncChangesBehaviorLocal(UnsyncChangesBehavior unsyncChangesBehaviorLocal) {
+    this.unsyncChangesBehaviorLocal = unsyncChangesBehaviorLocal;
   }
 
   /**
    * @param unsyncChangesBehaviorRemote Behavior related to unsynchronized remote
    * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
    */
-  public void setUnsyncChangesBehaviorRemote(UnsyncChangesBehavior unsyncChangeBehaviorRemote) {
-    this.unsyncChangesBehaviorRemote = unsyncChangeBehaviorRemote;
+  public void setUnsyncChangesBehaviorRemote(UnsyncChangesBehavior unsyncChangesBehaviorRemote) {
+    this.unsyncChangesBehaviorRemote = unsyncChangesBehaviorRemote;
   }
 
   /**
@@ -637,7 +638,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * This implementation does a traversal of the reference graph rooted at the root
    * ModuleVersion by recursively invoking itself and for each ModuleVersion
    * matching the {@link ReferencePathMatcher} provided to the class using
-   * {@link #setReferencePathMatcher}, it calls {@link #visitMatchedModuleVersion}.
+   * {@link #setReferencePathMatcherProvided}, it calls
+   * {@link #visitMatchedModuleVersion}.
    * <p>
    * If {@link #indDepthFirst}, the traversal is depth first. Otherwise it is
    * parent first.

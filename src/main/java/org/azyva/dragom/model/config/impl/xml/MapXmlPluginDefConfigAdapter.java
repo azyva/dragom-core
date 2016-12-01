@@ -34,7 +34,7 @@ import org.azyva.dragom.model.config.impl.xml.MapXmlPluginDefConfigAdapter.ListP
 import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**
- * XmlAdapter for mapping the Map of XmlPluginDefConfig in {@link NodeConfiXml} to
+ * XmlAdapter for mapping the Map of XmlPluginDefConfig in {@link XmlNodeConfig} to
  * List of PluginDefConfig since JAXB does not directly support Map's.
  *
  * @author David Raymond

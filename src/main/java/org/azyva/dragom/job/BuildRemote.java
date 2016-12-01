@@ -43,6 +43,7 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
+import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.plugin.RemoteBuilderPlugin;
 import org.azyva.dragom.reference.Reference;
@@ -64,7 +65,7 @@ import org.azyva.dragom.util.Util;
  * Since BuildReferenceGraph is used, this class derives from
  * {@link RootModuleVersionJobAbstractImpl}, but performs its job by overriding
  * {@link RootModuleVersionJobAbstractImpl#performJob} and delegating to
- * {@link BuildReferenceGraph.performJob} to build the ReferenceGraph before
+ * {@link BuildReferenceGraph#performJob} to build the ReferenceGraph before
  * performing the rest of the processing.
  * <p>
  * Although this class requires a workspace in order to build the ReferenceGraph,
@@ -80,9 +81,9 @@ import org.azyva.dragom.util.Util;
  * When intermediate ModuleVersion's in the ReferencePath's to the matched
  * ModuleVersions's are not also built, the submission of multiple builds
  * simultaneously will not honor the transitive relation between the
- * ModuleVersion's, meaning that in a ReferencePath A -> B -> C, if A and C are
- * matched but not B, A and C will be submitted simultaneously. A will not wait
- * for the completion of C before being submitted.
+ * ModuleVersion's, meaning that in a ReferencePath A -&gt; B -&gt; C, if A and C
+ * are matched but not B, A and C will be submitted simultaneously. A will not
+ * wait for the completion of C before being submitted.
  *
  * @author David Raymond
  */
@@ -194,32 +195,36 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(BuildRemote.class.getName() + "ResourceBundle");
 
   /**
-   * Holds a {@link RemoteBuilderPlugin.RemoteBuildHandle} as well as extra data
-   * needed to manage the builds and avoid useless queries for
-   * {@link RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}.
+   * Holds a
+   * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle} as
+   * well as extra data needed to manage the builds and avoid useless queries for
+   * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}.
    */
   private static class RemoteBuildWrapper {
     /**
-     * {@link RemoteBuilderPlugin.RemoteBuildHandle}.
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle}.
      */
     public RemoteBuilderPlugin.RemoteBuildHandle remoteBuildHandle;
 
     /**
-     * {@link RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus} obtained
-     * from the {@link RemoteBuilderPlugin.RemoteBuildHandle} during the last
-     * monitoring cycle.
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}
+     * obtained from the
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle}
+     * during the last monitoring cycle.
      */
     public RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus remoteBuildStatusPrevious;
 
     /**
-     * {@link RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus} obtained
-     * from the {@link RemoteBuilderPlugin.RemoteBuildHandle} during the current
-     * monitoring cycle.
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}
+     * obtained from the
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle}
+     * during the current monitoring cycle.
      */
     public RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus remoteBuildStatusNew;
 
     /**
-     * Returns the {@link RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}.
+     * Returns the
+     * {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle.RemoteBuildStatus}.
      * <p>
      * It uses remoteBuildStatusNew as a cache for the RemoteBuildStatus. reset is
      * expected to be called at the end of each monitoring cycle to copy it to
@@ -236,7 +241,8 @@ public class BuildRemote extends RootModuleVersionJobAbstractImpl {
     }
 
     /**
-     * @return Indicates if the {@link RemoteBuilderPlugin.RemoteBuildHandle}
+     * @return Indicates if the
+     *   {@link org.azyva.dragom.model.plugin.RemoteBuilderPlugin.RemoteBuildHandle}
      *   changed state.
      */
     public boolean isChangedState() {

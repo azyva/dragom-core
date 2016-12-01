@@ -83,7 +83,7 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
    * This method will be called only for matched {@link ModuleVersion}'s. But the
    * {@link ReferenceGraph} needs to include the {@link ReferencePath}'s leading to
    * them. It must also identify those ModuleVersion's which are the roots. This is
-   * all taken care of by {@link ReferenceGraph#addReferencePath}.
+   * all taken care of by {@link ReferenceGraph#addMatchedReferencePath}.
    *
    * @param reference Reference to the matched ModuleVersion.
    * @return Indicates if children must be visited. true is returned.

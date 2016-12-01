@@ -62,7 +62,7 @@ import org.azyva.dragom.model.plugin.ClassificationNodePlugin;
 import org.azyva.dragom.model.plugin.ModulePlugin;
 import org.azyva.dragom.model.plugin.NodeInitPlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
-import org.azyva.dragom.model.plugin.PluginFactory;
+import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.impl.MavenBuilderPluginImpl;
 import org.azyva.dragom.util.Util;
 
@@ -70,9 +70,10 @@ import org.azyva.dragom.util.Util;
  * Simple implementation of {@link Node} and {@link MutableNode}.
  * <p>
  * Two type of SimpleNode's exist each represented by a different subclass:
- * <p>
- * <li>{@link SimpleClassificationNode}</li>
- * <li>{@link SimpleModule}</li>
+ * <ul>
+ * <li>{@link SimpleClassificationNode}
+ * <li>{@link SimpleModule}
+ * </ul>
  *
  * @author David Raymond
  */
@@ -91,27 +92,18 @@ public abstract class SimpleNode implements Node, MutableNode {
   protected static enum State {
     /**
      * SimpleNode has been created using
-     * {@link SimpleModel#createMutableClassificationNodeConfigRoot},
+     * {@link SimpleModel#createMutableClassificationNodeRoot},
      * {@link SimpleClassificationNode#createChildMutableModule} or
-     * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is not
-     * finalized, meaning that
-     * {@link SimpleClassificationNode#setNodeConfigValue},
-     * {@link SimpleClassificationNode#setClassificationNodeConfigValue},
-     * {@link SimpleModule#setNodeConfigValue} or
-     * {@link SimpleModule#setModuleConfigValue} has not been called.
+     * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is
+     * not finalized, meaning that
+     * {@link SimpleNode#setNodeConfigTransferObject} has not been called.
      * <p>
      * In that state, only
-     * {@link SimpleClassificationNode#getNodeConfigValue},
-     * {@link SimpleClassificationNode#getClassificationNodeConfigValue},
-     * {@link SimpleModule#getNodeConfigValue} or
-     * {@link SimpleModule#getModuleConfigValue} or the methods mentioned above can
-     * be called.
+     * {@link SimpleNode#getNodeConfigTransferObject} or the methods mentioned above
+     * can be called.
      * <p>
-     * When one of {@link SimpleClassificationNode#setNodeConfigValue},
-     * {@link SimpleClassificationNode#setClassificationNodeConfigValue},
-     * {@link SimpleModule#setNodeConfigValue} or
-     * {@link SimpleModule#setModuleConfigValue} is called, the SimpleNode transitions
-     * to the {@link #CONFIG} state.
+     * When {@link SimpleNode#setNodeConfigTransferObject} is called, the SimpleNode
+     * transitions to the {@link #CONFIG} state.
      * <p>
      * When the SimpleNode is created from {@link ClassificationNodeConfig} or
      * {@link ModuleConfig}, this state is not used.
@@ -120,7 +112,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 
     /**
      * SimpleNode has been created using
-     * {@link SimpleModel#createMutableClassificationNodeConfigRoot},
+     * {@link SimpleModel#createMutableClassificationNodeRoot},
      * {@link SimpleClassificationNode#createChildMutableModule} or
      * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is finalized
      * (see {@link #CONFIG_NEW}).
@@ -180,14 +172,14 @@ public abstract class SimpleNode implements Node, MutableNode {
 
   /**
    * Map of the {@link NodePlugin}'s instantiated via their constructor (when the
-   * plugin implementation class does not implement {@link PluginFactory}).
+   * plugin implementation class does not implement {@link NodePluginFactory}).
    * <p>
    * For such a plugin implementation class, for a given Node, we want to have only
    * one instance of the class per Node as if the class implements multiple
    * NodePlugin's (extends multiple NodePlugin sub-interfaces), it is useless to
    * have multiple instances.
    * <p>
-   * NodePlugin's instantiated from PluginFactory are not cached since the factory
+   * NodePlugin's instantiated from NodePluginFactory are not cached since the factory
    * design pattern specifically allows instantiation logic which may return
    * different NodePlugin's depending on the runtime context.
    */
@@ -205,7 +197,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * {@link SimpleClassificationNode#SimpleClassificationNode(SimpleModel)} or
    * {@link SimpleModule#SimpleModule(SimpleModel)}.
    *
-   * @param simpleModel
+   * @param simpleModel SimpleModel.
    */
   protected SimpleNode(SimpleModel simpleModel) {
     this.indMutable = false;
@@ -225,7 +217,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * initially empty {@link MutableNodeConfig}.
    * <p>
    * Must not be used for SimpleNode's other than the root SimpleClassificationNode.
-   * Use {@link SimpleNode(NodeConfig, SimpleNode)} for these SimpleNode's.
+   * Use {@link #SimpleNode(NodeConfig, SimpleModel)} for these SimpleNode's.
    * <p>
    * This constructor is expected to be called by
    * {@link SimpleClassificationNode#SimpleClassificationNode(ClassificationNodeConfig, SimpleModel)}.
@@ -260,7 +252,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * initially empty {@link MutableNodeConfig}.
    * <p>
    * Must not be used for the root SimpleClassificationNode. Use
-   * {@link SimpleNode(NodeConfig, SimpleModel)} for the root
+   * {@link #SimpleNode(NodeConfig, SimpleModel)} for the root
    * SimpleClassificationNode.
    * <p>
    * This constructor is expected to be called by
@@ -299,7 +291,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * while dynamically completing a {@link SimpleModel} using
    * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
    *
-   * @param simpleClassificationNode See description.
+   * @param simpleClassificationNodeParent See description.
    */
   void setSimpleClassificationNodeParent(SimpleClassificationNode simpleClassificationNodeParent) {
     if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
@@ -334,10 +326,13 @@ public abstract class SimpleNode implements Node, MutableNode {
    * Sets the value of a property.
    * <p>
    * This method has package scope since fields of a SimpleNode can only be set
-   * while dynamically completing a {@link SimpleModel} using{@code}
+   * while dynamically completing a {@link SimpleModel} using
    * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
    *
    * @param name Name of the property.
+   * @param indOnlyThisNode Indicates that this property applies specifically to the
+   *   SimpleNode on which it is defined, as opposed to being inherited by child
+   *   SimpleNode.
    * @param value Value of the property.
    */
   void setProperty(String name, String value, boolean indOnlyThisNode) {
@@ -358,8 +353,8 @@ public abstract class SimpleNode implements Node, MutableNode {
    * <p>
    * This method has package scope since it can only be called by
    * {@link SimpleClassificationNode#createChildNodesFromConfig},
-   * {@link SimpleNode#setNodeConfigTransferObject(NodeConfigTransferObject)
-   * and {@link SimpleNodeBuilder#create}.
+   * {@link SimpleNode#setNodeConfigTransferObject} and
+   * {@link SimpleNodeBuilder#create}.
    */
   void init() {
     List<String> listPluginId;
@@ -396,10 +391,6 @@ public abstract class SimpleNode implements Node, MutableNode {
     return this.nodeConfig;
   }
 
-  /**
-   * @return Parent {@link ClassificationNode}. null in the case of the root
-   *   ClassificationNode.
-   */
   @Override
   public ClassificationNode getClassificationNodeParent() {
     this.checkNotDeleted();
@@ -425,9 +416,6 @@ public abstract class SimpleNode implements Node, MutableNode {
     return this.name;
   }
 
-  /**
-   * @return Model.
-   */
   @Override
   public Model getModel() {
     this.checkNotDeleted();
@@ -435,15 +423,6 @@ public abstract class SimpleNode implements Node, MutableNode {
     return this.simpleModel;
   }
 
-  /**
-   * @return NodeType. Must be overridden by subclasses.
-   */
-  @Override
-  public abstract NodeType getNodeType();
-
-  /**
-   * @return NodePath. null for the root {@link ClassificationNode}.
-   */
   @Override
   public NodePath getNodePath() {
     this.checkNotDeleted();
@@ -618,9 +597,9 @@ public abstract class SimpleNode implements Node, MutableNode {
   /**
    * Gets the {@link PluginDefConfig} for a NodePlugin.
    * <p>
-   * This method is similar to {@link #getPropertyValue} in that Node inheritance is
+   * This method is similar to {@link #getProperty} in that Node inheritance is
    * considered. But contrary to getPropertyValue, this method is private and used
-   * only internally by {@link #getNodePlugin|.
+   * only internally by {@link #getNodePlugin}.
    * <p>
    * The PluginDefConfig returned is the one on the first NodeConfig that defines it
    * while traversing the parent hierarchy of Node's starting with this Node.
@@ -629,7 +608,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * returned.
    * <p>
    * If the first NodeConfig in the parent hierarchy that defines the PluginDefConfig
-   * defines it with {@link PluginDefConfig.getPluginClass} as null (to avoid
+   * defines it with {@link PluginDefConfig#getPluginClass} as null (to avoid
    * inheritance), null is also returned.
    * <p>
    * If the first NodeConfig in the parent hierarchy that defines the PluginDefConfig
@@ -669,13 +648,8 @@ public abstract class SimpleNode implements Node, MutableNode {
   }
 
   /**
-   * Gets the specified {@link NodePlugin} for this Node.
-   * <p>
-   * The NodePlugin must exist. {@link #isNodePluginExists} can be used to verify if
-   * a NodePlugin exists before getting it.
-   * <p>
    * This method implements the logic to instantiate the NodePlugin either from
-   * {@link PluginFactory} or by instantiating a class directly as a NodePlugin with
+   * {@link NodePluginFactory} or by instantiating a class directly as a NodePlugin with
    * the current Node as the only constructor argument.
    *
    * @param classNodePlugin Class of the NodePlugin.
@@ -719,10 +693,10 @@ public abstract class SimpleNode implements Node, MutableNode {
       throw new RuntimeException(cnfe);
     }
 
-    if (PluginFactory.class.isAssignableFrom(classPlugin)) {
-      PluginFactory pluginFactory;
+    if (NodePluginFactory.class.isAssignableFrom(classPlugin)) {
+      NodePluginFactory pluginFactory;
 
-      pluginFactory = Util.getPluginFactory(pluginDefConfig.getPluginClass());
+      pluginFactory = Util.getNodePluginFactory(pluginDefConfig.getPluginClass());
 
       nodePlugin = pluginFactory.getPlugin(pluginDefConfig.getClassNodePlugin(), this);
     } else if (NodePlugin.class.isAssignableFrom(classPlugin)) {
@@ -755,21 +729,13 @@ public abstract class SimpleNode implements Node, MutableNode {
         throw new RuntimeException(e);
       }
     } else {
-      throw new RuntimeException("The plugin class " + pluginDefConfig.getPluginClass() + " does not implement PluginFactory and cannot be instantiated as a NodePlugin.");
+      throw new RuntimeException("The plugin class " + pluginDefConfig.getPluginClass() + " does not implement NodePluginFactory and cannot be instantiated as a NodePlugin.");
     }
 
     return nodePlugin.getClass().asSubclass(classNodePlugin).cast(nodePlugin);
   }
 
 
-  /**
-   * Verifies if a {@link NodePlugin exists for this Node, without instantiating it.
-   *
-   * @param classNodePlugin Class of the NodePlugin.
-   * @param pluginId Plugin ID to distinguish between multiple instances of the same
-   *   NodePlugin.
-   * @return Indicates if the NodePlugin exists.
-   */
   @Override
   public boolean isNodePluginExists(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
     PluginDefConfig pluginDefConfig;
@@ -803,9 +769,6 @@ public abstract class SimpleNode implements Node, MutableNode {
   }
 
   /**
-   * Returns the List of plugin IDs of all NodePlugin's of the specified class
-   * available.
-   * <p>
    * The order in which the plugin IDs are returned is as defined by the order of
    * the {@link PluginDefConfig} within the underlying {@link NodeConfig}'s. The
    * NodeConfig of the parents are considered while traversing the parent hierarchy
@@ -983,7 +946,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * them within the configuration of the SimpleNode.
    * <p>
    * Does most of the processing that
-   * {@link MutableNode#setNodeConfigValueTransferObject} must do, except calling init
+   * {@link MutableNode#setNodeConfigTransferObject} must do, except calling init
    * and setting the new state.
    * <p>
    * The reason for not directly implementing
@@ -999,13 +962,14 @@ public abstract class SimpleNode implements Node, MutableNode {
    * the SimpleNodeConfig.
    *
    * @param nodeConfigTransferObject NodeConfigTransferObject.
+   * @param optimisticLockHandle OptimisticLockHandle.
    * @throws OptimisticLockException When the underlying {@link MutableNodeConfig}
    *   detects that the configuration data was changed since the call to
    *   {@link #getNodeConfigTransferObject}.
    * @throws OptimisticLockException Can be thrown only if optimisticLockHandle is
    *   not null. This is a RuntimeException that may be of interest to
    *   the caller.
-   * @throws DuplicateNodeExcpeption When the new configuration data would introduce
+   * @throws DuplicateNodeException When the new configuration data would introduce
    *   a duplicate {@link MutableNode} within the parent. This is a RuntimeException
    *   that may be of interest to the caller.
    */

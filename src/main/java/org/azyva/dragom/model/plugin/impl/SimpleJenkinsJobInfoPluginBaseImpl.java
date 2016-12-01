@@ -76,7 +76,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
   private static final String RUNTIME_PROPERTY_PROJECT = "JENKINS_PROJECT";
 
   /**
-   * Runtime property indicating to include the {@link Vesion} of the
+   * Runtime property indicating to include the {@link Version} of the
    * {@link Module}. The possible values are "true" and "false". If not defined,
    * "false" is assumed.
    * <p>

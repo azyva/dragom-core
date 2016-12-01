@@ -69,7 +69,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
   private String basicAuthBase64;
 
   /**
-   * Main implementation of {@link JenkinsClient.Build}.
+   * Main implementation of {@link org.azyva.dragom.jenkins.JenkinsClient.Build}.
    */
   public class DefaultBuildImpl implements JenkinsClient.Build {
     /**
@@ -325,12 +325,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
   }
 
   /**
-   * Constructor.
-   *
-   * @param baseUrl Base URL of Jenkins.
-   * @param user User to use to connect to Jenkins. Can be null if Jenkins is to be
-   *   accessed anonymously.
-   * @param password Password. Can be null if user is null.
+   * Default constructor.
    */
   public DefaultJenkinsClientImpl() {
   }

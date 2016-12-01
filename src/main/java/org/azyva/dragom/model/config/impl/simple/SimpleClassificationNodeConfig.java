@@ -39,7 +39,7 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
  * Simple implementation for {@link ClassificationNodeConfig}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.simple
+ * @see org.azyva.dragom.model.config.impl.simple
  */
 public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements ClassificationNodeConfig, MutableClassificationNodeConfig {
   /**
@@ -117,7 +117,7 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
    * This method is called by
    * {@link SimpleNodeConfig#extractNodeConfigTransferObject}.
    *
-   * @param simpleNodeConfigChild.
+   * @param simpleNodeConfigChild Child SimpleNodeConfig.
    * @throws DuplicateNodeException When a SimpleNodeConfig already exists with the
    *   same name.
    */
@@ -157,7 +157,7 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
    * <p>
    * This method is called by {@link SimpleNodeConfig#delete}.
    *
-   * @param childNodeName
+   * @param childNodeName Name of the child NodeConig.
    */
   void removeChildNodeConfig(String childNodeName) {
     if (this.mapSimpleNodeConfigChild.remove(childNodeName) == null) {

@@ -21,6 +21,6 @@
  * Simple implementations of classes in {@link org.azyva.dragom.model.config}.
  * <p>
  * These implementations are generally used only internally for dynamically creating
- * {@link Node}'s.
+ * {@link org.azyva.dragom.model.Node}'s.
  */
 package org.azyva.dragom.model.config.impl.simple;

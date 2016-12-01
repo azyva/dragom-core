@@ -129,6 +129,7 @@ public class RootManager {
   /**
    * Verifies if a ModuleVersion is contained in the list of ModuleVersion.
    *
+   * @param moduleVersion ModuleVersion.
    * @return See description.
    */
   public static boolean containsModuleVersion(ModuleVersion moduleVersion) {
@@ -141,6 +142,7 @@ public class RootManager {
    *
    * Useful for managing the list when duplicate modules are not allowed.
    *
+   * @param nodePathModule NodePath of the ModuleVersion.
    * @return See description.
    */
   public static ModuleVersion getModuleVersion(NodePath nodePathModule) {

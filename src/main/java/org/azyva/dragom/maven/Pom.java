@@ -316,7 +316,7 @@ public class Pom {
   }
 
   /**
-   * @param Path to the POM.
+   * @param pathPom Path to the POM.
    */
   public void setPathPom(Path pathPom) {
     this.pathPom = pathPom;

@@ -55,17 +55,19 @@ import org.azyva.dragom.util.Util;
  * <p>
  * This mappings between resource Pattern's and corresponding realms and users are
  * defined using runtime properties defined on the root ClassificationNode:
- * <p>
+ * <ul>
  * <li>RESOURCE_PATTERN_REALM_USER_MAPPINGS: ","-separated list of
  *     resource-realm-user mapping names. For each such name, a
- *     {@link CredentialStore.ResourcePatternRealmUser} is created.</li>
- * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.&ltname&gt;: Literal
- *     value of {@link CredentialStore.ResourcePatternRealmUser#patternResource}.</li>
- * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.&ltname&gt;: Value of
- *     {@link CredentialStore.ResourcePatternRealmUser#realm}.</li>
- * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_USER.&ltname&gt;: Value of
- *     {@link CredentialStore.ResourcePatternRealmUser#user}.</li>
- * <p>
+ *     {@link org.azyva.dragom.security.CredentialStore.ResourcePatternRealmUser} is
+ *     created.
+ * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.&lt;name&gt;: Literal
+ *     value of
+ *     {@link org.azyva.dragom.security.CredentialStore.ResourcePatternRealmUser#patternResource}.
+ * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.&lt;name&gt;: Value of
+ *     {@link org.azyva.dragom.security.CredentialStore.ResourcePatternRealmUser#realm}.
+ * <li>RESOURCE_PATTERN_REALM_USER_MAPPING_USER.&lt;name&gt;: Value of
+ *     {@link org.azyva.dragom.security.CredentialStore.ResourcePatternRealmUser#user}.
+ * </ul>
  * If {@link UserInteractionCallbackPlugin#isBatchMode} returns false, this class
  * interacts with the user when appropriate to obtain missing passwords, as
  * recommended in CredentialStorePlugin.
@@ -75,7 +77,8 @@ import org.azyva.dragom.util.Util;
  * realms and explicitly modify the passwords, operations which are not supported
  * by the interface. This is meant to be used by a tool that would assume this
  * specific implementation of the CredentialStorePlugin to allow the user to
- * manage the credential store. {@link CredentialManagerTool} is such a CLI tool.
+ * manage the credential store. CredentialManagerTool from dragom-cli-tools is such
+ * a CLI tool.
  *
  * @author David Raymond
  */

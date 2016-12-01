@@ -29,7 +29,7 @@ import org.azyva.dragom.model.config.MutableConfig;
  * Simple implementation of {@link Config} and {@link MutableConfig}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.simple
+ * @see org.azyva.dragom.model.config.impl.simple
  */
 public class SimpleConfig implements Config, MutableConfig {
   /**

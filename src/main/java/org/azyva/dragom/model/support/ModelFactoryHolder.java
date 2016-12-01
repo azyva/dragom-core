@@ -63,7 +63,7 @@ import org.azyva.dragom.util.Util;
  * the org.azyva.dragom.DefaultModelFactory system property is used or
  * {@link DefaultModelFactory} if not specified.
  * <p>
- * {@link Util#setDragomSystemProperties} is called during initialization of this
+ * {@link Util#applyDragomSystemProperties} is called during initialization of this
  * class.
  *
  * @author David Raymond

@@ -38,7 +38,7 @@ import org.azyva.dragom.model.config.Config;
  * from an XML file.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.xml
+ * @see org.azyva.dragom.model.config.impl.xml
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "config")

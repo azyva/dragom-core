@@ -28,6 +28,7 @@ import java.util.Set;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
+import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.MutableClassificationNode;
 import org.azyva.dragom.model.MutableModule;
 import org.azyva.dragom.model.Node;
@@ -75,7 +76,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * {@link ModelNodeBuilderFactory#createClassificationNodeBuilder} implemented
    * by SimpleModel to create new {@link SimpleClassificationNode}'s.
    *
-   * @param simpleModel
+   * @param simpleModel SimpleModel.
    */
   SimpleClassificationNode(SimpleModel simpleModel) {
     super(simpleModel);
@@ -91,18 +92,18 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * <p>
    * Must not be used for SimpleClassificationNode's other than the root
    * SimpleClassificationNode. Use
-   * {@link SimpleClassificationNode(ClassificationNodeConfig, SimpleClassificationNode)}
+   * {@link #SimpleClassificationNode(ClassificationNodeConfig, SimpleClassificationNode)}
    * for these SimpleClassificationNode's.
    * <p>
    * This constructor is expected to be called by {@link SimpleModel}'s constructor
    * when creating the root SimpleClassificationNode.
    * <p>
    * This constructor has package scope to enforce the use of
-   * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
+   * {@link SimpleModel#SimpleModel} to create a complete Model from
    * {@link Config}.
    *
    * @param classificationNodeConfig ClassificationNodeConfig.
-   * @param model Model.
+   * @param simpleModel SimpleModel.
    */
   SimpleClassificationNode(ClassificationNodeConfig classificationNodeConfig, SimpleModel simpleModel) {
     super(classificationNodeConfig, simpleModel);
@@ -113,15 +114,14 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * SimpleClassificationNode when creating a {@link Model} from {@link Config}.
    * <p>
    * Must not be used for the root SimpleClassificationNode. Use
-   * {@link SimpleClassificationNode(ClassificationNodeConfig, SimpleModel)} for
+   * {@link #SimpleClassificationNode(ClassificationNodeConfig, SimpleModel)} for
    * the root SimpleClassificationNode.
    * <p>
    * This constructor has package scope to enforce the use of
-   * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
-   * {@link Config}.
+   * {@link SimpleModel#SimpleModel} to create a complete Model from {@link Config}.
    *
    * @param classificationNodeConfig ClassificationNodeConfig.
-   * @param simpleClassificatonNodeParent Parent SimpleClassificationNode.
+   * @param simpleClassificationNodeParent Parent SimpleClassificationNode.
    */
   SimpleClassificationNode(ClassificationNodeConfig classificationNodeConfig, SimpleClassificationNode simpleClassificationNodeParent) {
     super(classificationNodeConfig, simpleClassificationNodeParent);
@@ -145,7 +145,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * <p>
    * The order of the child SimpleNode's is as defined by the underlying
    * ClassificationNodeConfig, with child SimpleNodes inserted at runtime by
-   * {@link #addChildNode} are included at the end of the List.
+   * {@link #addNodeChild} are included at the end of the List.
    *
    * @return See description.
    */
@@ -318,7 +318,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * <p>
    * This method has package scope since SimpleModel can only be completed
    * dynamically with new {@link SimpleClassificationNode}'s using
-   * {@link SimpleModel.getClassificationNode}.
+   * {@link SimpleModel#getClassificationNode}.
    *
    * @param name Name of the child ClassificationNode.
    * @return Child ClassificationNode. null if no child of the specified name is
@@ -364,8 +364,8 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * Returns a child {@link Module}, dynamically creating it if it does not exist.
    * <p>
    * This method has package scope since SimpleModel can only be completed
-   * dynamically with new {@link SimpleModule's using
-   * {@link SimpleModel.getModule}.
+   * dynamically with new {@link SimpleModule}'s using
+   * {@link SimpleModel#getModule}.
    *
    * @param name Name of the child Module.
    * @return Child Module. null if no child of the specified name is currently
@@ -470,6 +470,8 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    *
    * @param currentName Current name.
    * @param newName New name.
+   * @throws DuplicateNodeException If the renaming would introduce a duplicate
+   *   SimpleNode.
    */
   void renameSimpleNodeChild(String currentName, String newName) throws DuplicateNodeException {
     this.checkMutable();
@@ -497,7 +499,7 @@ public class SimpleClassificationNode extends SimpleNode implements Classificati
    * This method is intended to be called by
    * {@link SimpleNode#delete}.
    *
-   * @param childNodeName
+   * @param childNodeName Name of the child Node.
    */
   void removeChildNode(String childNodeName) {
     this.checkMutable();

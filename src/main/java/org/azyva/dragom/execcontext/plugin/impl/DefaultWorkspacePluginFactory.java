@@ -147,10 +147,11 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
     /**
      * Map {@link WorkspaceDir} access modes. The entries have the following meanings:
-     * <p>
-     * <li>Key not present: No access</li>
-     * <li>0: Write access</li>
-     * <li>1+: Read access with read count</li>
+     * <ul>
+     * <li>Key not present: No access
+     * <li>0: Write access
+     * <li>1+: Read access with read count
+     * </ul>
      */
     private Map<WorkspaceDir, Integer> mapWorkspaceDirAccessMode;
 
@@ -306,7 +307,8 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
      * Returns the Path corresponding to a WorkspaceDirUserModuleVersion.
      *
      * @param workspaceDirUserModuleVersion WorkspaceDirUserModuleVersion.
-     * @param enumSetGetWorkspaceDirMode EnumSet of {@link GetWorkspaceDirMode}.
+     * @param enumSetGetWorkspaceDirMode EnumSet of
+     *   {@link org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode}.
      * @return Path
      */
     private Path getWorkspaceDirUserModuleVersion(WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {
@@ -353,7 +355,8 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
      * Returns the Path corresponding to a WorkspaceDirSystemModule.
      *
      * @param workspaceDirSystemModule WorkspaceDirSystemModule.
-     * @param enumSetGetWorkspaceDirMode EnumSet of {@link GetWorkspaceDirMode}.
+     * @param enumSetGetWorkspaceDirMode EnumSet of
+     *   {@link org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode}.
      * @return Path
      */
     private Path getWorkspaceDirSystemModule(WorkspaceDirSystemModule workspaceDirSystemModule, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode) {

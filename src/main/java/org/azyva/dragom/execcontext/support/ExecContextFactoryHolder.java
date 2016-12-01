@@ -47,7 +47,7 @@ import org.azyva.dragom.util.Util;
  * org.azyva.dragom.DefaultExecContextFactory system property is used or
  * {@link DefaultExecContextFactory} if not specified.
  * <p>
- * {@link Util#setDragomSystemProperties} is called during initialization of this
+ * {@link Util#applyDragomSystemProperties} is called during initialization of this
  * class.
  *
  * @author David Raymond

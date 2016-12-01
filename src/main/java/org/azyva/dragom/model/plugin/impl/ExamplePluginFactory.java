@@ -24,22 +24,22 @@ import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ModulePlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
-import org.azyva.dragom.model.plugin.PluginFactory;
+import org.azyva.dragom.model.plugin.NodePluginFactory;
 
 /**
- * Example implementation of a {@link PluginFactory}.
+ * Example implementation of a {@link NodePluginFactory}.
  * <p>
  * Generally {@link NodePlugin}'s are easier to implement using the constructor
  * idiom. Most NodePlugin's provided with Dragom use this idiom.
  * <p>
- * This NodePlugin provides an example implementation of a {@link PluginFactory},
+ * This NodePlugin provides an example implementation of a {@link NodePluginFactory},
  * the other NodePlugin implementation idiom supported by Dragom.
  * <p>
  * A useless generic {@link ModulePlugin} is actually implemented.
  *
  * @author David Raymond
  */
-public class ExamplePluginFactory implements PluginFactory {
+public class ExamplePluginFactory implements NodePluginFactory {
   private class ExamplePluginImpl extends ModulePluginAbstractImpl implements ModulePlugin {
     ExamplePluginImpl (Module module) {
       super(module);

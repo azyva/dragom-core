@@ -155,7 +155,8 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
   /**
    * Constructor.
    *
-   * @param referenceGraph ReferenceGraph.
+   * @param listModuleVersionRoot List of root ModuleVersions's.
+   * @param outputFormat OutputFormat.
    */
   public ReferenceGraphReport(List<ModuleVersion> listModuleVersionRoot, ReferenceGraphReport.OutputFormat outputFormat) {
     super(listModuleVersionRoot);
@@ -242,7 +243,8 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
   }
 
   /**
-   * {@link ReferenceGraph.Visitor} used to build the {@link Report}.
+   * {@link org.azyva.dragom.reference.ReferenceGraph.Visitor} used to build the
+   * {@link Report}.
    * <p>
    * Both the reference graph report and the list of {@link Module}'s are build
    * simultaneously.
@@ -636,16 +638,16 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
  * more closely matches a report meant to be consumed by humans.
  * <p>
  * A reference graph report contains two distinct sections:
- * <p>
+ * <ul>
  * <li>Reference graph itself modeled mostly as a tree
- * <p>List of {@link Module}'s with their {@link Versions}'s that occur within the
+ * <li>List of {@link Module}'s with their {@link Version}'s that occur within the
  * reference graph
- * <p>
+ * </ul>
  * In the first section, the reference graph is modeled as a tree as representing
  * it as a true graph in a report is more complex and is not currently supported.
  * <p>
  * The reference graph can be either completely unfolded, meaning that it is
- * rendered by traversing it as a tree and {@link ModuleVersions}'s and their
+ * rendered by traversing it as a tree and {@link ModuleVersion}'s and their
  * references that occur more than once in the graph occur more than once in the
  * report as well. Actually, node objects representing the same ModuleVersion's
  * are reused, but if object identity is ignore, recursize production of the
@@ -658,7 +660,7 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
  * <p>
  * In the second section, the Module's are identified by their {@link NodePath}'s.
  * For each Module the list of Version's occurring within the reference graph and
- * for each Version the list of {@link ReferenceGraphPath}'s corresponding to the
+ * for each Version the list of {@link ReferencePath}'s corresponding to the
  * ModuleVersion is included. Also, each Version can be tagged as being the most
  * recent Version of the Module in the reference graph or the most recent one
  * available in the SCM. If the most recent Version available in the SCM is not
@@ -669,12 +671,12 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
  * text format. This class and the other referenced classes are designed to help
  * produce the report in these formats. If it is required that the report be
  * produced in some other format, various solutions exist based on these formats:
- * <p>
+ * <ul>
  * <li>XSLT can be used to transform the report in XML format into some other
- * format, such as PDF using FOP</li>
+ * format, such as PDF using FOP
  * <li>A tool can be developped to interpret the report in XML or JSON format and
- * produce it in some other format</li>
- * <p>
+ * produce it in some other format
+ * </ul>
  * The report in text format could also be produced from the report in XML format
  * using XSLT. But a simple text format is supported by Dragom natiely mainly for
  * performance reasons and as a debugging help.
@@ -687,7 +689,7 @@ class Report {
   /**
    * List of root {link ReportReference}'s.
    * <p>
-   * These are ReportReference's and not simple {@link ReferenceGraphNode}'s
+   * These are ReportReference's and not simple {@link ReportReferenceGraphNode}'s
    * since a root {@link ModuleVersion} can occur elsewhere in the Report
    * and a bookmark may need to be used.
    * <p>

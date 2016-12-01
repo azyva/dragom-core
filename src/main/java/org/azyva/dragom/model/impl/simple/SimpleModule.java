@@ -23,13 +23,13 @@ import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.MutableModule;
-import org.azyva.dragom.model.config.Config;
 import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
 import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.config.OptimisticLockException;
 import org.azyva.dragom.model.config.OptimisticLockHandle;
+import org.azyva.dragom.model.config.impl.simple.SimpleConfig;
 
 /**
  * Simple implementation of {@link Module} and {@link MutableModule}.
@@ -44,18 +44,18 @@ public class SimpleModule extends SimpleNode implements Module, MutableModule {
    * {@link ModelNodeBuilderFactory#createModuleBuilder} to create new
    * {@link SimpleModule}'s.
    *
-   * @param simpleModel
+   * @param simpleModel SimpleModel.
    */
   SimpleModule(SimpleModel simpleModel) {
     super(simpleModel);
   }
 
   /**
-   * Constructor used when creating a {@link Model} from {@link Config}.
+   * Constructor used when creating a {@link Model} from {@link SimpleConfig}.
    * <p>
    * This constructor has package scope to enforce the use of
-   * {@link SimpleModel#SimpleModel(Config)} to create a complete Model from
-   * {@link Config}.
+   * {@link SimpleModel#SimpleModel} to create a complete Model from
+   * {@link SimpleConfig}.
    *
    * @param moduleConfig ModuleConfig.
    * @param simpleClassificationNodeParent Parent SimpleClassificationNode.

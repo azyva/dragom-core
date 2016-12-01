@@ -42,7 +42,7 @@ public class MapXmlNodeConfigXmAdapter extends XmlAdapter<ListNode, Map<String, 
   @XmlAccessorType(XmlAccessType.NONE)
   public static class ListNode {
     @XmlElementRef
-    private List<XmlNodeConfig> listNodeConfigXml;
+    private List<XmlNodeConfig> listXmlNodeConfig;
 
     /**
      * Default constructor required by JAXB.
@@ -52,17 +52,18 @@ public class MapXmlNodeConfigXmAdapter extends XmlAdapter<ListNode, Map<String, 
 
     /**
      * Constructor taking a List of XmlNodeConfig used for marshalling.
-     * @param listNodeConfigXml
+     *
+     * @param listXmlNodeConfig List of XmlNodeConfig.
      */
-    public ListNode(List<XmlNodeConfig> listNodeConfigXml) {
-      this.listNodeConfigXml = listNodeConfigXml;
+    public ListNode(List<XmlNodeConfig> listXmlNodeConfig) {
+      this.listXmlNodeConfig = listXmlNodeConfig;
     }
 
     /**
      * @return List of XmlNodeConfig.
      */
-    public List<XmlNodeConfig> getListNodeConfigXml() {
-      return this.listNodeConfigXml;
+    public List<XmlNodeConfig> getListXmlNodeConfig() {
+      return this.listXmlNodeConfig;
     }
   }
 
@@ -86,7 +87,7 @@ public class MapXmlNodeConfigXmAdapter extends XmlAdapter<ListNode, Map<String, 
     // LinkedHashMap is used to preserve insertion order.
     mapNodeConfigXml = new LinkedHashMap<String, XmlNodeConfig>();
 
-    for (XmlNodeConfig xmlNodeConfig: listNode.getListNodeConfigXml()) {
+    for (XmlNodeConfig xmlNodeConfig: listNode.getListXmlNodeConfig()) {
       mapNodeConfigXml.put(xmlNodeConfig.getName(), xmlNodeConfig);
     }
 

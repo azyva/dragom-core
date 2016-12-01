@@ -42,33 +42,34 @@ import org.slf4j.LoggerFactory;
  * parameters.
  * <p>
  * By "simple parameters" we mean something convenient like this:
- * <p>
- * <pre>{@code
+ * <pre>
+ * {@code
  * <A_PROPERTY>a_value</A_PROPERTY>
- * }</pre>
- * <p>
+ * }
+ * </pre>
  * instead of the more strict and verbose:
- * <p>
- * <pre>{@code
+ * <pre>
+ * {@code
  * <property>
  *   <name>A_PROPERTY</name>
  *   <value>a_value</value>
  * </property>
- * }</pre>
- * <p>
+ * }
+ * </pre>
  * or:
- * <p>
- * <pre>{@code
+ * <pre>
+ * {@code
  * <property name="A_PROPERTY" value="a_value"/>
- * }</pre>
- * <p>
+ * }
+ * </pre>
  * Note that this makes specifying the indOnlyThisChild property of the
  * XmlPropertyDefConfig more awkward, but nevertheless supported using an
  * attribute:
- * <p>
- * <pre>{@code
+ * <pre>
+ * {@code
  * <A_PROPERTY ind-only-this-node="true">a_value</A_PROPERTY>
- * }</pre>
+ * }
+ * </pre>
  *
  * @author David Raymond
  */
@@ -123,10 +124,11 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
    * property which must be marshalled as an attribute of the property.
    * <p>
    * I believe the solution revolves around:
-   * <p>
-   * <li>Making the type of listProperty org.w3c.dom.Node instead of JAXBelement;<li>
+   * <ul>
+   * <li>Making the type of listProperty org.w3c.dom.Node instead of JAXBelement;
    * <li>Using DocumentBuilderFactory (.newInstance()) to build a Node representing
-   *     property with the correct attribute;</li>
+   *     property with the correct attribute.
+   * </ul>
    */
   @Override
   public ListProperty marshal(Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml) {

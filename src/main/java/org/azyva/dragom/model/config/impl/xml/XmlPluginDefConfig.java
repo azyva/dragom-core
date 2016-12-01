@@ -41,7 +41,7 @@ import org.azyva.dragom.util.Util;
  * XmlNodeConfig.getPluginDefConfig will need to be revised.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.xml
+ * @see org.azyva.dragom.model.config.impl.xml
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "plugin")

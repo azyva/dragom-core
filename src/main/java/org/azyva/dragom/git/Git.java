@@ -87,7 +87,7 @@ public interface Git {
    * Sets the Path to the git executable. If not set, git is invoked with no
    * Path,, relying on it beinng available in the environment PATH.
    *
-   * @param pathGitExecutable See description.
+   * @param pathExecutable See description.
    */
   void setPathExecutable(Path pathExecutable);
 
@@ -136,7 +136,7 @@ public interface Git {
    *   be copied in this StringBuilder.
    * @return The exit code of the command.
    */
-  int executeGitCommand(String[] arrayArg, boolean provideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput);
+  int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput);
 
   /**
    * @return Indicates if the credentials provided are valid.
@@ -185,7 +185,7 @@ public interface Git {
    * Git fetch.
    *
    * @param path Path.
-   * @param reposUrl. Repository URL. Can be null in which case fetch occurs from
+   * @param reposUrl Repository URL. Can be null in which case fetch occurs from
    *   the remote named "origin" within the configuration of the workspace, and thus
    *   implicitly from the remote repository specified with {@link #setReposUrl}.
    *   Can be a repository URL in which case refspec should be specified otherwise

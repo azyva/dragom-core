@@ -161,7 +161,8 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   }
 
   /**
-   * Stack of {@link BracketHandle}'s.
+   * Stack of
+   * {@link org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin.BracketHandle}'s.
    * <p>
    * The depth of the Stack defines the indentation levels.
    * <p>

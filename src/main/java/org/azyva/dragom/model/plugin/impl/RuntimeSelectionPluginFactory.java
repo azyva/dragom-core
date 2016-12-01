@@ -32,13 +32,13 @@ import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.ModulePlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
-import org.azyva.dragom.model.plugin.PluginFactory;
+import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
 
 /**
- * {@link PluginFactory} which allows selecting a specific {@link NodePlugin}
+ * {@link NodePluginFactory} which allows selecting a specific {@link NodePlugin}
  * implementation at runtime based on a runtime property.
  * <p>
  * It is not for all NodePlugin's that it makes sense to dynamically select which
@@ -55,13 +55,13 @@ import org.azyva.dragom.util.Util;
  * The {@link Model} must be such that for a NodePlugin class and plugin ID this
  * class is used as the implementation class. The process of instantiating the
  * NodePlugin therefore (see {@link SimpleNode#getNodePlugin}) obtains the
- * PluginFactory using the {@link #getInstance} method since it is defined.
+ * NodePluginFactory using the {@link #getInstance} method since it is defined.
  * <p>
  * Then, {@link #getPlugin} is called with the NodePlugin class specified in the
  * Model. This method uses the runtime property
  * SPECIFIC_PLUGIN_ID.&lt;NodePlugin class&gt; as the plugin ID and delegates to
- * {@link Node#getPlugin} with the same NodePlugin class and the plugin ID obtained
- * from the runtime property.
+ * {@link Node#getNodePlugin} with the same NodePlugin class and the plugin ID
+ * obtained from the runtime property.
  * <p>
  * If no such runtime property exists and the runtime property
  * IND_ALLOW_USER_SPECIFIED_PLUGIN_ID.&lt;NodePlugin class&gt; is not true, null
@@ -72,7 +72,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class RuntimeSelectionPluginFactory implements PluginFactory {
+public class RuntimeSelectionPluginFactory implements NodePluginFactory {
   /**
    * Prefix for the runtime property specifying the specific plugin ID to delegate
    * to.
@@ -191,7 +191,7 @@ public class RuntimeSelectionPluginFactory implements PluginFactory {
   /**
    * @return The singleton {@link RuntimeSelectionPluginFactory}.
    */
-  public static synchronized PluginFactory getInstance() {
+  public static synchronized NodePluginFactory getInstance() {
     if (RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory == null) {
       RuntimeSelectionPluginFactory.runtimeSelectionPluginFactory = new RuntimeSelectionPluginFactory();
     }

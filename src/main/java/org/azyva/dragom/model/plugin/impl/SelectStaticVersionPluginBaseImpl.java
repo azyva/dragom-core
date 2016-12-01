@@ -525,7 +525,7 @@ public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbst
    * Gets the latest static {@link Version} matching a static Version prefix among a
    * List of static Version's.
    *
-   * @param llistVersionStatic List of static Version's, ordered latest first.
+   * @param listVersionStatic List of static Version's, ordered latest first.
    * @param versionStaticPrefix Static Version prefix.
    * @return Latest matching static Version or null if none.
    */
