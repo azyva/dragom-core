@@ -14,13 +14,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Afferp General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
-along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
+along with Dragom.  If not, see <http://www.gnu.org/licenses />.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.azyva.dragom</groupId>
   <artifactId>dragom-core</artifactId>
-  <version>master-SNAPSHOT</version>
+  <version>0.1.1</version>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -91,7 +91,7 @@ along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
     <dependency>
       <groupId>org.azyva.dragom</groupId>
       <artifactId>dragom-api</artifactId>
-      <version>master-SNAPSHOT</version>
+      <version>0.1.1</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>
@@ -180,7 +180,7 @@ along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
     <url>https://github.com/azyva/dragom-core</url>
     <connection>scm:git:https://github.com/azyva/dragom-core.git</connection>
     <developerConnection>scm:git:https://github.com/azyva/dragom-core.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v-0.1.1</tag>
   </scm>
   <distributionManagement>
     <snapshotRepository>
