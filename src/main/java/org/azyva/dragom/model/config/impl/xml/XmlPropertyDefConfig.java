@@ -51,11 +51,6 @@ public class XmlPropertyDefConfig implements PropertyDefConfig {
 
   /**
    * Constructor.
-   * <p>
-   * XmlPropertyDefConfig is instantiated by MapXmlPropertyDefConfigAdapter so a
-   * constructor needs to be provided, as opposed to the other classes in this
-   * package which are instantiated directly by JAXB and for which only the default
-   * no-arg constructor is required.
    *
    * @param name Name.
    * @param value Value.
@@ -63,7 +58,7 @@ public class XmlPropertyDefConfig implements PropertyDefConfig {
    *   {@link NodeConfig} on which it is defined, as opposed to being inherited by
    *   child NodeConfig when interpreted by the {@link Model}.
    */
-  XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
+  public XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
     this.name = name;
     this.value = value;
     this.indOnlyThisNode = indOnlyThisNode;

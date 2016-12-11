@@ -85,7 +85,7 @@ public interface Git {
 
   /**
    * Sets the Path to the git executable. If not set, git is invoked with no
-   * Path,, relying on it beinng available in the environment PATH.
+   * Path, relying on it being available in the environment PATH.
    *
    * @param pathExecutable See description.
    */
@@ -134,9 +134,11 @@ public interface Git {
    *   is used.
    * @param stringBuilderOutput If not null, any output (stdout) of the command will
    *   be copied in this StringBuilder.
+   * @param indTrimOutput Indicates to trim the output written to
+   *   stringBuilderOutput (remove leading and trailing whitespace).
    * @return The exit code of the command.
    */
-  int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput);
+  int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput, boolean indTrimOutput);
 
   /**
    * @return Indicates if the credentials provided are valid.

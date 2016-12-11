@@ -58,7 +58,7 @@ public class SimpleClassificationNodeConfig extends SimpleNodeConfig implements 
    *
    * @param simpleConfig SimpleConfig holding this root ClassificationNodeConfig.
    */
-  public SimpleClassificationNodeConfig(SimpleConfig simpleConfig) {
+  SimpleClassificationNodeConfig(SimpleConfig simpleConfig) {
     super(null);
 
     this.simpleConfig = simpleConfig;

@@ -145,10 +145,10 @@ public class ServiceLocator {
     }
 
     try {
-      return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Factory").getMethod("getService").invoke(null);
+      return (ServiceInterface)Class.forName(classServiceInterface.getPackage().getName() + ".impl.Default" + classServiceInterface.getSimpleName() + "Factory").getMethod("getService").invoke(null);
     } catch (ClassNotFoundException cnfe) {
       try {
-        return (ServiceInterface)Class.forName(classServiceInterface.getPackage() + ".impl.Default" + classServiceInterface.getSimpleName() + "Impl").newInstance();
+        return (ServiceInterface)Class.forName(classServiceInterface.getPackage().getName() + ".impl.Default" + classServiceInterface.getSimpleName() + "Impl").newInstance();
       } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
         throw new RuntimeException(e);
       }

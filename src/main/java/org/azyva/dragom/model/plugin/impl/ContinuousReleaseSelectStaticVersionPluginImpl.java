@@ -130,7 +130,7 @@ public class ContinuousReleaseSelectStaticVersionPluginImpl extends SelectStatic
 
   /**
    * Default number of decimal positions to use when generating the revision part of
-   * a new semantic Version. With 10 builds per day, this provides à 20+ years
+   * a new semantic Version. With 10 builds per day, this provides a 20+ years
    * before reaching the limit.
    */
   private static final int DEFAULT_REVISION_DECIMAL_POSITION_COUNT = 5;

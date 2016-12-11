@@ -20,7 +20,6 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -276,6 +275,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS = "WARNING_UNPUSHED_COMMITS";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_NO_DIVERGING_COMMITS = "NO_DIVERGING_COMMITS";
 
   /**
    * ResourceBundle specific to this class.
@@ -542,7 +546,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     this.getGit().fetch(pathModuleWorkspace, reposUrl, refspec, indFetchingIntoCurrentBranch);
 
     if (indFetchingIntoCurrentBranch) {
-      this.getGit().executeGitCommand(new String[] {"reset", "--hard", "HEAD"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+      this.getGit().executeGitCommand(new String[] {"reset", "--hard", "HEAD"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
     }
 
     // If pathRemote is null it means we cloned from the real remote repository. We
@@ -778,7 +782,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
           // We add "--" as a last argument since when a ref does no exist, Git complains
           // about the fact that the command is ambiguous.
-          if (this.getGit().executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null) == 0) {
+          if (this.getGit().executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
             // If the Workspace directory is not the main one, we fetch the same branch from
             // the main Workspace directory into the current Workspace directory.
             // This is the special handling of the synchronization between a workspace
@@ -1063,7 +1067,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       listArg.add("--");
 
       // The empty String[] argument to toArray is required for proper typing in Java.
-      this.getGit().executeGitCommand(listArg.toArray(new String[] {}), false, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
+      this.getGit().executeGitCommand(listArg.toArray(new String[] {}), false, AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits, true);
 
       bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
 
@@ -1085,7 +1089,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         String tagLine;
 
         stringBuilderTags = new StringBuilder();
-        this.getGit().executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderTags);
+        this.getGit().executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderTags, true);
 
         bufferedReaderTags = new BufferedReader(new StringReader(stringBuilderTags.toString()));
         mapTag = new HashMap<String, Object>();
@@ -1392,7 +1396,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       try {
         message += " Dummy commit introduced to record the version attributes including the base version of the newly created version " + versionTarget + '.';
 
-        this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, true, AllowExitCode.NONE, pathModuleWorkspace, null);
+        this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, true, AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
         this.push(pathModuleWorkspace, "refs/heads/" + branch);
 
@@ -1471,7 +1475,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       String commitString;
 
       stringBuilderCommits = new StringBuilder();
-      this.getGit().executeGitCommand(new String[] {"rev-list", "--pretty=oneline", this.getGit().convertToRef(version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits);
+      this.getGit().executeGitCommand(new String[] {"rev-list", "--pretty=oneline", this.getGit().convertToRef(version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits, true);
 
       bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
 
@@ -1516,7 +1520,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       String tagMessage;
 
       stringBuilder = new StringBuilder();
-      this.getGit().executeGitCommand(new String[] {"tag", "-n", "-l", version.getVersion()}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+      this.getGit().executeGitCommand(new String[] {"tag", "-n", "-l", version.getVersion()}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder, true);
 
       if (stringBuilder.toString().isEmpty()) {
         throw new RuntimeException("Static version " + version + " does not exist.");
@@ -1527,7 +1531,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mapVersionAttr = Util.getJsonAttr(tagMessage, mapVersionAttr);
 
       stringBuilder.setLength(0);
-      this.getGit().executeGitCommand(new String[] {"rev-parse", version.getVersion() + "^{}"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder);
+      this.getGit().executeGitCommand(new String[] {"rev-parse", version.getVersion() + "^{}"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder, true);
 
       if (stringBuilder.toString().isEmpty()) {
         throw new RuntimeException("Static version " + version + " does not exist.");
@@ -1555,7 +1559,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     versionCurrent = this.getVersion(pathModuleWorkspace);
 
-    this.getGit().executeGitCommand(new String[] {"checkout", "--detach"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+    this.getGit().executeGitCommand(new String[] {"checkout", "--detach"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     ExecContextHolder.get().setTransientData(GitScmPluginImpl.TRANSIENT_DATA_PREFIX_TEMP_DYNAMIC_VERSION_BASE + pathModuleWorkspace, versionCurrent);
   }
@@ -1623,7 +1627,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   }
 
   /**
-   * Validates the state of the temporary dynamic Version being created or not base
+   * Validates the state of the temporary dynamic Version being created or not based
    * on a provided expected state.
    * <p>
    * An exception is thrown if the states do not match.
@@ -1720,7 +1724,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mergeMessage = message + '\n' + mergeMessage;
     }
 
-    if (this.getGit().executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
+    if (this.getGit().executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
       return false;
     }
 
@@ -1733,6 +1737,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   public boolean merge(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
     Version versionDest;
     WorkspacePlugin workspacePlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     StringBuilder stringBuilderMergeMessage;
     List<ScmPlugin.Commit> listCommit;
     String commitIdRangeStart;
@@ -1758,9 +1763,100 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
     try {
       //*********************************************************************************
-      // Step 1: "prepare" a merge commit, but without actually performing any merge
+      // Step 1: Obtain the list of commits to merge.
+      //*********************************************************************************
+
+      listCommit = this.getListCommitDiverge(versionSrc, versionDest, null, null);
+
+      if (listCommit.isEmpty()) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
+        return true;
+      }
+
+      //*********************************************************************************
+      // Step 2: Generate the patches.
+      // The logic is as follows. Suppose the list of commits to merge is A, B, C, D,
+      // E and the list of commits to exlude is B and D, then patches will be generated
+      // and applied for the ranges <dest>..A, B..C and D..E. If the list of commits to
+      // exclude is rather A and E (the edges cases), the only range is A..D. <dest>
+      // above refers to the destination Version itself. See comment below about the
+      // initial commit range start.
+      //*********************************************************************************
+
+      // The initial commit range start is the destination Version. In Git, a range
+      // expressed as start..end means all commits reachable by end but not by start.
+      // Technically, the initial range start is the parent commit of the very first
+      // commit in the list of commits to merge. But since that commit is necessarily
+      // part of the parent hierarchy of the destination Version, it is equivalent.
+      commitIdRangeStart = this.getGit().convertToRef(versionDest);
+
+      // getListCommitDiverge return the most recent commits first. But we need to apply
+      // the patches from the oldest commits.
+      Collections.reverse(listCommit);
+
+      iteratorCommit = listCommit.iterator();
+
+      patchCount = 0;
+
+      // During each iteration of this loop we have a patch to apply which generally
+      // spans multiple commits (in between commits to be excluded). Therefore
+      // iterations do not correspond to the elements in the list of commits.
+      do {
+        String commitId;
+        String lastCommitIdExclude;
+        String commitIdRangeEnd;
+
+        lastCommitIdExclude = null;
+        commitIdRangeEnd = null;
+
+        patch:
+        while (iteratorCommit.hasNext()) {
+          commitId = iteratorCommit.next().id;
+
+          for (ScmPlugin.Commit commitExclude: listCommitExclude) {
+            if (commitId.equals(commitExclude.id)) {
+              lastCommitIdExclude = commitId;
+              break patch;
+            }
+          }
+
+          commitIdRangeEnd = commitId;
+        }
+
+        // commitIdRangeEnd will be null if the first commit encountered during this
+        // iteration happens to be excluded. In that case, we have nothing to merge and
+        // must simply go to the next range.
+        if (commitIdRangeEnd != null) {
+          StringBuilder stringBuilderPatch;
+          OutputStreamWriter outputStreamWriterPatch;
+
+          stringBuilderPatch = new StringBuilder();
+
+          // We pass false for the indTrimOutput since the generated patch file must be
+          // intact. In particular, removing the trailing newline character makes it
+          // unusable for git apply.
+          this.getGit().executeGitCommand(new String[] {"diff", "--binary", commitIdRangeStart + ".." + commitIdRangeEnd}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderPatch, false);
+
+          patchCount++;
+          String.valueOf(patchCount);
+          try {
+            outputStreamWriterPatch = new OutputStreamWriter(new FileOutputStream(pathModuleWorkspace.resolve("dragom-patch-" + String.format("%02d", patchCount) + ".patch").toFile()));
+            outputStreamWriterPatch.append(stringBuilderPatch);
+            outputStreamWriterPatch.close();
+          } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
+        }
+
+        commitIdRangeStart = lastCommitIdExclude;
+      } while (commitIdRangeStart != null);
+
+      //*********************************************************************************
+      // Step 3: "prepare" a merge commit, but without actually performing any merge
       // since we will perform the merge steps explicitly after. We need to prepare the
       // merge commit before performing the merge steps since issuing this command with
       // the index modified (the merge steps modify the index) fails.
@@ -1800,83 +1896,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         stringBuilderMergeMessage.setLength(stringBuilderMergeMessage.length() - 1);
       }
 
-      this.getGit().executeGitCommand(new String[] {"merge", "--no-commit", "--strategy", "ours", "-m", stringBuilderMergeMessage.toString(), this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
-
-      //*********************************************************************************
-      // Step 2: Obtain the list of commits to merge.
-      //*********************************************************************************
-
-      listCommit = this.getListCommitDiverge(versionSrc, versionDest, null, null);
-
-      //*********************************************************************************
-      // Step 3: Generate the patches.
-      // The logic is as follows. Suppose the list of commits to merge is A, B, C, D,
-      // E and the list of commits to exlude is B and D, then patches will be generated
-      // and applied for the ranges <dest>..A, B..C and D..E. If the list of commits to
-      // exclude is rather A and E (the edges cases), the only range is A..D. <dest>
-      // above refers to the destination Version itself. See comment below about the
-      // initial commit range start.
-      //*********************************************************************************
-
-      // The initial commit range start is the destination Version. In Git, a range
-      // expressed as start..end means all commits reachable by end but not by start.
-      // Technically, the initial range start is the parent commit of the very first
-      // commit in the list of commits to merge. But since that commit is necessarily
-      // part of the parent hierarchy of the destination Version, it is equivalent.
-      commitIdRangeStart = this.getGit().convertToRef(versionDest);
-
-      iteratorCommit = listCommit.iterator();
-
-      patchCount = 0;
-
-      // During each iteration of this loop we have a patch to apply which generally
-      // spans multiple commits (in between commits to be excluded). Therefore
-      // iterations do not correspond to the elements in the list of commits.
-      do {
-        String commitId;
-        String lastCommitIdExclude;
-        String commitIdRangeEnd;
-
-        lastCommitIdExclude = null;
-        commitIdRangeEnd = null;
-
-        patch:
-        while (iteratorCommit.hasNext()) {
-          commitId = iteratorCommit.next().id;
-
-          for (ScmPlugin.Commit commitExclude: listCommitExclude) {
-            if (commitId.equals(commitExclude.id)) {
-              lastCommitIdExclude = commitId;
-              break patch;
-            }
-          }
-
-          commitIdRangeEnd = commitId;
-        }
-
-        // commitIdRangeEnd will be null if the first commit encountered during this
-        // iteration happens to be excluded. In that case, we have nothing to merge and
-        // must simply go to the next range.
-        if (commitIdRangeEnd != null) {
-          StringBuilder stringBuilderPatch;
-          OutputStreamWriter outputStreamWriterPatch;
-
-          stringBuilderPatch = new StringBuilder();
-          this.getGit().executeGitCommand(new String[] {"diff", commitIdRangeStart + ".." + commitIdRangeEnd}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderPatch);
-
-          patchCount++;
-          String.valueOf(patchCount);
-          try {
-            outputStreamWriterPatch = new OutputStreamWriter(new FileOutputStream("dragom-patch-" + String.format("%2d", patchCount) + ".patch"));
-            outputStreamWriterPatch.append(stringBuilderPatch);
-            outputStreamWriterPatch.close();
-          } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
-          }
-        }
-
-        commitIdRangeStart = lastCommitIdExclude;
-      } while (commitIdRangeStart != null);
+      this.getGit().executeGitCommand(new String[] {"merge", "--no-commit", "--strategy", "ours", "-m", stringBuilderMergeMessage.toString(), this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
       //*********************************************************************************
       // Step 4: Apply the patches.
@@ -1890,20 +1910,18 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       for (int patchIndex = 1; patchIndex <= patchCount; patchIndex++) {
         String patchFileName;
+        String patchFileNameCurrent;
 
-        patchFileName = "dragom-patch-" + String.format("%2d", patchIndex) + ".patch";
+        patchFileName = "dragom-patch-" + String.format("%02d", patchIndex) + ".patch";
+        patchFileNameCurrent = patchFileName + ".current";
 
         try {
-          FileUtils.moveFile(new File(patchFileName), new File(patchFileName + ".current"));
+          FileUtils.moveFile(pathModuleWorkspace.resolve(patchFileName).toFile(), pathModuleWorkspace.resolve(patchFileNameCurrent).toFile());
         } catch (IOException ioe) {
           throw new RuntimeException(ioe);
         }
 
-        if (this.getGit().executeGitCommand(new String[] {"apply", "--3way", patchFileName}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null) == 1) {
-          UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-
-          userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
+        if (this.getGit().executeGitCommand(new String[] {"apply", "--3way", "--whitespace=nowarn", patchFileNameCurrent}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
           // It is not clear if it is OK for this plugin to use
           // UserInteractionCallbackPlugin as it would seem this plugin should operate at a
           // low level. But for now this seems to be the only way to properly inform the
@@ -1914,7 +1932,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         }
 
         try {
-          FileUtils.moveFile(new File(patchFileName + ".current"), new File(patchFileName + ".done"));
+          FileUtils.moveFile(pathModuleWorkspace.resolve(patchFileNameCurrent).toFile(), pathModuleWorkspace.resolve(patchFileName + ".done").toFile());
         } catch (IOException ioe) {
           throw new RuntimeException(ioe);
         }
@@ -1925,21 +1943,21 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       //*********************************************************************************
 
       for (int patchIndex = 1; patchIndex <= patchCount; patchIndex++) {
-        new File("dragom-patch-" + String.format("%2d", patchIndex) + ".patch.done").delete();
+        pathModuleWorkspace.resolve("dragom-patch-" + String.format("%02d", patchIndex) + ".patch.done").toFile().delete();
       }
 
       //*********************************************************************************
       // Step 6: Perform the commit.
       //*********************************************************************************
 
-      this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, true, Git.AllowExitCode.NONE, pathModuleWorkspace, null);
+      this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, true, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
       this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
 
       return true;
     } catch (RuntimeException re) {
       throw new RuntimeException(
-          "An expected exception occurred during the merge of version " + versionSrc + " into version " + versionDest + " within " + pathModuleWorkspace + ".\n"
+          "An unexpected exception occurred during the merge of version " + versionSrc + " into version " + versionDest + " within " + pathModuleWorkspace + ".\n"
         + "The merge has not been aborted and dragom-patch-##.patch files may still be present in the root of the workspace directory for the module.\n"
         + "IT IS VERY IMPORTANT that the merge operation not be completed with \"git commit\" as is.\n"
         + "If it is, the merge commit will tell Git that the merge is complete, whereas unmerged changes probably exist.\n"

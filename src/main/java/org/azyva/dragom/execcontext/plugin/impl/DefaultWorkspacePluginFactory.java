@@ -565,8 +565,18 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
         WorkspaceDirSystemModule workspaceDirSystemModuleIncomplete;
         Iterator<WorkspaceDir> iteratorWorkspaceDir;
 
-        workspaceDirUserModuleVersionIncomplete = (WorkspaceDirUserModuleVersion)workspaceDirIncomplete;
-        workspaceDirSystemModuleIncomplete = (WorkspaceDirSystemModule)workspaceDirIncomplete;
+        workspaceDirUserModuleVersionIncomplete = null;
+
+        if (workspaceDirIncomplete instanceof WorkspaceDirUserModuleVersion) {
+          workspaceDirUserModuleVersionIncomplete = (WorkspaceDirUserModuleVersion)workspaceDirIncomplete;
+        }
+
+        workspaceDirSystemModuleIncomplete = null;
+
+        if (workspaceDirIncomplete instanceof WorkspaceDirSystemModule) {
+          workspaceDirSystemModuleIncomplete = (WorkspaceDirSystemModule)workspaceDirIncomplete;
+        }
+
         iteratorWorkspaceDir = setWorkspaceDir.iterator();
 
         while (iteratorWorkspaceDir.hasNext()) {
@@ -576,7 +586,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
           if (workspaceDir.getClass() != workspaceDirIncomplete.getClass()) {
             iteratorWorkspaceDir.remove();
-          } else if (workspaceDirIncomplete instanceof WorkspaceDirUserModuleVersion) {
+          } else if (workspaceDirUserModuleVersionIncomplete != null) {
             WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
 
             workspaceDirUserModuleVersion = (WorkspaceDirUserModuleVersion)workspaceDir;
@@ -590,7 +600,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
               iteratorWorkspaceDir.remove();
             }
-          } else if (workspaceDirIncomplete instanceof WorkspaceDirSystemModule) {
+          } else if (workspaceDirSystemModuleIncomplete != null) {
             WorkspaceDirSystemModule workspaceDirSystemModule;
 
             workspaceDirSystemModule = (WorkspaceDirSystemModule)workspaceDir;

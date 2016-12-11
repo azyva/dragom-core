@@ -19,10 +19,12 @@
 
 package org.azyva.dragom.model.config.impl.xml;
 
+import java.io.OutputStream;
 import java.net.URL;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -31,6 +33,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.MutableClassificationNodeConfig;
+import org.azyva.dragom.model.config.MutableConfig;
 
 
 /**
@@ -42,9 +46,9 @@ import org.azyva.dragom.model.config.Config;
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "config")
-public class XmlConfig implements Config {
+public class XmlConfig implements Config, MutableConfig {
   @XmlElement(name = "root-classification-node")
-  XmlClassificationNodeConfig classificationNodeConfigXmlRoot;
+  XmlClassificationNodeConfig xmlClassificationNodeConfigRoot;
 
   /**
    * Loads a XmlConfig from a URL.
@@ -75,8 +79,53 @@ public class XmlConfig implements Config {
     }
   }
 
+  /**
+   * Saves this XmlConfig to an OutputStream.
+   *
+   * @param outputStreamXmlConfig OutputStream.
+   */
+  public void save(OutputStream outputStreamXmlConfig) {
+    JAXBContext jaxbContext;
+    Marshaller marshaller;
+
+    try {
+      // We include XmlModuleConfig, but not other classes since XmlModuleConfig is the
+      // only one that is not explicitly referenced (directly or indirectly) by
+      // XmlConfig.
+      jaxbContext = JAXBContext.newInstance(XmlConfig.class, XmlModuleConfig.class);
+      marshaller = jaxbContext.createMarshaller();
+      marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+      marshaller.marshal(this, outputStreamXmlConfig);
+    } catch (JAXBException je) {
+      throw new RuntimeException(je);
+    }
+  }
+
   @Override
   public ClassificationNodeConfig getClassificationNodeConfigRoot() {
-    return this.classificationNodeConfigXmlRoot;
+    return this.xmlClassificationNodeConfigRoot;
+  }
+
+  /**
+   * Sets the root {@link XmlClassificationNodeConfig}.
+   * <p>
+   * This method is intended to be called by
+   * {@link XmlNodeConfig#setNodeConfigTransferObject}.
+   *
+   * @param xmlClassificationNodeConfigRoot Root XmlClassificationNodeConfig.
+   */
+  void setXmlClassificationNodeConfigRoot(XmlClassificationNodeConfig xmlClassificationNodeConfigRoot) {
+    if (this.xmlClassificationNodeConfigRoot != null && xmlClassificationNodeConfigRoot != null) {
+      throw new RuntimeException("Replacing the root XmlClassificationNodeConfig is not allowed.");
+    }
+
+    // Setting this.simplClassificationNodeRoot to null is allowed since this
+    // can happen when deleting the root XmlClassificationNode.
+    this.xmlClassificationNodeConfigRoot = xmlClassificationNodeConfigRoot;
+  }
+
+  @Override
+  public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
+    return new XmlClassificationNodeConfig(this);
   }
 }

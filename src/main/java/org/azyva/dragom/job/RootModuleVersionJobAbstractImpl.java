@@ -505,12 +505,14 @@ public abstract class RootModuleVersionJobAbstractImpl {
    */
   protected void validateListModuleVersionRoot() {
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    WorkspacePlugin workspacePlugin;
     int indexModuleVersionRoot;
     ModuleVersion moduleVersion;
     Module module;
     ScmPlugin scmPlugin;
 
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
     RootModuleVersionJobAbstractImpl.logger.info("Starting the iteration among the root ModuleVersion's " + this.listModuleVersionRoot + " to validate them.");
 
@@ -529,11 +531,9 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
       // The Version can be null to indicate the main version.
       if (moduleVersion.getVersion() == null) {
-        WorkspacePlugin workspacePlugin;
         Set<WorkspaceDir> setWorkspaceDir;
         Version version;
 
-        workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
         setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(moduleVersion));
 
         if (setWorkspaceDir.size() > 1) {

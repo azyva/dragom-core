@@ -152,7 +152,7 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
     }
 
     stringBuilder = new StringBuilder("runtime-property.");
-    foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
+    foundPropertyValue = execContext.getInitProperty(stringBuilder.toString() + name);
 
     for (String nodeName: arrayNodeName) {
       stringBuilder.append(nodeName).append('.');

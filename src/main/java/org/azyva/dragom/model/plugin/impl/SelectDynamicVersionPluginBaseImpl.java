@@ -22,6 +22,7 @@ package org.azyva.dragom.model.plugin.impl;
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
+import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
@@ -29,8 +30,10 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
+import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.SelectDynamicVersionPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 
 /**
@@ -39,10 +42,9 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-
 public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbstractImpl implements SelectDynamicVersionPlugin {
   /**
-   * Runtime property that spécifies the specific dynamic Version to use.
+   * Runtime property that specifies the specific dynamic Version to use.
    */
   private static final String RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION = "SPECIFIC_DYNAMIC_VERSION";
 
@@ -56,6 +58,17 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
    * Runtime property that specifies the dynamic Version to reuse.
    */
   private static final String RUNTIME_PROPERTY_REUSE_DYNAMIC_VERSION = "REUSE_DYNAMIC_VERSION";
+
+  /**
+   * Runtime property that specifies the specific base Version to use when creating
+   * a new dynamic Version.
+   */
+  private static final String RUNTIME_PROPERTY_SPECIFIC_BASE_VERSION = "SPECIFIC_BASE_VERSION";
+
+  /**
+   * Runtime property that specifies to use the default Version as the base Version.
+   */
+  private static final String RUNTIME_PROPERTY_IND_USE_DEFAULT_VERSION_AS_BASE = "IND_USE_DEFAULT_VERSION_AS_BASE";
 
   /**
    * See description in ResourceBundle.
@@ -83,10 +96,30 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
   private static final String MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DYNAMIC_VERSION = "AUTOMATICALLY_REUSE_DYNAMIC_VERSION";
 
   /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_BASE_VERSION_SPECIFIED = "BASE_VERSION_SPECIFIED";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SPECIFIED_BASE_VERSION_DOES_NOT_EXIST = "SPECIFIED_BASE_VERSION_DOES_NOT_EXIST";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_USING_DEFAULT_VERSION_AS_BASE = "USING_DEFAULT_VERSION_AS_BASE";
+
+  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SelectDynamicVersionPluginBaseImpl.class.getName() + "ResourceBundle");
 
+  /**
+   * Constructor.
+   *
+   * @param module Module.
+   */
   public SelectDynamicVersionPluginBaseImpl(Module module) {
     super(module);
   }
@@ -99,13 +132,15 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
    * @return Specific dynamic Version. null if none specified.
    */
   protected Version handleSpecificDynamicVersion(Version version) {
+    ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     String stringSpecificDynamicVersion;
     Version versionDynamicSelected;
 
-    runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     stringSpecificDynamicVersion = runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_DYNAMIC_VERSION);
 
@@ -211,4 +246,52 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
 
     return versionDynamicSelected;
   }
+
+  /**
+   * Handles the case where a specific base Version is specified for when a selected
+   * dynamic Version does not exist and needs to be created.
+   *
+   * @param versionDynamicSelected Selected dynamic Version.
+   * @return Specific base Version. null if none specified.
+   */
+  protected Version handleSpecificBaseVersion(Version versionDynamicSelected) {
+    ExecContext execContext;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    Module module;
+    ScmPlugin scmPlugin;
+    String stringSpecificBaseVersion;
+    Version versionBase;
+
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    module = this.getModule();
+    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
+    stringSpecificBaseVersion = runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_SPECIFIC_BASE_VERSION);
+
+    if (stringSpecificBaseVersion != null) {
+      versionBase = new Version(stringSpecificBaseVersion);
+
+      if (!scmPlugin.isVersionExists(versionBase)) {
+        throw new RuntimeExceptionUserError(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_SPECIFIED_BASE_VERSION_DOES_NOT_EXIST), this.getModule(), versionDynamicSelected, versionDynamicSelected, versionBase));
+      }
+
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_BASE_VERSION_SPECIFIED), this.getModule(), versionDynamicSelected, versionBase));
+
+      return versionBase;
+    } else if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_IND_USE_DEFAULT_VERSION_AS_BASE))) {
+      versionBase = scmPlugin.getDefaultVersion();
+
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_USING_DEFAULT_VERSION_AS_BASE), this.getModule(), versionDynamicSelected, versionBase));
+
+      return versionBase;
+    } else {
+      return null;
+    }
+  }
 }
+
+

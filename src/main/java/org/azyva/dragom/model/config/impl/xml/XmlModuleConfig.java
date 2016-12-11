@@ -23,8 +23,13 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.MutableModuleConfig;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.NodeType;
+import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 
 /**
  * Implementation for {@link ModuleConfig} that allows reading from an XML file.
@@ -34,9 +39,31 @@ import org.azyva.dragom.model.config.NodeType;
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "module")
-public class XmlModuleConfig extends XmlNodeConfig implements ModuleConfig {
+public class XmlModuleConfig extends XmlNodeConfig implements ModuleConfig, MutableModuleConfig {
+  /**
+   * Default constructor for JAXB.
+   */
+  public XmlModuleConfig() {
+  }
+
+  /**
+   * Constructor.
+   *
+   * @param xmlClassificationNodeConfigParent Parent XmlClassificationNodeConfig.
+   */
+  XmlModuleConfig(XmlClassificationNodeConfig xmlClassificationNodeConfigParent) {
+    super(xmlClassificationNodeConfigParent);
+  }
+
   @Override
   public NodeType getNodeType() {
     return NodeType.MODULE;
+  }
+
+  @Override
+  public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
+    this.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
+
+    this.indNew = false;
   }
 }

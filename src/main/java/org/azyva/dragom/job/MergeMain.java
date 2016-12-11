@@ -97,7 +97,7 @@ import org.slf4j.LoggerFactory;
  * destination ModuleVersion in a user workspace directory, no special handling is
  * performed and if another Version of the same Module is already checked out in
  * a user workspace directory and the workspace does not support having multiple
- * Version's of the same Module in user workspace directories, an
+ * Version's of the same Module in user workspace directories, a
  * RuntimeExceptionUserError will likely be raised.
  * <p>
  * The actual merges on the ModuleVersion's are performed using
@@ -252,6 +252,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     module = model.getModule(moduleVersionSrc.getNodePath());
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
+    pathModuleWorkspace = null;
+
     try {
       //********************************************************************************
       // Determine the destination Version to merge the source matched ModuleVersion
@@ -318,10 +320,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
           pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
           throw re;
-        } finally {
-          if (pathModuleWorkspace != null) {
-            workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-          }
         }
       } else {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
@@ -375,7 +373,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
     } finally {
-      this.referencePath.removeLeafReference();
+        if (pathModuleWorkspace != null) {
+          workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+        }
+
+        this.referencePath.removeLeafReference();
     }
 
     return true;

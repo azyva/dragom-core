@@ -54,8 +54,20 @@ import org.azyva.dragom.util.YesAlwaysNoUserResponse;
  * @author David Raymond
  */
 public abstract class SelectStaticVersionPluginBaseImpl extends ModulePluginAbstractImpl implements SelectStaticVersionPlugin {
+  /**
+   * Runtime property that specifies the specific static Version to use.
+   */
   private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION = "SPECIFIC_STATIC_VERSION";
+
+  /**
+   * Runtime property of type AlwaysNeverAskUserResponse that indicates if existing
+   * equivalent static Versions can be reused.
+   */
   private static final String RUNTIME_PROPERTY_CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION = "CAN_REUSE_EXISTING_EQUIVALENT_STATIC_VERSION";
+
+  /**
+   * Runtime property that specifies the specific static Version prefix to use.
+   */
   private static final String RUNTIME_PROPERTY_SPECIFIC_STATIC_VERSION_PREFIX = "SPECIFIC_STATIC_VERSION_PREFIX";
 
   /**

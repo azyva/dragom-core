@@ -223,7 +223,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
      * changed.
      * <p>
      * This state is somewhat inconsistent since the {@link Version} at the source
-     * level, will still be dynamic, whicl the ArtifactVersion will be static. But
+     * level, will still be dynamic, which the ArtifactVersion will be static. But
      * this is supported and {@link SwitchToDynamicVersion} can be used to "correct"
      * the ArtifactVersion.
      * <p>
@@ -232,18 +232,17 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     NONE,
 
     /**
-     * Revert the {@link ArtifactVersion} only, but interact with the user for
-     * confirmation.
+     * Revert the {@link ArtifactVersion} only.
      * <p>
      * The {@link ModuleVersion} references will have its references updated.
      */
-    REVERT_ARTIFACT_VERSION_ASK,
+    REVERT_ARTIFACT_VERSION,
 
     /**
-     * Same as {@link #REVERT_ARTIFACT_VERSION_ASK}, but no interaction with the user
-     * is performed.
+     * Same as {@link #REVERT_ARTIFACT_VERSION_ASK}, but interact with the user for
+     * confirmation.
      */
-    REVERT_ARTIFACT_VERSION_NO_ASK,
+    REVERT_ARTIFACT_VERSION_ASK,
 
     /**
      * A temporary dynamic {@link Version} is used to completely isolate the Version
@@ -791,7 +790,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
       userInteractionCallbackPlugin.provideInfo(message);
       this.listActionsPerformed.add(message);
 
-      if ((artifactVersionManagerPlugin != null) && (releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION_ASK) || (releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION_NO_ASK)) {
+      if ((artifactVersionManagerPlugin != null) && (releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION_ASK) || (releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION)) {
         AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponsRevertArtifactVersion = null;
         Map<String, String> mapCommitAttr;
 
@@ -817,7 +816,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
                 MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_DO_YOU_WANT_TO_REVERT_ARTIFACT_VERSION), moduleVersion, artifactVersion, versionStaticSelected));
           }
 
-          if ((releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION_NO_ASK) || alwaysNeverYesNoAskUserResponsRevertArtifactVersion.isYes()) {
+          if ((releaseIsolationMode == ReleaseIsolationMode.REVERT_ARTIFACT_VERSION) || alwaysNeverYesNoAskUserResponsRevertArtifactVersion.isYes()) {
             // Here we do not check if the version was actually changed since we made the
             // verification above.
             artifactVersionManagerPlugin.setArtifactVersion(pathModuleWorkspace, artifactVersion);

@@ -21,6 +21,7 @@ package org.azyva.dragom.model.config.impl.xml;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,12 +31,22 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import org.azyva.dragom.model.MutableNode;
 import org.azyva.dragom.model.config.ClassificationNodeConfig;
+import org.azyva.dragom.model.config.DuplicateNodeException;
 import org.azyva.dragom.model.config.ModuleConfig;
+import org.azyva.dragom.model.config.MutableNodeConfig;
 import org.azyva.dragom.model.config.NodeConfig;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
+import org.azyva.dragom.model.config.OptimisticLockException;
+import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
+import org.azyva.dragom.model.config.SimpleNodeConfigTransferObject;
+import org.azyva.dragom.model.config.impl.simple.SimpleClassificationNodeConfig;
+import org.azyva.dragom.model.config.impl.simple.SimpleConfig;
+import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfig;
 import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**
@@ -45,7 +56,28 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @see org.azyva.dragom.model.config.impl.xml
  */
 @XmlAccessorType(XmlAccessType.NONE)
-public abstract class XmlNodeConfig implements NodeConfig {
+public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
+  /**
+   * Indicates that the {@link SimpleNodeConfig} is new and has not been finalized
+   * yet. This is the state in which it is after having been created using the
+   * create methods of {@link SimpleConfig} or
+   * {@link SimpleClassificationNodeConfig}.
+   */
+  protected boolean indNew;
+
+  /**
+   * Parent {@link SimpleClassificationNodeConfig}.
+   */
+  private XmlClassificationNodeConfig xmlClassificationNodeConfigParent;
+
+  /**
+   * Unique revision number to manage optimistic locking (see
+   * {@link OptimisticLockHandle}).
+   * <p>
+   * Starts at since 0 within OptimisticLockHandle means not locked.
+   */
+  protected int revision;
+
   @XmlElement(name = "name")
   private String name;
 
@@ -57,7 +89,35 @@ public abstract class XmlNodeConfig implements NodeConfig {
   @XmlJavaTypeAdapter(MapXmlPluginDefConfigAdapter.class)
   private Map<PluginKey, PluginDefConfig> mapPluginDefConfig;
 
+  /**
+   * Default constructor for JAXB.
+   */
+  XmlNodeConfig() {
+    this.revision = 1;
+  }
+
+  /**
+   * Constructor.
+   *
+   * @param xmlClassificationNodeConfigParent Parent XmlClassificationNodeConfig.
+   */
+  XmlNodeConfig(XmlClassificationNodeConfig xmlClassificationNodeConfigParent) {
+    this.indNew = true;
+
+    this.xmlClassificationNodeConfigParent = xmlClassificationNodeConfigParent;
+
+    this.revision = 1;
+
+    // LinkedHashMap are used to preserve insertion order.
+    this.mapPropertyDefConfig = new LinkedHashMap<String, PropertyDefConfig>();
+    this.mapPluginDefConfig = new LinkedHashMap<PluginKey, PluginDefConfig>();
+  }
+
   protected void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+    if (parent instanceof XmlClassificationNodeConfig) {
+      this.xmlClassificationNodeConfigParent = (XmlClassificationNodeConfig)parent;
+    }
+
     // mapPropertyDefConfig and mapPluginDefConfig are assumed to not be null, but
     // after unmarshalling, if no property or plugin is defined (which is often the
     // case) they will not have been assigned.
@@ -120,6 +180,157 @@ public abstract class XmlNodeConfig implements NodeConfig {
     // caller. Ideally, an unmodifiable List view of the Collection returned by
     // Map.values should be returned, but that does not seem possible.
     return new ArrayList<PluginDefConfig>(this.mapPluginDefConfig.values());
+  }
+
+  @Override
+  public boolean isNew() {
+    return this.indNew;
+  }
+
+  /**
+   * Check whether the {@link OptimisticLockHandle} corresponds to the current state
+   * of the data it represents.
+   * <p>
+   * If optimisticLockHandle is null, nothing is done.
+   * <p>
+   * If optimisticLockHandle is not null and is locked
+   * ({@link OptimisticLockHandle#isLocked}), its state must correspond to the state
+   * of the data it represents, otherwise {@link OptimisticLockException} is thrown.
+   * <p>
+   * If optimisticLockHandle is not null and is not locked, it is simply locked to
+   * the current state of the data, unless indRequireLock, in which case an
+   * exception is thrown.
+   *
+   * @param optimisticLockHandle OptimisticLockHandle. Can be null.
+   * @param indRequireLock Indicates if it is required that the OptimisticLockHandle
+   *   be locked.
+   */
+  protected void checkOptimisticLock(OptimisticLockHandle optimisticLockHandle, boolean indRequireLock) {
+    if (optimisticLockHandle != null) {
+      if (optimisticLockHandle.isLocked()) {
+        if (((XmlOptimisticLockHandle)optimisticLockHandle).getRevision() != this.revision) {
+          throw new OptimisticLockException();
+        }
+      } else {
+        if (indRequireLock) {
+          throw new RuntimeException("Lock required.");
+        }
+
+        ((XmlOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+      }
+    }
+  }
+
+  @Override
+  public OptimisticLockHandle createOptimisticLockHandle(boolean indLock) {
+    return new XmlOptimisticLockHandle(indLock ? this.revision : 0);
+  }
+
+  @Override
+  public boolean isOptimisticLockValid(OptimisticLockHandle optimisticLockHandle) {
+    return (((XmlOptimisticLockHandle)optimisticLockHandle).getRevision() == this.revision);
+  }
+
+  @Override
+  public NodeConfigTransferObject getNodeConfigTransferObject(OptimisticLockHandle optimisticLockHandle)
+      throws OptimisticLockException {
+    NodeConfigTransferObject nodeConfigTransferObject;
+
+    this.checkOptimisticLock(optimisticLockHandle, false);
+
+    nodeConfigTransferObject = new SimpleNodeConfigTransferObject();
+
+    nodeConfigTransferObject.setName(this.name);
+
+    for(PropertyDefConfig propertyDefConfig: this.mapPropertyDefConfig.values()) {
+      nodeConfigTransferObject.setPropertyDefConfig(propertyDefConfig);
+    }
+
+    for(PluginDefConfig pluginDefConfig: this.mapPluginDefConfig.values()) {
+      nodeConfigTransferObject.setPluginDefConfig(pluginDefConfig);
+    }
+
+    return nodeConfigTransferObject;
+  }
+
+  /**
+   * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
+   * them within the XmlNodeConfig.
+   * <p>
+   * Uses the indNew variable, but does not reset it. It is intended to be reset by
+   * the subclass caller method, {@link MutableNodeConfig#setNodeConfigTransferObject}.
+   * <p>
+   * The reason for not directly implementing
+   * MutableNodeConfig.setNodeConfigValueTransferObject is that subclasses can have
+   * other tasks to perform.
+   * <p>
+   * If optimisticLockHandle is null, no optimistic lock is managed.
+   * <p>
+   * If optimisticLockHandle is not null, it must be locked
+   * ({@link OptimisticLockHandle#isLocked}) and its state must correspond to the
+   * state of the data it represents, otherwise {@link OptimisticLockException} is
+   * thrown. The state of the OptimisticLockHandle is updated to the new revision of
+   * the XmlNodeConfig.
+   *
+   * @param nodeConfigTransferObject NodeConfigTransferObject.
+   * @param optimisticLockHandle OptimisticLockHandle. Can be null.
+   * @throws OptimisticLockException Can be thrown only if optimisticLockHandle is
+   *   not null. This is a RuntimeException that may be of interest to
+   *   the caller.
+   * @throws DuplicateNodeException When the new configuration data would introduce
+   *   a duplicate {@link MutableNode} within the parent. This is a RuntimeException
+   *   that may be of interest to the caller.
+   */
+  protected void extractNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle)
+      throws DuplicateNodeException {
+    String previousName;
+
+    this.checkOptimisticLock(optimisticLockHandle, !this.indNew);
+
+    if ((nodeConfigTransferObject.getName() == null) && (this.xmlClassificationNodeConfigParent != null)) {
+      throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root XmlClassificationNodeConfig.");
+    }
+
+    previousName = this.name;
+    this.name = nodeConfigTransferObject.getName();
+
+    if (this.indNew) {
+      if (this.xmlClassificationNodeConfigParent != null) {
+        this.xmlClassificationNodeConfigParent.setXmlNodeConfigChild(this);
+      }
+    } else {
+      if ((this.xmlClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
+        this.xmlClassificationNodeConfigParent.renameXmlNodeConfigChild(previousName, this.name);
+      }
+    }
+
+    this.mapPropertyDefConfig.clear();
+
+    for(PropertyDefConfig propertyDefConfig: nodeConfigTransferObject.getListPropertyDefConfig()) {
+      this.mapPropertyDefConfig.put(propertyDefConfig.getName(),  propertyDefConfig);
+    }
+
+    this.mapPluginDefConfig.clear();
+
+    for(PluginDefConfig pluginDefConfig: nodeConfigTransferObject.getListPluginDefConfig()) {
+      this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
+    }
+
+    if (!this.indNew) {
+      this.revision++;
+    }
+
+    if (optimisticLockHandle != null) {
+      ((XmlOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+    }
+  }
+
+  @Override
+  public void delete() {
+    if (!this.indNew && (this.xmlClassificationNodeConfigParent != null)) {
+      this.xmlClassificationNodeConfigParent.removeChildNodeConfig(this.name);
+      this.xmlClassificationNodeConfigParent = null;
+    }
   }
 
   /**

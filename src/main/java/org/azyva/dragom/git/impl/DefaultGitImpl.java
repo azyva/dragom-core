@@ -27,6 +27,7 @@ import java.io.StringReader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
@@ -67,8 +68,10 @@ public class DefaultGitImpl implements Git {
 
   /**
    * Path to the git Executable.
+   *
+   * <p>Defaults to "git" with no actual Path.
    */
-  private Path pathExecutable;
+  private Path pathExecutable = Paths.get("git");
 
   /**
    * Repository URL.
@@ -119,7 +122,7 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput) {
+  public int executeGitCommand(String[] arrayArg, boolean indProvideCredentials, AllowExitCode allowExitCode, Path pathWorkingDirectory, StringBuilder stringBuilderOutput, boolean indTrimOutput) {
     CommandLine commandLine;
     Path pathFileCredentials;
     DefaultExecutor defaultExecutor;
@@ -216,7 +219,11 @@ public class DefaultGitImpl implements Git {
       }
 
       if (stringBuilderOutput != null) {
-        stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
+        if (indTrimOutput) {
+          stringBuilderOutput.append(byteArrayOutputStreamOut.toString().trim());
+        } else {
+          stringBuilderOutput.append(byteArrayOutputStreamOut.toString());
+        }
 
         // We concatenate stderr since in some cases it is of interest to the caller,
         // such as in validateCredentials, where the text allowing the method to
@@ -255,7 +262,7 @@ public class DefaultGitImpl implements Git {
     //   remote: Not Found
     //   fatal: repository '<repository url>' not found
 
-    if (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, stringBuilderOutput) != 0) {
+    if (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, stringBuilderOutput, true) != 0) {
       String error;
 
       error = stringBuilderOutput.toString();
@@ -274,7 +281,7 @@ public class DefaultGitImpl implements Git {
   public boolean isReposExists() {
     boolean isReposExists;
 
-    isReposExists = (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, null) == 0);
+    isReposExists = (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, null, false) == 0);
 
     if (isReposExists) {
       DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " exists.");
@@ -291,7 +298,7 @@ public class DefaultGitImpl implements Git {
     int exitCode;
 
     stringBuilder = new StringBuilder();
-    exitCode = this.executeGitCommand(new String[] {"symbolic-ref", "-q", "HEAD"}, false, AllowExitCode.ONE, pathWorkspace, stringBuilder);
+    exitCode = this.executeGitCommand(new String[] {"symbolic-ref", "-q", "HEAD"}, false, AllowExitCode.ONE, pathWorkspace, stringBuilder, true);
 
     if (exitCode == 0) {
       String branch;
@@ -310,7 +317,7 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public void config(Path pathWorkspace, String param, String value) {
-    this.executeGitCommand(new String[] {"config", param, value}, false, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"config", param, value}, false, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override
@@ -336,7 +343,8 @@ public class DefaultGitImpl implements Git {
           isConfiguredReposUrl,
           AllowExitCode.NONE,
           null,
-          null);
+          null,
+          false);
     } else {
       // The -b option takes a branch or tag name, but without the complete reference
       // prefix such as heads/master or tags/v-1.2.3. This means that it is not
@@ -346,7 +354,8 @@ public class DefaultGitImpl implements Git {
           isConfiguredReposUrl,
           AllowExitCode.NONE,
           null,
-          null);
+          null,
+          false);
     }
 
     if (version != null) {
@@ -397,7 +406,7 @@ public class DefaultGitImpl implements Git {
     }
 
     // The empty String[] argument to toArray is required for proper typing in Java.
-    this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override
@@ -411,7 +420,7 @@ public class DefaultGitImpl implements Git {
       throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
     }
 
-    exitCode = this.executeGitCommand(new String[] {"pull"}, true, AllowExitCode.ONE, pathWorkspace, null);
+    exitCode = this.executeGitCommand(new String[] {"pull"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
 
     return exitCode == 1;
   }
@@ -430,7 +439,7 @@ public class DefaultGitImpl implements Git {
     // Rebase onto the upstream tracking branch corresponding to the current branch.
     // This is the default behavior, but specifying @{u} is more symmetrical with the
     // merge mode below.
-    exitCode = this.executeGitCommand(new String[] {"rebase", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
+    exitCode = this.executeGitCommand(new String[] {"rebase", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null, false);
 
     return exitCode == 1;
   }
@@ -446,7 +455,7 @@ public class DefaultGitImpl implements Git {
       throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
     }
 
-    exitCode = this.executeGitCommand(new String[] {"merge", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null);
+    exitCode = this.executeGitCommand(new String[] {"merge", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null, false);
 
     return exitCode == 1;
   }
@@ -454,9 +463,9 @@ public class DefaultGitImpl implements Git {
   @Override
   public void push(Path pathWorkspace, String gitRef) {
     if (gitRef != null) {
-      this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null);
+      this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null, false);
     } else {
-      this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null);
+      this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
     }
   }
 
@@ -467,7 +476,7 @@ public class DefaultGitImpl implements Git {
     // The checkout command takes a branch or tag name, but without the complete
     // reference prefix such as heads/master or tags/v-1.2.3. This means that it is
     // not straightforward to distinguish between branches and tags.
-    this.executeGitCommand(new String[] {"checkout", version.getVersion()}, false, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"checkout", version.getVersion()}, false, AllowExitCode.NONE, pathWorkspace, null, false);
 
     // We need to verify the type of version checked out by checking whether we are in
     // a detached head state (tag) or not (branch).
@@ -495,7 +504,7 @@ public class DefaultGitImpl implements Git {
     // We add "--" as a last argument since when a ref does no exist, Git complains
     // about the fact that the command is ambiguous.
     //TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
-    if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null) == 0) {
+    if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) == 0) {
       DefaultGitImpl.logger.trace("Version " + version + " exists.");
       return true;
     } else {
@@ -524,7 +533,7 @@ public class DefaultGitImpl implements Git {
     // branch.
 
     stringBuilder = new StringBuilder();
-    this.executeGitCommand(new String[] {"for-each-ref", "--format=%(upstream:track)", "refs/heads/" + branch}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+    this.executeGitCommand(new String[] {"for-each-ref", "--format=%(upstream:track)", "refs/heads/" + branch}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder, true);
 
     aheadBehindInfo = new AheadBehindInfo();
 
@@ -573,7 +582,7 @@ public class DefaultGitImpl implements Git {
     // command.
 
     stringBuilder = new StringBuilder();
-    this.executeGitCommand(new String[] {"status", "-s"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+    this.executeGitCommand(new String[] {"status", "-s"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder, true);
 
     return (stringBuilder.length() != 0);
   }
@@ -583,13 +592,13 @@ public class DefaultGitImpl implements Git {
     // We always set the upstream tracking information because because pushes can be
     // delayed and new branches can be pushed on the call to this method other than
     // the one immediately after creating the branch.
-    this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
 
     // Unfortunately we cannot specify --all and --tags in the same command.
     // Maybe it is possible to specify --follow-tags with --all, but even if so,
     // this is not what we need since there may be exceptional cases where tags
     // are not reachable from a branch.
-    this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override
@@ -607,7 +616,7 @@ public class DefaultGitImpl implements Git {
     // tag.
 
     stringBuilder = new StringBuilder();
-    this.executeGitCommand(new String[] {"describe", "--exact-match"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+    this.executeGitCommand(new String[] {"describe", "--exact-match"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder, true);
 
     return new Version(VersionType.STATIC, stringBuilder.toString());
   }
@@ -621,7 +630,7 @@ public class DefaultGitImpl implements Git {
 
     try {
       stringBuilder = new StringBuilder();
-      this.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder);
+      this.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder, true);
 
       bufferedReader = new BufferedReader(new StringReader(stringBuilder.toString()));
       listVersionStatic = new ArrayList<Version>();
@@ -653,7 +662,7 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch) {
-    this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
+    this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     if (indSwitch) {
       this.checkout(pathModuleWorkspace, new Version(VersionType.DYNAMIC, branch));
@@ -662,7 +671,7 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public void createTag(Path pathModuleWorkspace, String tag, String message) {
-    this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathModuleWorkspace, null);
+    this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
   }
 
   @Override
@@ -675,7 +684,7 @@ public class DefaultGitImpl implements Git {
       throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
     }
 
-    this.executeGitCommand(new String[] {"add", "--all"}, false, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"add", "--all"}, false, AllowExitCode.NONE, pathWorkspace, null, false);
 
     // Git does not natively support commit attributes. It does support "notes" which
     // could be used to keep commit attributes. But it looks like this is not a robust
@@ -700,7 +709,7 @@ public class DefaultGitImpl implements Git {
     // Runtime.exec's fault. But escaping the double quotes works.
     message = message.replace("\"", "\\\"");
 
-    this.executeGitCommand(new String[] {"commit", "-m", message}, false, AllowExitCode.NONE, pathWorkspace, null);
+    this.executeGitCommand(new String[] {"commit", "-m", message}, false, AllowExitCode.NONE, pathWorkspace, null, false);
 
     if (indPush) {
       this.push(pathWorkspace, "refs/heads/" + branch);
