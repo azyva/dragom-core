@@ -282,6 +282,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   private static final String MSG_PATTERN_KEY_NO_DIVERGING_COMMITS = "NO_DIVERGING_COMMITS";
 
   /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_VERSIONS_EQUAL = "VERSIONS_EQUAL";
+
+  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(GitScmPluginImpl.class.getName() + "ResourceBundle");
@@ -1686,6 +1691,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   public boolean merge(Path pathModuleWorkspace, Version versionSrc, String message) {
     Version versionDest;
     WorkspacePlugin workspacePlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    List<ScmPlugin.Commit> listCommit;
     String mergeMessage;
 
     this.validateTempDynamicVersion(pathModuleWorkspace, false);
@@ -1705,6 +1712,15 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+    }
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    listCommit = this.getListCommitDiverge(versionSrc, versionDest, null, null);
+
+    if (listCommit.isEmpty()) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
+      return true;
     }
 
     mergeMessage = "Merged " + versionSrc + " into " + versionDest + '.';
@@ -1734,7 +1750,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   }
 
   @Override
-  public boolean merge(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
+  public boolean mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
     Version versionDest;
     WorkspacePlugin workspacePlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
@@ -1965,6 +1981,80 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         + "But after investigating the problem it is preferable to abort the merge operation with \"git merge --abort\", reset the workspace directory with \"git reset --hard HEAD\" and perform the merge again.",
         re);
     }
+  }
+
+  @Override
+  public void replace(Path pathModuleWorkspace, Version versionSrc, String message) {
+    Version versionDest;
+    WorkspacePlugin workspacePlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    String mergeMessage;
+
+    this.validateTempDynamicVersion(pathModuleWorkspace, false);
+
+    versionDest = this.getVersion(pathModuleWorkspace);
+
+    if (versionDest.getVersionType() == VersionType.STATIC) {
+      throw new RuntimeException("Current version " + versionDest + " in working directory " + pathModuleWorkspace + " must be dynamic for merging into.");
+    }
+
+    // gitFetch will have been called by isSync.
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
+      throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
+    }
+
+    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+
+    if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+      throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+    }
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    if (this.getGit().executeGitCommand(new String[] {"diff", "--quiet", this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 0) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_VERSIONS_EQUAL), pathModuleWorkspace, versionSrc, versionDest));
+      return;
+    }
+
+    mergeMessage = "Replaced version " + versionSrc + " with version " + versionDest + '.';
+
+    if (message != null) {
+      // Commons Exec ends up calling Runtime.exec(String[], ...) with the command line
+      // arguments. It looks like along the way double quotes within the arguments get
+      // removed which is undesirable. At the very least it is required to use the
+      // addArgument(String, boolean handleQuote) method to disable quote handling.
+      // Otherwise Commons Exec surrounds the argument with single quotes when it
+      // contains double quotes, which we do not want. But we must also escape double
+      // quotes to prevent Runtime.exec from removing them. I did not find any reference
+      // to this behavior, and I am not 100% sure that it is Runtime.exec's fault. But
+      // escaping the double quotes works.
+      message = message.replace("\"", "\\\"");
+
+      mergeMessage = message + '\n' + mergeMessage;
+    }
+
+    // Doing a replace in Git is not straight forward. Essentially, we would need a
+    // merge strategy "theirs" symetrical with "ours", but Git does not provide this.
+    // Inspired by simulation #5 in
+    // http://stackoverflow.com/questions/4911794/git-command-for-making-one-branch-like-another/4912267#4912267
+    // we perform the following sequences of commands:
+
+    // First prepare the merge, without performing the commit and doing as if we
+    // wanted to keep the destination Version.
+    this.getGit().executeGitCommand(new String[] {"merge", "--strategy", "ours", "--no-commit", "-m", mergeMessage, this.getGit().convertToRef(versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+    // Remove all files from working copy and from the index.
+    this.getGit().executeGitCommand(new String[] {"rm", "-r", "."}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+    // Get all files from source Version. This also updates the index.
+    this.getGit().executeGitCommand(new String[] {"checkout", this.getGit().convertToRef(versionSrc), "."}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+    // Resume the merge by performing the final commit, but with a modified index
+    // which represents the source Version state, effectivement replacing the
+    // destination Version.
+    this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, true, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+    this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
   }
 
   @Override

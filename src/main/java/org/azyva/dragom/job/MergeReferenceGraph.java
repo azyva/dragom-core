@@ -775,7 +775,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       }
 
       // ScmPlugin.merge ensures that the working directory is synchronized.
-      if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
+      if (!scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
         this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));

@@ -34,6 +34,7 @@ import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.model.ArtifactVersion;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
@@ -133,6 +134,13 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   private static final String RUNTIME_PROPERTY_REUSE_DEST_VERSION = "REUSE_DEST_VERSION";
 
   /**
+   * Merge mode.
+   *
+   * <p>The possible values are given by {@link MergeMainMode}.
+   */
+  private static final String RUNTIME_PROPERTY_MERGE_MODE = "MERGE_MAIN_MODE";
+
+  /**
    * Runtime property of type {@link AlwaysNeverAskUserResponse} that specifies if
    * processing should continue if merge conflicts are encountered.
    */
@@ -166,7 +174,12 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
-  private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS";
+  private static final String MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST = "DIVERGING_COMMITS_IN_DEST";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_EXCLUDED_VERSION_CHANGING_COMMITS = "EXCLUDED_VERSION_CHANGING_COMMITS";
 
   /**
    * See description in ResourceBundle.
@@ -177,11 +190,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST";
 
   /**
    * See description in ResourceBundle.
@@ -197,6 +205,46 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeMain.class.getName() + "ResourceBundle");
+
+  /**
+   * Merge modes for this job.
+   */
+  public enum MergeMainMode {
+    /**
+     * Normal merge.
+     *
+     * <p>This is the default.
+     */
+    MERGE,
+
+    /**
+     * Normal merge, excluding version-chaning commits, that is those which have the
+     * dragom-version-change attribute set.
+     *
+     * <p>This is so that each {@link Version} maintains its own
+     * {@link ArtifactVersion}. The exclusion does not apply to
+     * reference-version-chaning commits.
+     */
+    MERGE_EXCLUDE_VERSION_CHANGING_COMMITS,
+
+    /**
+     * Similar to {@link #MERGE_EXCLUDE_VERSION_CHANGING_COMMITS}, but validate there
+     * are no diverging commits in the destination Version.
+     */
+    MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS,
+
+    /**
+     * Take the source {@link Version} (overwriting destination), but validate there
+     * are no diverging commits in the destination Version.
+     */
+    SRC_VALIDATE_NO_DIVERGING_COMMITS,
+
+    /**
+     * Unconditionally take the source {@link Version}, overwriting destination and
+     * potentially loosing changes in destination.
+     */
+    SRC_UNCONDITIONAL
+  }
 
   /**
    * Constructor.
@@ -236,10 +284,12 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     String runtimeProperty;
     Version versionDest;
     ModuleVersion moduleVersionDest;
+    MergeMainMode mergeMainMode;
     WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
     Path pathModuleWorkspace;
     List<ScmPlugin.Commit> listCommit;
     Iterator<ScmPlugin.Commit> iteratorCommit;
+    String message;
 
     this.referencePath.add(reference);
 
@@ -304,6 +354,18 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       moduleVersionDest = new ModuleVersion(module.getNodePath(), versionDest);
 
       //********************************************************************************
+      // Determine merge mode.
+      //********************************************************************************
+
+      runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_MERGE_MODE);
+
+      if (runtimeProperty == null) {
+        mergeMainMode = MergeMainMode.MERGE;
+      } else {
+        mergeMainMode = MergeMainMode.valueOf(runtimeProperty);
+      }
+
+      //********************************************************************************
       // Ensure destination ModuleVersion is in a user workspace directory.
       //********************************************************************************
 
@@ -330,26 +392,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // actual merge.
       //********************************************************************************
 
-      MergeMain.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
-//??? probably support specifying if diverging commits on main are allowed.
-      listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
-      iteratorCommit = listCommit.iterator();
-
-      while (iteratorCommit.hasNext()) {
-        ScmPlugin.Commit commit;
-
-        commit = iteratorCommit.next();
-
-        if (!commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE)) {
-          iteratorCommit.remove();
-        }
-      }
-
-      if (listCommit.isEmpty()) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
-      } else {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, listCommit));
-      }
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
         // The return value not important since the caller is expected to check for
@@ -357,21 +400,100 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         return true;
       }
 
-      // ScmPlugin.merge ensures that the working directory is synchronized.
-      if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
-        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+      switch (mergeMainMode) {
+      case MERGE:
+        // ScmPlugin.merge ensures that the working directory is synchronized.
+        if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null)) {
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
 
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+          this.listActionsPerformed.add(message);
 
-        // Will have call Util.setAbort in case we must not continue.
-        MergeMain.handleContinueOnMergeConflicts();
+          userInteractionCallbackPlugin.provideInfo(message);
 
-        // The return value not important since the caller is expected to check for
-        // Util.isAbort.
-        return true;
+          // Will have call Util.setAbort in case we must not continue.
+          MergeMain.handleContinueOnMergeConflicts();
+
+          // The return value not important since the caller is expected to check for
+          // Util.isAbort.
+          return true;
+        }
+
+        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        break;
+
+      case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
+        if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+
+          // Will have call Util.setAbort in case we must not continue.
+          MergeMain.handleContinueOnMergeConflicts();
+
+          // The return value not important since the caller is expected to check for
+          // Util.isAbort.
+          return true;
+        }
+
+        // Normal fall-through...
+
+      case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS:
+        MergeMain.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
+        listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
+        iteratorCommit = listCommit.iterator();
+
+        while (iteratorCommit.hasNext()) {
+          ScmPlugin.Commit commit;
+
+          commit = iteratorCommit.next();
+
+          if (!commit.mapAttr.containsKey(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE)) {
+            iteratorCommit.remove();
+          }
+        }
+
+        if (!listCommit.isEmpty()) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_EXCLUDED_VERSION_CHANGING_COMMITS), listCommit));
+        }
+
+        // ScmPlugin.merge ensures that the working directory is synchronized.
+        if (!scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
+
+          this.listActionsPerformed.add(message);
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // Will have call Util.setAbort in case we must not continue.
+          MergeMain.handleContinueOnMergeConflicts();
+
+          // The return value not important since the caller is expected to check for
+          // Util.isAbort.
+          return true;
+        }
+
+        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        break;
+
+      case SRC_VALIDATE_NO_DIVERGING_COMMITS:
+        if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+
+          // Will have call Util.setAbort in case we must not continue.
+          MergeMain.handleContinueOnMergeConflicts();
+
+          // The return value not important since the caller is expected to check for
+          // Util.isAbort.
+          return true;
+        }
+
+        // Normal fall-through...
+
+      case SRC_UNCONDITIONAL:
+        // ScmPlugin.merge ensures that the working directory is synchronized.
+        scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+
+        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        break;
       }
-
-      this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
     } finally {
         if (pathModuleWorkspace != null) {
           workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
