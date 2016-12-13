@@ -284,7 +284,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
    * @param credentialValidator CredentialValidator.
    * @return Credentials. null if not available.s
    */
-  public Credentials getCredentialsInternal(String resource, String user, CredentialValidator credentialValidator) {
+  private Credentials getCredentialsInternal(String resource, String user, CredentialValidator credentialValidator) {
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     String password;
     Credentials credentials;

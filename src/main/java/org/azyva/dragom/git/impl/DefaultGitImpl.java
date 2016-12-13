@@ -178,6 +178,8 @@ public class DefaultGitImpl implements Git {
           throw new RuntimeException(ioe);
         }
 
+        // It seems like Git, being a Linux based tool, does not like having \ in paths,
+        // at least for the store credential helper file.
         commandLine.addArgument("-c").addArgument(("credential.helper=store --file=" + pathFileCredentials.toString()).replace("\\", "/"), false);
       }
 

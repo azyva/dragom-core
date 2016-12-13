@@ -78,6 +78,9 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlugin {
+  /**
+   * Logger for the class.
+   */
   private static final Logger logger = LoggerFactory.getLogger(GitScmPluginImpl.class);
 
   /**
@@ -758,7 +761,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // But it may not be up-to-date and may not have the requested version checked
       // out.
 
-      pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
       versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
 
@@ -808,15 +811,26 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     // If not we know we will create a new system workspace directory.
 
-    pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+    pathModuleWorkspace = null;
 
-    // But if there is a main user workspace directory for the Module (whatever the
-    // Version) we want to clone from this directory instead of from the remote
-    // repository to avoid network access.
+    try {
+      pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
-    pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+      // But if there is a main user workspace directory for the Module (whatever the
+      // Version) we want to clone from this directory instead of from the remote
+      // repository to avoid network access.
 
-    this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
+      pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+
+      this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
+    } catch (Exception e) {
+      if (pathModuleWorkspace != null) {
+        workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModule);
+
+        // We hope the newly created folder by git clone is still empty.
+        pathModuleWorkspace.toFile().delete();
+      }
+    }
 
     return pathModuleWorkspace;
   }
