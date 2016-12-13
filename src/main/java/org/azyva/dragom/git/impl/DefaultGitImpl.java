@@ -178,7 +178,7 @@ public class DefaultGitImpl implements Git {
           throw new RuntimeException(ioe);
         }
 
-        commandLine.addArgument("-c").addArgument("credential.helper=store --file=" + pathFileCredentials.toString());
+        commandLine.addArgument("-c").addArgument(("credential.helper=store --file=" + pathFileCredentials.toString()).replace("\\", "/"), false);
       }
 
       for (String arg: arrayArg) {

@@ -722,7 +722,7 @@ public class Pom {
 
     if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.DEPENDENCY_MANAGEMENT)) {
       try {
-        nodeListDependencies = (NodeList)xPath.evaluate("/project/dependencyManagement/dependency", this.documentPom, XPathConstants.NODESET);
+        nodeListDependencies = (NodeList)xPath.evaluate("/project/dependencyManagement/dependencies/dependency", this.documentPom, XPathConstants.NODESET);
       } catch (XPathExpressionException xpee) {
         throw new RuntimeException(xpee);
       }
@@ -897,7 +897,7 @@ public class Pom {
     case DEPENDENCY_MANAGEMENT:
       try {
         nodeVersion = (Node)xPath.evaluate(
-              "/project/dependencyManagement/dependency[groupId='"
+              "/project/dependencyManagement/dependencies/dependency[groupId='"
             + referencedArtifact.groupId
             + "' and artifactId='"
             + referencedArtifact.artifactId
@@ -911,7 +911,7 @@ public class Pom {
       }
 
       if (nodeVersion == null) {
-        throw new RuntimeException("The POM " + this.pathPomLoaded + " does not contain a dependencyManagement/dependency element which matches the specified GAV " + referencedArtifact.groupId + ":" + referencedArtifact.artifactId + ":" + referencedArtifact.version + " to modify.");
+        throw new RuntimeException("The POM " + this.pathPomLoaded + " does not contain a dependencyManagement/dependencies/dependency element which matches the specified GAV " + referencedArtifact.groupId + ":" + referencedArtifact.artifactId + ":" + referencedArtifact.version + " to modify.");
       }
 
       nodeVersion.setTextContent(version);

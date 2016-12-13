@@ -38,6 +38,8 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for ReferenceManagerPlugin that supports Maven modules.
@@ -57,6 +59,11 @@ import org.azyva.dragom.reference.Reference;
  * @author David Raymond
  */
 public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl implements ReferenceManagerPlugin {
+  /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
+
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
    * <p>
@@ -166,6 +173,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     ArrayList<Reference> listReference;
     Pom pom;
     Path pathPom;
+    List<Pom.ReferencedArtifact> listReferencedArtifact;
     String version;
     Model model;
 
@@ -189,17 +197,33 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       throw new RuntimeException("The submodule POM " + pathPom + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + versionContainer + '.');
     }
 
-    for(Pom.ReferencedArtifact referencedArtifact: pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class),  null,  null,  null)) {
+    listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
+
+    for(Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
       ArtifactGroupId artifactGroupId;
+      String groupId;
       Module module;
       ModuleVersion moduleVersion;
       Reference reference;
 
-      if (referencedArtifact.getGroupId().contains("${") || referencedArtifact.getArtifactId().contains("${")) {
-        throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ".");
+      // We only allow these property references within the groupId of a reference.
+      groupId = referencedArtifact.getGroupId();
+
+      if (   groupId.equals("${groupId}")
+          || groupId.equals("${pom.groupId}") // Deprecated but still supported.
+          || groupId.equals("${project.groupId}")) {
+
+        groupId = pom.getParentReferencedArtifact().getGroupId();
       }
 
-      artifactGroupId = new ArtifactGroupId(referencedArtifact.getGroupId(), referencedArtifact.getArtifactId());
+      // The groupId should not anymore contain a property reference, but just in case.
+      // Note that a parent reference cannot contain a property reference in Maven.
+      if (groupId.contains("${") || referencedArtifact.getArtifactId().contains("${")) {
+        MavenReferenceManagerPluginImpl.logger.warn("An unsupported property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ". Reference ignored.");
+        continue;
+      }
+
+      artifactGroupId = new ArtifactGroupId(groupId, referencedArtifact.getArtifactId());
 
       /* We are not interested in references internal to the module.
        */
@@ -208,7 +232,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       }
 
       if (referencedArtifact.getVersion().contains("${")) {
-        throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ".");
+        MavenReferenceManagerPluginImpl.logger.warn("An unsupported property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ". Reference ignored.");
+        continue;
       }
 
       module = model.findModuleByArtifactGroupId(artifactGroupId);

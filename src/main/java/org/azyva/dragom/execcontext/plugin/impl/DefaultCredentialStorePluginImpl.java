@@ -292,12 +292,6 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
     boolean indSetDefaultUser;
 
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-    password = this.credentialStore.getPassword(resource, user);
-
-    if ((password != null) && (credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
-      password = null;
-    }
 
     resourceInfo = this.credentialStore.getResourceInfo(resource);
 
@@ -315,6 +309,13 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
     if (user == null) {
       user = this.credentialStore.getDefaultUser(resource);
+    }
+
+    password = this.credentialStore.getPassword(resource, user);
+
+    if ((password != null) && (credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
+      password = null;
     }
 
     /*
