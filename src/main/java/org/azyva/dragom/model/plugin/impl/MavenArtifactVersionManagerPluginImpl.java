@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.azyva.dragom.maven.Pom;
-import org.azyva.dragom.maven.PomUtil;
+import org.azyva.dragom.maven.PomAggregation;
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ArtifactVersion;
 import org.azyva.dragom.model.Module;
@@ -45,6 +45,11 @@ import org.azyva.dragom.model.plugin.ArtifactVersionManagerPlugin;
  * @author David Raymond
  */
 public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractImpl implements ArtifactVersionManagerPlugin {
+  /**
+   * Constructor.
+   *
+   * @param module Module.
+   */
   public MavenArtifactVersionManagerPluginImpl(Module module) {
     super(module);
   }
@@ -68,7 +73,7 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
     }
 
     if (version.contains("${")) {
-      throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ".");
+      throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ". This is not supported by Maven nor Dragom.");
     }
 
     return new ArtifactVersion(version);
@@ -76,23 +81,22 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
 
   @Override
   public boolean setArtifactVersion(Path pathModuleWorkspace, ArtifactVersion artifactVersion) {
-    Pom pom;
     Path pathPom;
+    PomAggregation pomAggregation;
     String priorVersion;
-    Set<ArtifactGroupId> setArtifactGroupIdAggregator;
+    Set<ArtifactGroupId> setArtifactGroupIdAggregation;
+    String newVersion;
 
-    pom = new Pom();
     pathPom = pathModuleWorkspace.resolve("pom.xml");
-    pom.setPathPom(pathModuleWorkspace.resolve("pom.xml"));
-    pom.loadPom();
-    priorVersion = pom.getVersion();
+    pomAggregation = new PomAggregation(pathPom);
+    priorVersion = pomAggregation.getPomMain().getVersion();
 
     if (priorVersion == null) {
       throw new RuntimeException("The version of the artifacts is not explicitely set within POM " + pathPom + " of module " + pathModuleWorkspace + ". Maven allows this (the version being inherited from the parent), but Dragom does not allow this for a top-level module.");
     }
 
     if (priorVersion.contains("${")) {
-      throw new RuntimeException("A property reference was found within version " + priorVersion + " in the POM " + pathPom + ".");
+      throw new RuntimeException("A property reference was found within version " + priorVersion + " in the POM " + pathPom + ". This is not supported by Maven nor Dragom.");
     }
 
     if (artifactVersion.toString().equals(priorVersion)) {
@@ -102,139 +106,105 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
       return false;
     }
 
-    /*
-     * We need to get the set of ArtifactGroupId within the aggregation before doing
-     * the actual traversal since there may be dependencies between modules and the
-     * order in which they are traversed may not be such that dependencies are visited
-     * before dependents.
-     */
-    setArtifactGroupIdAggregator = PomUtil.getSetArtifactGroupIdAggregator(pathPom);
+    // We need the Set of ArtifactGroupId within the aggregation in order to
+    // distinguish dependencies that are internal to the aggregation from those that
+    // are external. The version must be set on all internal dependencies.
+    setArtifactGroupIdAggregation = pomAggregation.getSetArtifactGroupId();
 
-    /* To initiate the traversal of the submodules, we simply treat the main module as
-     * a submodule, after having initialized the required variables.
-     */
-    this.setArtifactVersionOnSubmodule(pathModuleWorkspace, setArtifactGroupIdAggregator, priorVersion, pathModuleWorkspace, artifactVersion.toString());
+    newVersion = artifactVersion.getVersion();
 
-    return true;
-  }
+    for (Pom pom: pomAggregation.getCollectionPom()) {
+      String version;
+      Pom.ReferencedArtifact referencedArtifactParent;
+      ArtifactGroupId artifactGroupId;
+      List<Pom.ReferencedArtifact> listReferencedArtifact;
 
-  /**
-   * Traverses the tree of submodules within an aggregator module and sets the
-   * version of each submodule.
-   *
-   * @param pathModuleWorkspace Path to the main aggregator module within the
-   *   workspace. Used for error reporting.
-   * @param setArtifactGroupIdAggregator Set of ArtifactGroupId within the aggregation.
-   *   This set must be built before invoking the method. Used to validate the version
-   *   of the dependencies within the aggregation, which must match the version of the
-   *   main aggregator module.
-   * @param priorVersion Version that submodules should have before the change. Used
-   *   for validation.
-   * @param pathSubmoduleWorkspace Path to the submodule within the workspace. This
-   *   is within the main aggregator module.
-   * @param newVersion New version to set. If null, nothing is modified and the
-   *   modules are simply traversed to build setArtifactGroupIdAggregator.
-   */
-  private void setArtifactVersionOnSubmodule(Path pathModuleWorkspace, Set<ArtifactGroupId> setArtifactGroupIdAggregator, String priorVersion, Path pathSubmoduleWorkspace, String newVersion) {
-    Pom pom;
-    Path pathPom;
-    String version;
-    Pom.ReferencedArtifact referencedArtifactParent;
-    ArtifactGroupId artifactGroupId;
-    List<Pom.ReferencedArtifact> listReferencedArtifact;
-    List<String> listSubmodules;
+      version = pom.getVersion();
 
-    pom = new Pom();
-    pathPom = pathSubmoduleWorkspace.resolve("pom.xml");
-    pom.setPathPom(pathPom);
-    pom.loadPom();
-
-    version = pom.getVersion();
-
-    if ((version != null) && version.contains("${")) {
-      throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ".");
-    }
-
-    referencedArtifactParent = pom.getParentReferencedArtifact();
-
-    if (referencedArtifactParent != null) {
-      if (referencedArtifactParent.getGroupId().contains("${") || referencedArtifactParent.getArtifactId().contains("${") || referencedArtifactParent.getVersion().contains("${")) {
-        throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifactParent + " in the POM " + pathPom + ".");
+      if ((version != null) && version.contains("${")) {
+        throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ". This is not supported by Maven nor Dragom.");
       }
 
-      artifactGroupId = new ArtifactGroupId(referencedArtifactParent.getGroupId(), referencedArtifactParent.getArtifactId());
+      referencedArtifactParent = pom.getParentReferencedArtifact();
 
-      /* If the parent is within the aggregation its version must match that of the main
-       * aggregator module. And if ever the version is also specified (generally it is
-       * not specified and is inherited from the parent), it must also match.
-       */
-      if (setArtifactGroupIdAggregator.contains(artifactGroupId)) {
-        if (!referencedArtifactParent.getVersion().equals(priorVersion)) {
-          throw new RuntimeException("The parent " + referencedArtifactParent + " identified within " + pathPom + " is within the aggregation but its version does not match that of the main aggregator module " + pathModuleWorkspace + '.');
+      if (referencedArtifactParent != null) {
+        if (referencedArtifactParent.getGroupId().contains("${") || referencedArtifactParent.getArtifactId().contains("${") || referencedArtifactParent.getVersion().contains("${")) {
+          throw new RuntimeException("A property reference was found within referenced parent artifact " + referencedArtifactParent + " in the POM " + pathPom + ". This is not supported by Maven nor Dragom.");
         }
 
-        if ((version != null) && !version.equals(priorVersion)) {
-          throw new RuntimeException("The parent " + referencedArtifactParent + " identified within " + pathPom + " is within the aggregation rooted at " + pathModuleWorkspace + ", the module also specifies a version but this version does not match that of the parent.");
-        }
+        artifactGroupId = new ArtifactGroupId(referencedArtifactParent.getGroupId(), referencedArtifactParent.getArtifactId());
 
-        pom.setReferencedArtifactVersion(referencedArtifactParent, newVersion);
-      }
-    } else {
-      if (version == null) {
-        throw new RuntimeException("The POM " + pathPom + " within the aggregation rooted at " + pathModuleWorkspace + " does not specify a parent and its version is not specified.");
-      }
-
-      if (!version.equals(priorVersion)) {
-        throw new RuntimeException("The version of the POM " + pathPom + " does not match that of the main aggregator module " + pathModuleWorkspace + '.');
-      }
-    }
-
-    if (version != null) {
-      pom.setVersion(newVersion);
-    }
-
-    listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.DEPENDENCY, Pom.ReferencedArtifactType.DEPENDENCY_MANAGEMENT), null, null, null);
-
-    for (Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
-      if (referencedArtifact.getGroupId().contains("${") || referencedArtifact.getArtifactId().contains("${")) {
-        throw new RuntimeException("A property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ".");
-      }
-
-      artifactGroupId = new ArtifactGroupId(referencedArtifact.getGroupId(), referencedArtifact.getArtifactId());
-
-      /* If a referenced module is within the aggregation its version must match that of
-       * the main aggregator module.
-       */
-      if (setArtifactGroupIdAggregator.contains(artifactGroupId)) {
-        // We only allow these property references within the version of a reference to a
-        // module within the aggregation.
-        if (   !referencedArtifact.getVersion().equals("${version}")
-            && !referencedArtifact.getVersion().equals("${pom.version}") // Deprecated but still supported.
-            && !referencedArtifact.getVersion().equals("${project.version}")) {
-
-          if (referencedArtifact.getVersion().contains("${")) {
-            throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ".");
+        // If the parent is within the aggregation its version must match that of the main
+        // module. And if ever the version is also specified (generally it is not
+        // specified and is inherited from the parent), it must also match.
+        if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
+          if (!referencedArtifactParent.getVersion().equals(priorVersion)) {
+            throw new RuntimeException("The parent " + referencedArtifactParent + " identified within " + pathPom + " is within the aggregation but its version does not match that of the main aggregator module " + pathModuleWorkspace + '.');
           }
 
-          if (!referencedArtifact.getVersion().equals(priorVersion)) {
-            throw new RuntimeException("The referenced module " + referencedArtifact + " identified within " + pathPom + " is within the aggregation but its version does not match that of the main aggregator module " + pathModuleWorkspace + " and is not one of the property references ${version}, ${pom.version} or ${project.version}.");
+          if ((version != null) && !version.equals(priorVersion)) {
+            throw new RuntimeException("The parent " + referencedArtifactParent + " identified within " + pathPom + " is within the aggregation rooted at " + pathModuleWorkspace + ", the module also specifies a version but this version does not match that of the parent.");
           }
 
-          pom.setReferencedArtifactVersion(referencedArtifact, newVersion);
+          pom.setReferencedArtifactVersion(referencedArtifactParent, newVersion);
         }
       } else {
-        if (referencedArtifact.getVersion().contains("${")) {
-          throw new RuntimeException("A property reference was found within version " + version + " in the POM " + pathPom + ".");
+        if (version == null) {
+          throw new RuntimeException("The POM " + pathPom + " within the aggregation rooted at " + pathModuleWorkspace + " does not specify a parent and its version is not specified.");
+        }
+
+        if (!version.equals(priorVersion)) {
+          throw new RuntimeException("The version of the POM " + pathPom + " does not match that of the main aggregator module " + pathModuleWorkspace + '.');
         }
       }
+
+      if (version != null) {
+        pom.setVersion(newVersion);
+      }
+
+      listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.DEPENDENCY, Pom.ReferencedArtifactType.DEPENDENCY_MANAGEMENT, Pom.ReferencedArtifactType.PROFILE_DEPENDENCY, Pom.ReferencedArtifactType.PROFILE_DEPENDENCY_MANAGEMENT), null, null, null);
+
+      for (Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
+        String groupId;
+        String artifactId;
+
+        groupId = pom.resolveProperties(referencedArtifact.getGroupId(), null);
+        artifactId = pom.resolveProperties(referencedArtifact.getArtifactId(), null);
+
+        if ((groupId == null) || (artifactId == null)) {
+          // As an optimization, if the groupId or artifactId cannot be resolved locally (
+          // null is passed for pomResolver), we conclude they refer to artifact external
+          // to the aggregation, in which case its version must not be changed.
+          continue;
+        }
+
+        artifactGroupId = new ArtifactGroupId(groupId, artifactId);
+
+        // If a referenced module is within the aggregation its version must match that of
+        // the main module.
+        if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
+          // We only allow these property references within the version of a reference to a
+          // module within the aggregation.
+          if (   !referencedArtifact.getVersion().equals("${project.version}")
+              && !referencedArtifact.getVersion().equals("${pom.version}") // Deprecated but still supported.
+              && !referencedArtifact.getVersion().equals("${version}")) { // Deprecated but still supported.
+
+            if (referencedArtifact.getVersion().contains("${")) {
+              throw new RuntimeException("A property reference (other than ${project.version}, ${pom.version} or ${version}) was found within version " + version + " in the POM " + pathPom + " for an artifact within the aggregation. This is not supported by Dragom.");
+            }
+
+            if (!referencedArtifact.getVersion().equals(priorVersion)) {
+              throw new RuntimeException("The referenced module " + referencedArtifact + " identified within " + pathPom + " is within the aggregation but its version does not match that of the main aggregator module " + pathModuleWorkspace + " and is not one of the property references ${project.version}, ${pom.version} or ${version}.");
+            }
+
+            pom.setReferencedArtifactVersion(referencedArtifact, newVersion);
+          }
+        }
+      }
+
+      pom.savePom();
     }
 
-    pom.savePom();
-
-    listSubmodules = pom.getListSubmodule();
-
-    for (String submodule: listSubmodules) {
-      this.setArtifactVersionOnSubmodule(pathModuleWorkspace, setArtifactGroupIdAggregator, priorVersion, pathSubmoduleWorkspace.resolve(submodule), newVersion);
-    }
+    return true;
   }
 }

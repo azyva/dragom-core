@@ -82,7 +82,7 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
    */
   @XmlAccessorType(XmlAccessType.NONE)
   public static class ListProperty {
-    /*
+    /**
      * The fact of having List<JAXBElement> is the optimal and most logical
      * configuration. It works for marshal since JAXB knows how to marshal a
      * JAXBElement. But for unmarshal, since the elements are variable, JAXB cannot

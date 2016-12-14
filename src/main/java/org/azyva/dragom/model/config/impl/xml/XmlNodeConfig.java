@@ -114,6 +114,15 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
   }
 
   protected void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
+    if (!(parent instanceof XmlConfig) && ((this.name == null) || this.name.isEmpty())) {
+      throw new RuntimeException("Node cannot have null or empty name. Parent: " + parent);
+    }
+
+    // xmlClassificationNodeConfigParent is set here in the base class if parent is
+    // indeed a XmlClassificationNodeConfig since this applies to all Node types.
+    // The other case where parent is XmlConfig is handled in
+    // XmlClassificationNodeConfig since this case is possible only for
+    // XmlClassificationNodeConfig.
     if (parent instanceof XmlClassificationNodeConfig) {
       this.xmlClassificationNodeConfigParent = (XmlClassificationNodeConfig)parent;
     }

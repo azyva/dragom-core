@@ -59,6 +59,10 @@ public class XmlPropertyDefConfig implements PropertyDefConfig {
    *   child NodeConfig when interpreted by the {@link Model}.
    */
   public XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
+    if ((name == null) || name.isEmpty()) {
+      throw new RuntimeException("PropertyDef cannot have null or empty name.");
+    }
+
     this.name = name;
     this.value = value;
     this.indOnlyThisNode = indOnlyThisNode;

@@ -29,6 +29,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -83,15 +85,17 @@ import org.xml.sax.SAXException;
  * This class manages the following references within the POM file:
  *
  * - Parent
- * - DependencyManagement
  * - Dependencies
+ * - DependencyManagement
+ * - Dependencies within profiles
+ * - DependencyManagement within profiles
  *
  * References could exists elsewhere by using more advanced Maven features. These
  * are not supported.
  *
- * Referenced versions are not interpreted in any way. If a version reference uses
- * a property expression such as ${project.version}, the expression itself is
- * returned.
+ * Accessors (such as {@link #getGroupId} do not evaluate property references,
+ * which are returned as is (e.g.: ${my.module.group.id}). However, methods are
+ * provided to help resolve properties when needed.
  *
  * Artifact versions are returned as simple String. During the design of this
  * class we considered to use the class ArtifactVersion. But we figured this was
@@ -103,13 +107,39 @@ import org.xml.sax.SAXException;
  */
 public class Pom {
   /**
+   * Pattern used to resolve property references within arbitrary strings within
+   * {@link Pom}'s.
+   */
+  private static final Pattern patternExtractPropertyReference = Pattern.compile("(.*?)\\$\\{(.+?)\\}(.*)");
+  /**
    * Enumeration of the different types of referenced artifacts managed by this
    * class.
    */
   public static enum ReferencedArtifactType {
-    PARENT, // Parent.
-    DEPENDENCY, // A dependency in the dependencies element.
-    DEPENDENCY_MANAGEMENT // A dependency in the dependencyManagement element.
+    /**
+     * Parent.
+     */
+    PARENT,
+
+    /**
+     * A dependency in the dependencies element.
+     */
+    DEPENDENCY,
+
+    /**
+     * A dependency in the dependencyManagement/dependencies element.
+     */
+    DEPENDENCY_MANAGEMENT,
+
+    /**
+     * A dependency in the profiles/profile/dependencies element.
+     */
+    PROFILE_DEPENDENCY,
+
+    /**
+     * A dependency in the profiles/profile/dependencyManagement/dependencies element.
+     */
+    PROFILE_DEPENDENCY_MANAGEMENT
   }
 
   /**
@@ -122,6 +152,13 @@ public class Pom {
      * Type of referenced artifact.
      */
     private ReferencedArtifactType referencedArtifactType;
+
+    /**
+     * Profile if {@link #referencedArtifactType} is
+     * {@link ReferencedArtifactType#PROFILE_DEPENDENCY} or
+     * {@link ReferencedArtifactType#PROFILE_DEPENDENCY_MANAGEMENT}.
+     */
+    private String profile;
 
     /**
      * GroupId.
@@ -142,12 +179,16 @@ public class Pom {
      * Constructor.
      *
      * @param referencedArtifactType ReferenceArtifactType.
+     * @param profile Profile. Null if referencedArtifactType is not
+     *   {@link ReferencedArtifactType#PROFILE_DEPENDENCY} or
+     *   {@link ReferencedArtifactType#PROFILE_DEPENDENCY_MANAGEMENT}.
      * @param groupId GroupId.
      * @param artifactId ArtifactId.
      * @param version Version.
      */
-    public ReferencedArtifact(ReferencedArtifactType referencedArtifactType, String groupId, String artifactId, String version) {
+    public ReferencedArtifact(ReferencedArtifactType referencedArtifactType, String profile, String groupId, String artifactId, String version) {
       this.referencedArtifactType = referencedArtifactType;
+      this.profile = profile;
       this.groupId = groupId;
       this.artifactId = artifactId;
       this.version = version;
@@ -158,6 +199,15 @@ public class Pom {
      */
     public ReferencedArtifactType getReferencedArtifactType() {
       return this.referencedArtifactType;
+    }
+
+    /**
+     * @return Profile. null if {@link #getReferencedArtifactType} returns
+     *   {@link ReferencedArtifactType#PROFILE_DEPENDENCY} or
+     *   {@link ReferencedArtifactType#PROFILE_DEPENDENCY_MANAGEMENT}.
+     */
+    public String getProfile() {
+      return this.profile;
     }
 
     /**
@@ -183,7 +233,19 @@ public class Pom {
 
     @Override
     public String toString() {
-      return this.referencedArtifactType + "/" + this.groupId + ":" + this.artifactId + ":" + this.version;
+      StringBuilder stringBuilder;
+
+      stringBuilder = new StringBuilder();
+
+      stringBuilder.append(this.referencedArtifactType);
+
+      if ((this.referencedArtifactType == ReferencedArtifactType.PROFILE_DEPENDENCY) || (this.referencedArtifactType == ReferencedArtifactType.PROFILE_DEPENDENCY_MANAGEMENT)) {
+        stringBuilder.append('(').append(this.profile).append(')');
+      }
+
+      stringBuilder.append("/").append(this.groupId).append(':').append(this.artifactId).append(':').append(this.version);
+
+      return stringBuilder.toString();
     }
 
     @Override
@@ -192,9 +254,10 @@ public class Pom {
       int result;
 
       result = 1;
-      result = (prime * result) + ((this.artifactId == null) ? 0 : this.artifactId.hashCode());
-      result = (prime * result) + ((this.groupId == null) ? 0 : this.groupId.hashCode());
       result = (prime * result) + ((this.referencedArtifactType == null) ? 0 : this.referencedArtifactType.hashCode());
+      result = (prime * result) + ((this.profile == null) ? 0 : this.profile.hashCode());
+      result = (prime * result) + ((this.groupId == null) ? 0 : this.groupId.hashCode());
+      result = (prime * result) + ((this.artifactId == null) ? 0 : this.artifactId.hashCode());
       result = (prime * result) + ((this.version == null) ? 0 : this.version.hashCode());
 
       return result;
@@ -218,11 +281,15 @@ public class Pom {
 
       referencedArtifactOther = (ReferencedArtifact)other;
 
-      if (this.artifactId == null) {
-        if (referencedArtifactOther.artifactId != null) {
+      if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
+        return false;
+      }
+
+      if (this.profile == null) {
+        if (referencedArtifactOther.profile != null) {
           return false;
         }
-      } else if (!this.artifactId.equals(referencedArtifactOther.artifactId)) {
+      } else if (!this.profile.equals(referencedArtifactOther.profile)) {
         return false;
       }
 
@@ -234,7 +301,11 @@ public class Pom {
         return false;
       }
 
-      if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
+      if (this.artifactId == null) {
+        if (referencedArtifactOther.artifactId != null) {
+          return false;
+        }
+      } else if (!this.artifactId.equals(referencedArtifactOther.artifactId)) {
         return false;
       }
 
@@ -249,6 +320,13 @@ public class Pom {
       return true;
     }
 
+    /**
+     * Similar to {@link #equals}, but does not consider the version.
+     *
+     * @param referencedArtifactOther Other ReferencedArtifact.
+     * @return Indicates if this ReferencedArtifact is equal to
+     *   referencedArtifactOther.
+     */
     public boolean equalsNoVersion(ReferencedArtifact referencedArtifactOther) {
       if (this == referencedArtifactOther) {
         return true;
@@ -258,11 +336,15 @@ public class Pom {
         return false;
       }
 
-      if (this.artifactId == null) {
-        if (referencedArtifactOther.artifactId != null) {
+      if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
+        return false;
+      }
+
+      if (this.profile == null) {
+        if (referencedArtifactOther.profile != null) {
           return false;
         }
-      } else if (!this.artifactId.equals(referencedArtifactOther.artifactId)) {
+      } else if (!this.profile.equals(referencedArtifactOther.profile)) {
         return false;
       }
 
@@ -274,7 +356,11 @@ public class Pom {
         return false;
       }
 
-      if (this.referencedArtifactType != referencedArtifactOther.referencedArtifactType) {
+      if (this.artifactId == null) {
+        if (referencedArtifactOther.artifactId != null) {
+          return false;
+        }
+      } else if (!this.artifactId.equals(referencedArtifactOther.artifactId)) {
         return false;
       }
 
@@ -282,31 +368,80 @@ public class Pom {
     }
   }
 
-  // Path to the POM file to be loaded or saved.
+  /**
+   * Allows resolving external {@link Pom}'s.
+   *
+   * <p>Used for resolving property references within strings.
+   */
+  public interface PomResolver {
+    /**
+     * Resolves a Pom given a GAV.
+     *
+     * @param groupId GroupId.
+     * @param artifactId ArtifactId.
+     * @param version Version.
+     * @return Pom.
+     */
+    Pom resolve(String groupId, String artifactId, String version);
+  }
+
+  /**
+   * Path to the POM file to be loaded or saved.
+   */
   private Path pathPom;
 
-  // Document corresponding to the loaded POM file.
+  /**
+   * Document (XML) corresponding to the loaded POM file.
+   */
   private Document documentPom;
 
+  /**
+   * Used to handle the reading of the XML header.
+   *
+   * <p>Special handling is required for the information before the body since it is
+   * not preserved when writing back the DOM to a file.
+   */
   enum BeforeAfterReadState {
+    /**
+     * Before any processing.
+     */
     INIT,
+
+    /**
+     * We may have encountered the body (opening &lt;), but we are not sure it is the
+     * body.
+     */
     MAYBE_BODY,
+
+    /**
+     * We know we are in a XML header since character following &lt; is ? or !.
+     */
     XML_HEADER,
+
+    /**
+     * We know we are in the body.
+     */
     BODY
   }
 
-  // Bytes appearing before the start of the XML document. This can include the XML
-  // declaration ("<?...>"), DOCTYPE declaration (<!...>) and any whitespace before
-  // the root element.
+  /**
+   * Bytes appearing before the start of the XML document. This can include the XML
+   * declaration ("<?...>"), DOCTYPE declaration (<!...>) and any whitespace before
+   * the root element.
+   */
   private String before;
 
-  // Bytes appearing after the close of the root element. This includes whitespace
-  // at the very end of the file.
+  /**
+   * Bytes appearing after the close of the root element. This includes whitespace
+   * at the very end of the file.
+   */
   private String after;
 
-  // Path to the POM file that was last loaded. Used for error reporting. pathPom
-  // may be changed after the POM is loaded but errors would relate to the original
-  // file.
+  /**
+   * Path to the POM file that was last loaded. Used for error reporting. pathPom
+   * may be changed after the POM is loaded but errors would relate to the original
+   * file.
+   */
   private Path pathPomLoaded;
 
   /**
@@ -320,6 +455,13 @@ public class Pom {
    */
   public void setPathPom(Path pathPom) {
     this.pathPom = pathPom;
+  }
+
+  /**
+   * @return Path to the POM.
+   */
+  public Path getPathPom() {
+    return this.pathPom;
   }
 
   /**
@@ -372,7 +514,7 @@ public class Pom {
 
     // After parsing the XML file into a Document (and hence validating that it is
     // well-formed), we read it again to extract the bytes before and after the
-    // root element since these are not preserved when writing back teh DOM to a
+    // root element since these are not preserved when writing back the DOM to a
     // file.
     try {
       inputStream = new FileInputStream(this.pathPom.toFile());
@@ -488,7 +630,7 @@ public class Pom {
    *   parent if not provided. null can be returned if no groupId can be resolved
    *   (which is an error).
    */
-  public String getResolvedGroupId() {
+  public String getEffectiveGroupId() {
     String groupId;
 
     groupId = this.getGroupId();
@@ -569,7 +711,7 @@ public class Pom {
    *   parent if not provided. null can be returned if no version can be resolved
    *   (which is an error).
    */
-  public String getResolvedVersion() {
+  public String getEffectiveVersion() {
     String version;
 
     version = this.getVersion();
@@ -659,7 +801,7 @@ public class Pom {
 
       if (nodeParent != null) {
         try {
-          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PARENT, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PARENT, null, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
         } catch (XPathExpressionException xpee) {
           throw new RuntimeException(xpee);
         }
@@ -667,7 +809,6 @@ public class Pom {
         if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
           listReferencedArtifact.add(referencedArtifact);
         }
-
       }
     }
 
@@ -701,14 +842,13 @@ public class Pom {
         // pertinent here.
         //TODO: If we want to support references that are dependencies through parent-specified version,
         //maybe we should return these and let the caller decide what to do (null version).
-        //The caller may have accessed to a database of parent references that could allow such retrievals.
+        //The caller may have access to a database of parent references that could allow such retrievals.
         if (version == null) {
           continue;
         }
 
-
         try {
-          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY, null, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
         } catch (XPathExpressionException xpee) {
           throw new RuntimeException(xpee);
         }
@@ -716,7 +856,6 @@ public class Pom {
         if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
           listReferencedArtifact.add(referencedArtifact);
         }
-
       }
     }
 
@@ -740,15 +879,14 @@ public class Pom {
           throw new RuntimeException(xpee);
         }
 
-
-        // The version of a dependency can be not specified. SUch dependencies are not
+        // The version of a dependency can be not specified. Such dependencies are not
         // pertinent here.
         if (version == null) {
           continue;
         }
 
         try {
-          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, null, xPath.evaluate("groupId", nodeDependency), xPath.evaluate("artifactId", nodeDependency), version);
         } catch (XPathExpressionException xpee) {
           throw new RuntimeException(xpee);
         }
@@ -756,7 +894,101 @@ public class Pom {
         if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
           listReferencedArtifact.add(referencedArtifact);
         }
+      }
+    }
 
+    if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.PROFILE_DEPENDENCY)) {
+      try {
+        nodeListDependencies = (NodeList)xPath.evaluate("/project/profiles/profile/dependencies/dependency", this.documentPom, XPathConstants.NODESET);
+      } catch (XPathExpressionException xpee) {
+        throw new RuntimeException(xpee);
+      }
+
+      length = nodeListDependencies.getLength();
+
+      for (int i = 0; i < length; i++) {
+        Node nodeProfileDependency;
+
+        nodeProfileDependency = nodeListDependencies.item(i);
+
+        try {
+          version = xPath.evaluate("version", nodeProfileDependency);
+        } catch (XPathExpressionException xpee) {
+          throw new RuntimeException(xpee);
+        }
+
+        /* It looks like XPath.evaluate returns absent elements as empty strings.
+         */
+        if (version.isEmpty()) {
+          version = null;
+        }
+
+        // The version of a dependency can be not specified. Such dependencies are not
+        // pertinent here.
+        //TODO: If we want to support references that are dependencies through parent-specified version,
+        //maybe we should return these and let the caller decide what to do (null version).
+        //The caller may have access to a database of parent references that could allow such retrievals.
+        if (version == null) {
+          continue;
+        }
+
+        nodeProfileDependency.getParentNode().getParentNode();
+
+        try {
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PROFILE_DEPENDENCY, xPath.evaluate("id", nodeProfileDependency), xPath.evaluate("groupId", nodeProfileDependency), xPath.evaluate("artifactId", nodeProfileDependency), version);
+        } catch (XPathExpressionException xpee) {
+          throw new RuntimeException(xpee);
+        }
+
+        if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
+          listReferencedArtifact.add(referencedArtifact);
+        }
+      }
+    }
+
+    if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.PROFILE_DEPENDENCY_MANAGEMENT)) {
+      try {
+        nodeListDependencies = (NodeList)xPath.evaluate("/project/profiles/profile/dependencyManagement/dependencies/dependency", this.documentPom, XPathConstants.NODESET);
+      } catch (XPathExpressionException xpee) {
+        throw new RuntimeException(xpee);
+      }
+
+      length = nodeListDependencies.getLength();
+
+      for (int i = 0; i < length; i++) {
+        Node nodeProfileDependency;
+
+        nodeProfileDependency = nodeListDependencies.item(i);
+
+        try {
+          version = xPath.evaluate("version", nodeProfileDependency);
+        } catch (XPathExpressionException xpee) {
+          throw new RuntimeException(xpee);
+        }
+
+        /* It looks like XPath.evaluate returns absent elements as empty strings.
+         */
+        if (version.isEmpty()) {
+          version = null;
+        }
+
+        // The version of a dependency can be not specified. Such dependencies are not
+        // pertinent here.
+        if (version == null) {
+          continue;
+        }
+
+        nodeProfileDependency.getParentNode().getParentNode().getParentNode();
+
+        try {
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PROFILE_DEPENDENCY_MANAGEMENT, xPath.evaluate("id", nodeProfileDependency), xPath.evaluate("groupId", nodeProfileDependency), xPath.evaluate("artifactId", nodeProfileDependency), version);
+        } catch (XPathExpressionException xpee) {
+          throw new RuntimeException(xpee);
+        }
+
+        if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
+          listReferencedArtifact.add(referencedArtifact);
+        }
       }
     }
 
@@ -917,7 +1149,60 @@ public class Pom {
       nodeVersion.setTextContent(version);
 
       break;
+
+    case PROFILE_DEPENDENCY:
+      try {
+        nodeVersion = (Node)xPath.evaluate(
+              "/project/profiles/profile[id='"
+            + referencedArtifact.profile
+            + "]/dependencies/dependency[groupId='"
+            + referencedArtifact.groupId
+            + "' and artifactId='"
+            + referencedArtifact.artifactId
+            + "' and version='"
+            + referencedArtifact.version
+            + "']/version",
+            this.documentPom,
+            XPathConstants.NODE);
+      } catch (XPathExpressionException xpee) {
+        throw new RuntimeException(xpee);
+      }
+
+      if (nodeVersion == null) {
+        throw new RuntimeException("The POM " + this.pathPomLoaded + " does not contain a profiles/profile/dependencies/dependency element which matches the specified profile " + referencedArtifact.profile + " and GAV " + referencedArtifact.groupId + ":" + referencedArtifact.artifactId + ":" + referencedArtifact.version + " to modify.");
+      }
+
+      nodeVersion.setTextContent(version);
+
+      break;
+
+    case PROFILE_DEPENDENCY_MANAGEMENT:
+      try {
+        nodeVersion = (Node)xPath.evaluate(
+              "/project/profiles/profile[id='"
+            + referencedArtifact.profile
+            + "]/dependencyManagement/dependencies/dependency[groupId='"
+            + referencedArtifact.groupId
+            + "' and artifactId='"
+            + referencedArtifact.artifactId
+            + "' and version='"
+            + referencedArtifact.version
+            + "']/version",
+            this.documentPom,
+            XPathConstants.NODE);
+      } catch (XPathExpressionException xpee) {
+        throw new RuntimeException(xpee);
+      }
+
+      if (nodeVersion == null) {
+        throw new RuntimeException("The POM " + this.pathPomLoaded + " does not contain a profiles/profile/dependencyManagement/dependencies/dependency element which matches the specified profile " + referencedArtifact.profile + " and GAV " + referencedArtifact.groupId + ":" + referencedArtifact.artifactId + ":" + referencedArtifact.version + " to modify.");
+      }
+
+      nodeVersion.setTextContent(version);
+
+      break;
     }
+
   }
 
   /**
@@ -958,6 +1243,170 @@ public class Pom {
     }
 
     return listSubmodule;
+  }
+
+  // If pomResolver is null, different mode. null is returned if properties cannot be resolved locally.
+  /**
+   * Resolves property references (${...}) within a string.
+   *
+   * <p>If pomResolver is not null, it is expected that all properties can be
+   * resolved. An exception is thrown if this is not the case.
+   *
+   * <p>If pomResolver is null, this indicates we expect only local property
+   * references to be encountered. If property references cannot be resolved, null
+   * is returned for the whole string that contains the property references (not
+   * only for the property itself).
+   *
+   * @param string String.
+   * @param pomResolver PomResolver to resolve parent Pom's. Can be null.
+   * @return New string with property references resolved.
+   */
+  public String resolveProperties(String string, PomResolver pomResolver) {
+    Matcher matcher;
+
+    do {
+      String value;
+
+      matcher = Pom.patternExtractPropertyReference.matcher(string);
+
+      if (!matcher.matches()) {
+        return string;
+      }
+
+      value = this.evaluateProperty(matcher.group(2), pomResolver);
+
+      if (value == null) {
+        if (pomResolver == null) {
+          return null;
+        } else {
+          throw new RuntimeException("Within " + this.pathPom + ", property " + matcher.group(2) + " within " + string + " cannot be evaluated.");
+        }
+      }
+
+      string = string.substring(0, matcher.end(1)) + value + string.substring(matcher.start(3));
+    } while (true);
+  }
+
+  /**
+   * Evaluates a property.
+   *
+   * <p>This is similar to resolveProperties. But here, a property name is provided,
+   * not a string that contains (one or many) property references.
+   *
+   * <p>If a property cannot be evaluated locally and pomResolver is null, null is
+   * returned. If pomResolver is not null, the resolved Pom used to evaluate the
+   * property. Therefore, contrary to {@link #resolveProperties}, no exception is
+   * thrown if the property cannot be evaluated.
+   *
+   * @param property Property.
+   * @param pomResolver PomResolver to resolve parant Pom's. Can be null.
+   * @return See description.
+   */
+  public String evaluateProperty(String property, PomResolver pomResolver) {
+    String value;
+
+    if (   property.equals("project.version")
+        || property.equals("pom.version")
+        || property.equals("version")) {
+
+      return this.getEffectiveVersion();
+    }
+
+    if (   property.equals("project.groupId")
+        || property.equals("pom.groupId")
+        || property.equals("groupId")) {
+
+      return this.getEffectiveGroupId();
+    }
+
+    if (   property.equals("project.artifactId")
+        || property.equals("pom.artifactId")
+        || property.equals("artifactId")) {
+
+      return this.getArtifactId();
+    }
+
+    if (   property.equals("project.parent.version")
+        || property.equals("pom.parent.version")
+        || property.equals("parent.version")) {
+
+      return this.getParentReferencedArtifact().version;
+    }
+
+    if (   property.equals("project.parent.groupId")
+        || property.equals("pom.parent.groupId")
+        || property.equals("parent.groupId")) {
+
+      return this.getParentReferencedArtifact().groupId;
+    }
+
+    if (   property.equals("project.parent.artifactId")
+        || property.equals("pom.parent.artifactId")
+        || property.equals("parent.artifactId")) {
+
+      return this.getParentReferencedArtifact().artifactId;
+    }
+
+    value = this.getProperty(property);
+
+    if (value != null) {
+      return this.resolveProperties(value, pomResolver);
+    }
+
+    if ((value == null) && (pomResolver != null)) {
+      ReferencedArtifact referenceArtifactParent;
+      Pom pom;
+
+      referenceArtifactParent = this.getParentReferencedArtifact();
+
+      if (referenceArtifactParent == null) {
+        throw new RuntimeException("Referenced property " + property + " not defined in " + this.pathPom + " and no parent POM is specified.");
+      }
+
+      pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
+
+      return pom.evaluateProperty(property, pomResolver);
+    }
+
+    return null;
+  }
+
+  /**
+   * Returns the specified property defined in this Pom as is, with no attempt to
+   * resolve property references within the value of the property.
+   *
+   * @param property Property.
+   * @return See description.
+   */
+  public String getProperty(String property) {
+    XPathFactory xPathFactory;
+    XPath xPath;
+    NodeList nodeListProperties;
+    int length;
+
+    xPathFactory = XPathFactory.newInstance();
+    xPath = xPathFactory.newXPath();
+
+    try {
+      nodeListProperties = (NodeList)xPath.evaluate("/project/properties/*", this.documentPom, XPathConstants.NODESET);
+    } catch (XPathExpressionException xpee) {
+      throw new RuntimeException(xpee);
+    }
+
+    length = nodeListProperties.getLength();
+
+    for (int i = 0; i < length; i++) {
+      Node nodeProperty;
+
+      nodeProperty = nodeListProperties.item(i);
+
+      if (nodeProperty.getNodeName().equals(property)) {
+//???? check if can be empty, null????
+        return nodeProperty.getTextContent();
+      }
+    }
+
+    return null;
   }
 
   public static void main(String[] args) {

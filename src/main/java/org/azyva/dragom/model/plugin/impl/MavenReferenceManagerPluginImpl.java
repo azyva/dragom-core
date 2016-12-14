@@ -20,7 +20,6 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -28,7 +27,7 @@ import java.util.Set;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.maven.Pom;
-import org.azyva.dragom.maven.PomUtil;
+import org.azyva.dragom.maven.PomAggregation;
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ArtifactVersion;
 import org.azyva.dragom.model.Model;
@@ -38,8 +37,6 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Factory for ReferenceManagerPlugin that supports Maven modules.
@@ -62,7 +59,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   /**
    * Logger for the class.
    */
-  private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
+  //private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -72,32 +69,39 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * <p>
    * See Reference for more information about constrained imposed on the extra
    * implementation data.
+   * <p>
+   * Note this is not a static class, so instances have an implicit reference to the
+   * outer class which created it.
    */
   private class ReferenceImplData {
     /**
-     * Path to the pom.
+     * Path to the POM.
      */
     private Path pathPom;
 
     /**
-     * ReferencedArtifact.
+     * ReferencedArtifact which include the information required for updating
+     * references within {@link Pom}, and allows providing a useful string
+     * representation of internal {@link Reference} details.
      */
-    private Pom.ReferencedArtifactType referencedArtifactType;
+    private Pom.ReferencedArtifact referencedArtifact;
 
     /**
      * Constructor.
      *
      * @param pathPom Path to the pom.
-     * @param referencedArtifactType ReferencedArtifactType.
+     * @param referencedArtifact ReferencedArtifact.
      */
-    public ReferenceImplData(Path pathPom, Pom.ReferencedArtifactType referencedArtifactType) {
+    public ReferenceImplData(Path pathPom, Pom.ReferencedArtifact referencedArtifact) {
       this.pathPom = pathPom;
-      this.referencedArtifactType = referencedArtifactType;
+      this.referencedArtifact = referencedArtifact;
     }
 
-    /* To allow validating that references passed back to updateReferenceVersion and
-     * updateReferenceArtifactVersion are references created by this same plugin
-     * instance.
+    /**
+     * @return The outer class instance for this referene. Allows validating that
+     * {@link Reference}'s passed back to {@link #updateReferenceVersion} and
+     * {@link #updateReferenceArtifactVersion} are Reference's created by this same
+     * NodePlugin instance.
      */
     private MavenReferenceManagerPluginImpl getReferenceManagerPluginImpl() {
       return MavenReferenceManagerPluginImpl.this;
@@ -112,7 +116,21 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
      */
     @Override
     public String toString() {
-      return "ref " + this.pathPom + " " + this.referencedArtifactType;
+      StringBuilder stringBuilder;
+      Pom.ReferencedArtifactType referencedArtifactType;
+
+      stringBuilder = new StringBuilder();
+
+      referencedArtifactType = this.referencedArtifact.getReferencedArtifactType();
+      stringBuilder.append("ref ").append(this.pathPom).append(' ').append(referencedArtifactType);
+
+      if (   (referencedArtifactType == Pom.ReferencedArtifactType.PROFILE_DEPENDENCY)
+          || (referencedArtifactType == Pom.ReferencedArtifactType.PROFILE_DEPENDENCY_MANAGEMENT)) {
+
+        stringBuilder.append('(').append(this.referencedArtifact.getProfile()).append(')');
+      }
+
+      return stringBuilder.toString();
     }
 
     @Override
@@ -122,7 +140,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
       result = 1;
       result = (prime * result) + this.pathPom.hashCode();
-      result = (prime * result) + this.referencedArtifactType.hashCode();
+      result = (prime * result) + this.referencedArtifact.hashCode();
 
       return result;
     }
@@ -145,7 +163,15 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
         return false;
       }
 
-      if (!this.referencedArtifactType.equals(referenceImplDataOther.referencedArtifactType)) {
+      if (!this.referencedArtifact.getReferencedArtifactType().equals(referenceImplDataOther.referencedArtifact.getReferencedArtifactType())) {
+        return false;
+      }
+
+      if (this.referencedArtifact.getProfile() == null) {
+        if (referenceImplDataOther.referencedArtifact.getProfile() != null) {
+          return false;
+        }
+      } else if (!this.referencedArtifact.getProfile().equals(referenceImplDataOther.referencedArtifact.getProfile())) {
         return false;
       }
 
@@ -153,6 +179,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     }
   }
 
+  /**
+   * Constructor.
+   *
+   * @param module Module.
+   */
   public MavenReferenceManagerPluginImpl(Module module) {
     super(module);
   }
@@ -160,101 +191,72 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   @Override
   public List<Reference> getListReference(Path pathModuleWorkspace) {
     Path pathPom;
-    Set<ArtifactGroupId> setArtifactGroupIdAggregator;
+    PomAggregation pomAggregation;
+    String aggregationVersion;
+    Set<ArtifactGroupId> setArtifactGroupIdAggregation;
+    ArrayList<Reference> listReference;
+    Model model;
+    Pom.PomResolver pomResolver;
 
     pathPom = pathModuleWorkspace.resolve("pom.xml");
+    pomAggregation = new PomAggregation(pathPom);
+    aggregationVersion = pomAggregation.getPomMain().getVersion();
 
-    setArtifactGroupIdAggregator = PomUtil.getSetArtifactGroupIdAggregator(pathPom);
-
-    return this.getListReference(pathModuleWorkspace, setArtifactGroupIdAggregator, Paths.get("pom.xml"), null);
-  }
-
-  private List<Reference> getListReference(Path pathModuleWorkspace, Set<ArtifactGroupId> setArtifactGroupIdAggregator, Path pathPomRelative, String versionContainer) {
-    ArrayList<Reference> listReference;
-    Pom pom;
-    Path pathPom;
-    List<Pom.ReferencedArtifact> listReferencedArtifact;
-    String version;
-    Model model;
-
-    model = this.getModule().getModel();
+    setArtifactGroupIdAggregation = pomAggregation.getSetArtifactGroupId();
 
     listReference = new ArrayList<Reference>();
 
-    pom = new Pom();
+    model = this.getModule().getModel();
 
-    pathPom = pathModuleWorkspace.resolve(pathPomRelative);
-    pom.setPathPom(pathPom);
-    pom.loadPom();
+    pomResolver = new SimplePomResolver(pomAggregation);
 
-    version = pom.getResolvedVersion();
+    for(Pom pom: pomAggregation.getCollectionPom()) {
+      List<Pom.ReferencedArtifact> listReferencedArtifact;
+      String version;
 
-    if (version == null) {
-      throw new RuntimeException("The module " + this.getModule() + " does not define its artifact version in the POM " + pathPom + '.');
-    }
+      version = pom.getEffectiveVersion();
 
-    if ((versionContainer != null) && !version.equals(versionContainer)) {
-      throw new RuntimeException("The submodule POM " + pathPom + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + versionContainer + '.');
-    }
-
-    listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
-
-    for(Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
-      ArtifactGroupId artifactGroupId;
-      String groupId;
-      Module module;
-      ModuleVersion moduleVersion;
-      Reference reference;
-
-      // We only allow these property references within the groupId of a reference.
-      groupId = referencedArtifact.getGroupId();
-
-      if (   groupId.equals("${groupId}")
-          || groupId.equals("${pom.groupId}") // Deprecated but still supported.
-          || groupId.equals("${project.groupId}")) {
-
-        groupId = pom.getParentReferencedArtifact().getGroupId();
+      if (version == null) {
+        throw new RuntimeException("The module " + this.getModule() + " does not define its artifact version in the POM " + pathPom + '.');
       }
 
-      // The groupId should not anymore contain a property reference, but just in case.
-      // Note that a parent reference cannot contain a property reference in Maven.
-      if (groupId.contains("${") || referencedArtifact.getArtifactId().contains("${")) {
-        MavenReferenceManagerPluginImpl.logger.warn("An unsupported property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ". Reference ignored.");
-        continue;
+      if (!version.equals(aggregationVersion)) {
+        throw new RuntimeException("The submodule POM " + pathPom + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + aggregationVersion + '.');
       }
 
-      artifactGroupId = new ArtifactGroupId(groupId, referencedArtifact.getArtifactId());
+      listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
 
-      /* We are not interested in references internal to the module.
-       */
-      if (setArtifactGroupIdAggregator.contains(artifactGroupId)) {
-        continue;
+      for(Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
+        ArtifactGroupId artifactGroupId;
+        ArtifactVersion artifactVersion;
+        Module module;
+        ModuleVersion moduleVersion;
+        Reference reference;
+
+        artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
+        artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+
+        // We are not interested in references internal to the module.
+        if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
+          continue;
+        }
+
+        module = model.findModuleByArtifactGroupId(artifactGroupId);
+
+        if (module != null) {
+          ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
+
+          artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
+
+          moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
+        } else {
+          moduleVersion = null;
+        }
+
+        reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
+
+        listReference.add(reference);
       }
-
-      if (referencedArtifact.getVersion().contains("${")) {
-        MavenReferenceManagerPluginImpl.logger.warn("An unsupported property reference was found within referenced artifact " + referencedArtifact + " in the POM " + pathPom + ". Reference ignored.");
-        continue;
-      }
-
-      module = model.findModuleByArtifactGroupId(artifactGroupId);
-
-      if (module != null) {
-        ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
-
-        artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
-
-        moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(new ArtifactVersion(referencedArtifact.getVersion())));
-      } else {
-        moduleVersion = null;
-      }
-
-      reference = new Reference(moduleVersion, artifactGroupId, new ArtifactVersion(referencedArtifact.getVersion()), new ReferenceImplData(pathPomRelative, referencedArtifact.getReferencedArtifactType()));
-
-      listReference.add(reference);
-    }
-
-    for(String submodule: pom.getListSubmodule()) {
-      listReference.addAll(this.getListReference(pathModuleWorkspace, setArtifactGroupIdAggregator, pathPomRelative.resolveSibling(submodule).resolve("pom.xml"), version));
     }
 
     return listReference;
@@ -297,7 +299,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     if (!artifactVersion.toString().equals(reference.getArtifactVersion())) {
       // We need to recreate a Pom.ReferencedArtifact since we do not keep it around.
       // That is OK since we have all the required information.
-      pom.setReferencedArtifactVersion(new Pom.ReferencedArtifact(referenceImplData.referencedArtifactType, reference.getArtifactGroupId().getGroupId(), reference.getArtifactGroupId().getArtifactId(), reference.getArtifactVersion().getVersion()), artifactVersion.toString());
+      pom.setReferencedArtifactVersion(referenceImplData.referencedArtifact, artifactVersion.toString());
       pom.savePom();
 
       return true;

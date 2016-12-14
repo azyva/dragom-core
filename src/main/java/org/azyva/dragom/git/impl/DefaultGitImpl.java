@@ -129,6 +129,7 @@ public class DefaultGitImpl implements Git {
     ByteArrayOutputStream byteArrayOutputStreamOut;
     ByteArrayOutputStream byteArrayOutputStreamErr;
     int exitCode;
+    String stderr;
 
     pathFileCredentials = null;
 
@@ -208,6 +209,9 @@ public class DefaultGitImpl implements Git {
         throw new RuntimeException(ioe);
       }
 
+      // We need this at more than one place below.
+      stderr = byteArrayOutputStreamErr.toString();
+
       if (!(   (exitCode == 0)
             || ((exitCode == 1) && allowExitCode == AllowExitCode.ONE)
             || ((exitCode != 0) && allowExitCode == AllowExitCode.ALL))) {
@@ -216,8 +220,17 @@ public class DefaultGitImpl implements Git {
         DefaultGitImpl.logger.error("Output of the command:");
         DefaultGitImpl.logger.error(byteArrayOutputStreamOut.toString());
         DefaultGitImpl.logger.error("Error output of the command:");
-        DefaultGitImpl.logger.error(byteArrayOutputStreamErr.toString());
+        DefaultGitImpl.logger.error(stderr);
         throw new RuntimeException("Git command " + commandLine + " failed.");
+      } else if (!stderr.isEmpty()) {
+        if (exitCode != 0) {
+          DefaultGitImpl.logger.error("Git command returned " + exitCode + '.');
+          DefaultGitImpl.logger.error("Caller indicated to not treat this exit code as an error, but information was returned in stderr which may indicate an abnormal situation:");
+        } else {
+          DefaultGitImpl.logger.warn("Git command returned 0 and information in stderr which may indicate an abnormal situation:");
+        }
+
+        DefaultGitImpl.logger.warn(stderr);
       }
 
       if (stringBuilderOutput != null) {
