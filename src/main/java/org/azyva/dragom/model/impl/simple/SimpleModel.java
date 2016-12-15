@@ -43,6 +43,7 @@ import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
+import org.azyva.dragom.util.Util;
 
 /**
  * Simple implementation of a {@link Model} and {@link MutableModel} based on
@@ -71,6 +72,19 @@ import org.azyva.dragom.model.plugin.NodePlugin;
  * @see org.azyva.dragom.model.impl.simple
  */
 public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel {
+  /**
+   * Model property which specifies if the determination of whether a {@link Module}
+   * produces an {@link ArtifactGroupId} is optimistic.
+   *
+   * <p>For example if we try to find the Module which produced ArtifactGroupId
+   * com.acme:my-module-main-sub, and
+   * {@link FindModuleByArtifactGoupId#getListModulePossiblyProduceArtifactGroupId}
+   * returns my-module-sub, my-module and my as possible artifactId, if my-module
+   * does correspond to an existing Module, the search will stop there and the
+   * Module corresponding to artifactId my will not be tried.
+   */
+  private static final String MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING = "OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING";
+
   /**
    * Indicates if the SimpleModel is mutable, based on whether the {@link Config}
    * provided is mutable.
@@ -245,12 +259,18 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
           this.moduleFound = module;
 
-          break;
+          if (Util.isNotNullAndTrue(module.getProperty(SimpleModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
+            break;
+          }
         }
 
         if (artifactInfoPlugin.isArtifactGroupIdPossiblyProduced(this.artifactGroupId)) {
           if (modulePossiblyFound == null) {
             modulePossiblyFound = module;
+
+            if (Util.isNotNullAndTrue(module.getProperty(SimpleModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
+              break;
+            }
           }
         }
       }

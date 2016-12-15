@@ -449,6 +449,7 @@ public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
 
     buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
     buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
+    buildReferenceGraph.setIndAvoidReentry(this.indAvoidReentry);
     buildReferenceGraph.performJob();
     referenceGraph = buildReferenceGraph.getReferenceGraph();
 

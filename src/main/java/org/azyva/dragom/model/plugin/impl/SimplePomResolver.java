@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.maven.Pom;
 import org.azyva.dragom.maven.PomAggregation;
@@ -153,6 +154,7 @@ public class SimplePomResolver implements Pom.PomResolver {
     Module module;
     ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
     ScmPlugin scmPlugin;
+    WorkspacePlugin workspacePlugin;
     Version version;
     Path pathModuleWorkspace;
     PomAggregation pomAggregation;
@@ -179,12 +181,17 @@ public class SimplePomResolver implements Pom.PomResolver {
 
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
     artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
+    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
     version = artifactVersionMapperPlugin.mapArtifactVersionToVersion(new ArtifactVersion(stringVersion));
 
     pathModuleWorkspace = scmPlugin.checkoutSystem(version);
 
-    pomAggregation = new PomAggregation(pathModuleWorkspace);
+    try {
+      pomAggregation = new PomAggregation(pathModuleWorkspace.resolve("pom.xml"));
+    } finally {
+    	workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+    }
 
     this.listPomAggregation.add(pomAggregation);
 

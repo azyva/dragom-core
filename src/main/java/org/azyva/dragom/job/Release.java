@@ -378,7 +378,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
       if (!indRelease) {
         // If the current ModuleVersion matches, we switch to release mode and continue.
         if (this.getReferencePathMatcher().matches(this.referencePath)) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.referencePath.getLeafModuleVersion()));
           indRelease = true;
         }
       }

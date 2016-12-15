@@ -99,6 +99,11 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_VERSION_NOT_MATCHED = "VERSION_NOT_MATCHED";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT = "MODULE_VERSION_ALREADY_CHECKED_OUT";
 
   /**
@@ -177,6 +182,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
     buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
     buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
     buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
+    buildReferenceGraph.setIndAvoidReentry(this.indAvoidReentry);
     buildReferenceGraph.performJob();
 
     if (buildReferenceGraph.isListModuleVersionRootChanged()) {
@@ -261,7 +267,13 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
               } catch (ParseException pe) {
                 userInteractionCallbackPlugin.provideInfo(pe.getMessage());
               }
+
+              if (!mapEntry.getValue().contains(versionSelected)) {
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_NOT_MATCHED), selectedVersion, mapEntry.getKey()));
+                versionSelected = null;
+              }
             }
+
             if (versionSelected == null) {
               userInteractionCallbackPlugin.provideInfo(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_TRY_AGAIN));
             }

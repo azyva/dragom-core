@@ -125,6 +125,14 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
   public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER = "RESOURCE_PATTERN_REALM_USER_MAPPING_USER.";
 
   /**
+   * Transient data prefix that stores whether credentials for a given realm and
+   * user have already been validated and should not be validated again during the
+   * same tool execution. The suffix is &lt;realm&gt;.&lt;user&gt; and the value is
+   * Boolean.TRUE or null (absent, implying false).
+   */
+  private static final String TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED = DefaultCredentialStorePluginImpl.class.getName() + ".CredentialsAlreadyValidated.";
+
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE = "INPUT_USER_FOR_RESOURCE";
@@ -285,13 +293,15 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
    * @return Credentials. null if not available.s
    */
   private Credentials getCredentialsInternal(String resource, String user, CredentialValidator credentialValidator) {
+    ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     String password;
     Credentials credentials;
     CredentialStore.ResourceInfo resourceInfo;
     boolean indSetDefaultUser;
 
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    execContext = ExecContextHolder.get();
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     resourceInfo = this.credentialStore.getResourceInfo(resource);
 
@@ -313,9 +323,15 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
     password = this.credentialStore.getPassword(resource, user);
 
-    if ((password != null) && (credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
-      password = null;
+    if ((password != null) && (credentialValidator != null)) {
+      if (!Util.isNotNullAndTrue((Boolean)execContext.getTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user))) {
+        if (!credentialValidator.validateCredentials(resource, user, password)) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
+          password = null;
+        }
+
+        execContext.setTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user, true);
+      }
     }
 
     /*
@@ -358,12 +374,22 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
         } else {
           password = userInteractionCallbackPlugin.getInfoPassword(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_INPUT_PASSWORD_FOR_USER_RESOURCE), user, resource, resourceInfo.realm));
           indSetPassword = true;
+
+          // If the password was obtained from the user, it is necessarily not validated
+          // yet.
+          execContext.setTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user, null);
         }
       }
 
       if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
-        continue;
+        if (!Util.isNotNullAndTrue((Boolean)execContext.getTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user))) {
+          if (!credentialValidator.validateCredentials(resource, user, password)) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));
+            continue;
+          }
+
+          execContext.setTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user, true);
+        }
       }
 
       if (indSetDefaultUser) {

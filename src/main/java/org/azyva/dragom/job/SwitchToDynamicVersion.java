@@ -618,7 +618,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           // The current ReferencePath is matched by the ReferencePathMatcherAnd. The
           // current ModuleVersion must be processed.
 
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
           indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 

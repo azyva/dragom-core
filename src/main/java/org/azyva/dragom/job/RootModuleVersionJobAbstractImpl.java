@@ -422,7 +422,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * @param indAvoidReentry Specifies to avoid reentry by using
    *   {@link ModuleReentryAvoider}. The default is to avoid reentry.
    */
-  protected void setIndAvoidReentry(boolean indAvoidReentry) {
+  public void setIndAvoidReentry(boolean indAvoidReentry) {
     this.indAvoidReentry = indAvoidReentry;
   }
 
@@ -779,10 +779,13 @@ public abstract class RootModuleVersionJobAbstractImpl {
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
+
+              // We indent even if we are immediately exiting in order to have a more intuitive
+              // layout.
+              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
               return false;
             } else {
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
             }
 
             // We are about to delegate to visitMatchedModuleVersion for the rest of the
@@ -856,17 +859,19 @@ public abstract class RootModuleVersionJobAbstractImpl {
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-            if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), moduleVersion));
-              return false;
-            } else {
               // This is not required since bracketHandle can only be null here, but the
               // compiler does not know. This avoids a warning.
               if (bracketHandle != null) {
                 bracketHandle.close();
               }
 
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
+            if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
+              // We indent even if we are immediately exiting in order to have a more intuitive
+              // layout.
+              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
+              return false;
+            } else {
+              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
             }
 
             // We are about to delegate to visitMatchedModuleVersion for the rest of the
@@ -930,7 +935,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
     * overridden at all.
     *
    * @param reference Reference to the matched ModuleVersion.
-   * @return Indicates if children must be visited. The return value is ignore if
+   * @return Indicates if children must be visited. The return value is ignored if
    *   the traversal is depth first.
    */
   protected boolean visitMatchedModuleVersion(Reference reference) {
