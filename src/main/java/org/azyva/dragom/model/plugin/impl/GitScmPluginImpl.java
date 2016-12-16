@@ -1,5 +1,4 @@
 /*
- * Copyright 2015 - 2017 AZYVA INC. INC.
  *
  * This file is part of Dragom.
  *
@@ -830,6 +829,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         // We hope the newly created folder by git clone is still empty.
         pathModuleWorkspace.toFile().delete();
       }
+
+      throw e;
     }
 
     return pathModuleWorkspace;

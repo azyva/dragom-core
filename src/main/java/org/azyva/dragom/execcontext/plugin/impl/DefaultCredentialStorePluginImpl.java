@@ -96,8 +96,10 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
   private static final String DEFAULT_CREDENTIAL_FILE = "credentials.properties";
 
   /**
-   * System property that specifies the master password file. "~" in the
-   * value of this property is replaced by the user home directory.
+   * System property that specifies the master key file. "~" in the
+   * value of this property is replaced by the user home directory. If that system
+   * property is not defined, the master key file is as defined by
+   * {@link CredentialStore}, namely "dragom-master-key"
    */
   public static final String SYS_PROPERTY_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
 

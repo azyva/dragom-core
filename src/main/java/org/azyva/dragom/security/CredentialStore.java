@@ -74,17 +74,17 @@ import org.azyva.dragom.execcontext.plugin.impl.DefaultCredentialStorePluginImpl
  * <ul>
  * <li>A constant password hardcoded in this class
  * <li>The current user name (system property user.name)
- * <li>A random password stored in a master password file
+ * <li>A random password stored in a master key file
  * </ul>
- * If the master password file does not exist, it is created with newly generated
+ * If the master key file does not exist, it is created with newly generated
  * random password.
  * <p>
  * This is not the highest security, but is considered sufficient in the current
  * context. Properly securing passwords that must be stored locally is hard. No
  * matter the logic used, one always ends up having to store some decryption key
- * somewhere. The fact that the master password file can be stored in the user
- * home directory, not accessible for reading to others makes the solution
- * sufficiently secure.
+ * somewhere. The fact that the master key file can be stored in the user home
+ * directory, not accessible for reading to others makes the solution sufficiently
+ * secure.
  * <p>
  * This class uses a sequence of mappings between resource Pattern's and
  * corresponding realms and users. These mapping are specified when the class is
@@ -128,13 +128,13 @@ public class CredentialStore {
   public static final String DEFAULT_CREDENTIAL_FILE = "dragom-credentials.properties";
 
   /**
-   * Default master password file. When no master password file is specified during
+   * Default master key file. When no master key file is specified during
    * initialization this file is used in the user home directory.
    * <p>
-   * The caller can use this constant to construct a master password file Path which
-   * uses that same file name, but a different directory.
+   * The caller can use this constant to construct a master key file Path which uses
+   * that same file name, but a different directory.
    */
-  public static final String DEFAULT_MASTER_KEY_FILE = "dragom-master-key";
+  public static final String DEFAULT_MASTER_KEY_FILE = "dragom-credentials-master-key";
 
   /**
    * Hardcoded password generated using
@@ -262,8 +262,8 @@ public class CredentialStore {
   /**
    * Constructor.
    * <p>
-   * If pathMasterPassworedFile is null, the master password file is
-   * "dragom-master-password" in the user home directory.
+   * If pathMasterPassworedFile is null, the master key file is
+   * "dragom-credentials-master-key" in the user home directory.
    * <p>
    * If pathCredentialFile is null, the credential file is
    * "dragom-credentials.properties" in the user home directory.
@@ -272,7 +272,7 @@ public class CredentialStore {
    * to this class and should not be modified by the caller. This ciass does not
    * make a copy for efficiency reasons.
    *
-   * @param pathMasterKeyFile Path of the master password file. Can be null.
+   * @param pathMasterKeyFile Path of the master key file. Can be null.
    * @param pathCredentialFile Path of the credential file. Can be null.
    * @param listResourcePatternRealmUser List of {@link ResourcePatternRealmUser}.
    */

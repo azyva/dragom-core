@@ -147,7 +147,7 @@ public class SimplePomResolver implements Pom.PomResolver {
   }
 
   @Override
-  public Pom resolve(String groupId, String artifactId, String stringVersion) {
+  public Pom resolve(String groupId, String artifactId, String stringVersion) throws Pom.ResolveException {
     ArtifactGroupId artifactGroupId;
     Gav gav;
     Pom pom;
@@ -178,6 +178,10 @@ public class SimplePomResolver implements Pom.PomResolver {
     }
 
     module = this.model.findModuleByArtifactGroupId(artifactGroupId);
+
+    if (module == null) {
+      throw new Pom.ResolveException(artifactGroupId);
+    }
 
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
     artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);

@@ -19,6 +19,15 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Properties;
+import java.util.regex.Matcher;
+
+import org.azyva.dragom.execcontext.ExecContext;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
@@ -26,6 +35,7 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleBuilder;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
+import org.azyva.dragom.util.Util;
 
 /**
  * Simple implementation of {@link UndefinedDescendantNodeManagerPlugin}.
@@ -39,6 +49,39 @@ import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
  * @author David Raymond
  */
 public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends ClassificationNodePluginAbstractImpl implements UndefinedDescendantNodeManagerPlugin {
+  /**
+   * Initialization property specifying to cache module existence in a file.
+   *
+   * <p>This is useful when module existence verification is costly.
+   */
+  private static final String INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE = "org.azyva.dragom.IndCacheModuleExistence";
+
+  /**
+   * Initialization property specifying the module existence cache file.
+   *
+   * <p> "~" in the value of this property is replaced by the user home directory.
+   *
+   * <p>If not defined (and module existence should be cache), the file
+   * "dragom-module-existence" in the user home durectory is used.
+   */
+  private static final String INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE = "org.azyva.dragom.ModuleExistenceCacheFile";
+
+  /**
+   * Default module existence cache file, in the user home directory.
+   */
+  private static final String DEFAULT_MODULE_EXISTENCE_CACHE_FILE = "dragom-module-existence-cache.properties";
+
+  /**
+   * Transient data for storing the module existence cache. It is a Properties.
+   */
+  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCache";
+
+  /**
+   * Transient data for storing the module existence cache file name. This is to
+   * avoid having to recompute its name each time it is needed.
+   */
+  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCacheFile";
+
   public UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl(ClassificationNode classificationNode) {
     super(classificationNode);
   }
@@ -59,7 +102,6 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
     ModelNodeBuilderFactory modelNodeBuilderFactory;
     ModuleBuilder moduleBuilder;
     Module module;
-    ScmPlugin scmPlugin;
 
     model = this.getClassificationNode().getModel();
 
@@ -80,9 +122,7 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
      * and will remain unreferenced.
      */
 
-    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-
-    if (!scmPlugin.isModuleExists()) {
+    if (!this.isModuleExists(module)) {
       return null;
     }
 
@@ -92,5 +132,75 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
      */
 
     return moduleBuilder.create();
+  }
+
+  /**
+   * Verifies if a {@link Module} exists, using the module existence cache if
+   * configured.
+   *
+   * @param module Module.
+   * @return See description.
+   */
+  private boolean isModuleExists(Module module) {
+    ExecContext execContext;
+    Properties propertiesModuleExist;
+    String moduleExistenceCacheFile;
+    String stringBoolean;
+    ScmPlugin scmPlugin;
+
+    execContext = ExecContextHolder.get();
+
+    if (Util.isNotNullAndTrue(execContext.getInitProperty(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE))) {
+      propertiesModuleExist = (Properties)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE);
+
+      if (propertiesModuleExist == null) {
+        moduleExistenceCacheFile = execContext.getInitProperty(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE);
+
+        if (moduleExistenceCacheFile == null) {
+          moduleExistenceCacheFile = System.getProperty("user.home") + '/' + UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.DEFAULT_MODULE_EXISTENCE_CACHE_FILE;
+        } else {
+          moduleExistenceCacheFile = moduleExistenceCacheFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+        }
+
+        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE, moduleExistenceCacheFile);
+
+        propertiesModuleExist = new Properties();
+
+        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE, propertiesModuleExist);
+
+        if ((new File(moduleExistenceCacheFile)).exists()) {
+          try {
+            propertiesModuleExist.load(new FileInputStream(moduleExistenceCacheFile));
+          } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+          }
+        }
+      }
+
+      stringBoolean = propertiesModuleExist.getProperty(module.getNodePath().toString());
+
+      if (stringBoolean == null) {
+        boolean indModuleExists;
+
+        scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+        indModuleExists = scmPlugin.isModuleExists();
+        propertiesModuleExist.setProperty(module.getNodePath().toString(), Boolean.toString(indModuleExists));
+        moduleExistenceCacheFile = (String)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE);
+
+        try {
+          propertiesModuleExist.store(new FileOutputStream(moduleExistenceCacheFile), null);
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+
+        return indModuleExists;
+      } else {
+        return Boolean.parseBoolean(stringBoolean);
+      }
+    } else {
+      scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
+      return scmPlugin.isModuleExists();
+    }
   }
 }

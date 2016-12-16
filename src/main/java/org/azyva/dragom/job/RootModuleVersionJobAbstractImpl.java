@@ -480,7 +480,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
    */
   public void performJob() {
     this.beforeValidateListModuleVersionRoot();
-    this.validateListModuleVersionRoot();
+//    this.validateListModuleVersionRoot();
     this.beforeIterateListModuleVersionRoot();
     this.iterateListModuleVersionRoot();
     this.afterIterateListModuleVersionRoot();

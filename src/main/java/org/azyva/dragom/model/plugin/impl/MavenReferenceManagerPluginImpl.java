@@ -37,6 +37,8 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Factory for ReferenceManagerPlugin that supports Maven modules.
@@ -59,7 +61,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   /**
    * Logger for the class.
    */
-  //private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
+  private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -233,8 +235,14 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
         ModuleVersion moduleVersion;
         Reference reference;
 
-        artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
-        artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+        try {
+          artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
+          artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+        } catch (Pom.ResolveException pre) {
+          MavenReferenceManagerPluginImpl.logger.warn("ReferencedArtifact " + referencedArtifact + " could not be resolved and is ignored. Reason:");
+          MavenReferenceManagerPluginImpl.logger.warn(pre.getMessage());
+          continue;
+        }
 
         // We are not interested in references internal to the module.
         if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
