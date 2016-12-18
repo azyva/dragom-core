@@ -180,7 +180,7 @@ public class SimplePomResolver implements Pom.PomResolver {
     module = this.model.findModuleByArtifactGroupId(artifactGroupId);
 
     if (module == null) {
-      throw new Pom.ResolveException(artifactGroupId);
+      throw new Pom.ResolveException("Could not find Module corresponding to ArtifactGroupId " + artifactGroupId + '.');
     }
 
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -194,7 +194,7 @@ public class SimplePomResolver implements Pom.PomResolver {
     try {
       pomAggregation = new PomAggregation(pathModuleWorkspace.resolve("pom.xml"));
     } finally {
-    	workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+      workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
     }
 
     this.listPomAggregation.add(pomAggregation);

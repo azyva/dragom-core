@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -47,7 +46,6 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.azyva.dragom.model.ArtifactGroupId;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -382,50 +380,28 @@ public class Pom {
    * other levels in the call stack can modify the exception to add information.
    * Ultimately, the code which requested the resolution of a property which caused
    * the exception to be thrown can access the message which includes all the
-   * relevant informatin.
+   * relevant information.
    */
   public static class ResolveException extends Exception {
-    // To keep compiler happy.
+    /**
+     * To keep compiler happy.
+     */
     private static final long serialVersionUID = 0;
 
     /**
-     * ArtifactGroupId for which the Module containing the Pom could not be resolved.
+     * The message can be completed with additional relevant information.
      */
-    private ArtifactGroupId artifactGroupIdModule;
-
-    private static class PropertyResolveStackItem {
-        public String string;
-
-        public String property;
-
-        public ArtifactGroupId artifactGroupId;
-
-        public String version;
-
-        public Path pathPom;
-
-        public PropertyResolveStackItem(String string, String property, ArtifactGroupId artifactGroupId, String version, Path pathPom) {
-          this.string = string;
-          this.property = property;
-          this.artifactGroupId = artifactGroupId;
-          this.version = version;
-          this.pathPom = pathPom;
-
-        }
-      }
-
-    private List<PropertyResolveStackItem> listPropertyResolveStackItem;
+    StringBuilder stringBuilderMessage;
 
     /**
      * Constructor.
      *
-     * @param artifactGroupId ArtifactGroupId for which the Module containing the Pom
-     *   could not be resolved.
+     * @param message Initial message when the exception is created.
      */
-    public ResolveException(ArtifactGroupId artifactGroupIdModule) {
-      this.artifactGroupIdModule = artifactGroupIdModule;
+    public ResolveException(String message) {
+      this.stringBuilderMessage = new StringBuilder();
 
-      this.listPropertyResolveStackItem = new ArrayList<PropertyResolveStackItem>();
+      this.stringBuilderMessage.append(message).append('\n');
     }
 
     /**
@@ -434,34 +410,15 @@ public class Pom {
      * <p>This is expected to be used while unwinding the call stack during the
      * resolution of properties.
      *
-     * @param string String that contains property references.
-     * @param property Property being evaluated.
-     * @param artifactGroupId ArtifactGroupId in which the string occurs.
-     * @param version Version of the ArtifactGroupId in which the string occurs.
-     * @param pathPom Path to the POM in which the string occurs.
+     * @param message Additional message.
      */
-    public void addPropertyResolveStackItem(String string, String property, ArtifactGroupId artifactGroupId, String version, Path pathPom) {
-      this.listPropertyResolveStackItem.add(new PropertyResolveStackItem(string, property, artifactGroupId, version, pathPom));
+    public void addMessage(String message) {
+      this.stringBuilderMessage.append(message).append('\n');
     }
 
     @Override
     public String getMessage() {
-      StringBuilder stringBuilder;
-
-      stringBuilder = new StringBuilder();
-
-      stringBuilder.append("The Module corresponding to ArtifactGroupId " + this.artifactGroupIdModule + " could not be resolved to access the POM.\n");
-      stringBuilder.append("This occured in the context of the following property resolution call stack:\n");
-
-      for (PropertyResolveStackItem propertyResolveStackItem: this.listPropertyResolveStackItem) {
-        stringBuilder.append("String: ").append(propertyResolveStackItem.string);
-        stringBuilder.append("  Property: ").append(propertyResolveStackItem.property);
-        stringBuilder.append("  Artifact coordinates: ").append(propertyResolveStackItem.artifactGroupId).append(':').append(propertyResolveStackItem.version);
-        stringBuilder.append("  Path to the POM: ").append(propertyResolveStackItem.pathPom);
-        stringBuilder.append('\n');
-      }
-
-      return stringBuilder.toString();
+      return this.stringBuilderMessage.toString();
     }
   }
 
@@ -478,6 +435,7 @@ public class Pom {
      * @param artifactId ArtifactId.
      * @param version Version.
      * @return Pom.
+     * @throws ResolveException See ResolveException.
      */
     Pom resolve(String groupId, String artifactId, String version) throws ResolveException;
   }
@@ -1359,7 +1317,7 @@ public class Pom {
    * @param string String.
    * @param pomResolver PomResolver to resolve parent Pom's. Can be null.
    * @return New string with property references resolved.
-   * @throws ResolveException
+   * @throws ResolveException See ResolveException.
    */
   public String resolveProperties(String string, PomResolver pomResolver) throws ResolveException {
     Matcher matcher;
@@ -1376,7 +1334,7 @@ public class Pom {
       try {
         value = this.evaluateProperty(matcher.group(2), pomResolver);
       } catch (ResolveException re) {
-        re.addPropertyResolveStackItem(string, matcher.group(2), new ArtifactGroupId(this.getEffectiveGroupId(), this.getArtifactId()), this.getEffectiveVersion(), this.pathPom);
+        re.addMessage("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
         throw re;
       }
 
@@ -1404,7 +1362,7 @@ public class Pom {
    * @param property Property.
    * @param pomResolver PomResolver to resolve parant Pom's. Can be null.
    * @return See description.
-   * @throws ResolveException
+   * @throws ResolveException See ResolveException.
    */
   public String evaluateProperty(String property, PomResolver pomResolver) throws ResolveException {
     String value;
@@ -1467,13 +1425,18 @@ public class Pom {
         throw new RuntimeException("Referenced property " + property + " not defined in " + this.pathPom + " and no parent POM is specified.");
       }
 
-      pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
+      try {
+        pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
+      } catch (ResolveException re) {
+        re.addMessage("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
+        throw re;
+      }
 
       try {
         return pom.evaluateProperty(property, pomResolver);
-      } catch (Pom.ResolveException pre) {
-        pre.addPropertyResolveStackItem(null, property, new ArtifactGroupId(this.getEffectiveGroupId(), this.getArtifactId()), this.getEffectiveVersion(), this.pathPom);
-        throw pre;
+      } catch (ResolveException re) {
+        re.addMessage("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
+        throw re;
       }
     }
 
@@ -1518,6 +1481,7 @@ public class Pom {
     return null;
   }
 
+  /*
   public static void main(String[] args) {
     Pom pom;
 
@@ -1525,14 +1489,13 @@ public class Pom {
 
     pom.setPathPom(Paths.get("C:/Projects/test.xml"));
     pom.loadPom();
-    /*
     System.out.println("Version: " + pom.getVersion());
     List<ReferencedArtifact> list = pom.getListReferencedArtifact(EnumSet.allOf(ReferencedArtifactType.class),  null,  null,  null);
     System.out.println("List: " + list);
     ReferencedArtifact referencedArtifact = new Pom.ReferencedArtifact(ReferencedArtifactType.DEPENDENCY_MANAGEMENT, "org.azyva", "dependency-management", "1.2");
     pom.setReferencedArtifactVersion(referencedArtifact, "1.10");
     System.out.println("Submodules: " + pom.getListSubmodule());
-    */
     pom.savePom();
   }
+  */
 }
