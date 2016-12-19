@@ -479,6 +479,23 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * Alternatively, the methods mentioned above can be overridden individually.
    */
   public void performJob() {
+/*
+  {
+    Model model;
+    Module module;
+    ScmPlugin scmPlugin;
+    Path pathModuleWorkspace;
+    ReferenceManagerPlugin referenceManagerPlugin;
+    List<Reference> listReference;
+
+    model = ExecContextHolder.get().getModel();
+    module = model.getModule(new NodePath("EpargnePlacement/Supervision/epsupf-spr-modele"));
+    scmPlugin = module.getNodePlugin(ScmPlugin.class,  null);
+    pathModuleWorkspace = scmPlugin.checkoutSystem(new Version("D/livr-20170122"));
+    referenceManagerPlugin = module.getNodePlugin(ReferenceManagerPlugin.class,  null);
+    listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
+    System.out.println();
+  } */
     this.beforeValidateListModuleVersionRoot();
 //    this.validateListModuleVersionRoot();
     this.beforeIterateListModuleVersionRoot();
@@ -704,6 +721,12 @@ public abstract class RootModuleVersionJobAbstractImpl {
         return false;
       }
 
+      if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
+        // ??? Message
+        userInteractionCallbackPlugin.provideInfo("???????? Version of ModuleVersion " + moduleVersion + " does not exist. Skipping");
+        return false;
+      }
+
       // We need to have access to the sources of the Module at different places below:
       // - For verifying for unsynchronized local or remote changes
       // - To obtain the list of references and iterate over them
@@ -782,7 +805,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
               // We indent even if we are immediately exiting in order to have a more intuitive
               // layout.
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
+              // TODO: Probably should remove altogether. Information not really useful and it litters de console.
+              // bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
               return false;
             } else {
               bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));

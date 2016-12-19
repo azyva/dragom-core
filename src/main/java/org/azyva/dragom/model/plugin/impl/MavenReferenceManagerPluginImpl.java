@@ -20,12 +20,16 @@
 package org.azyva.dragom.model.plugin.impl;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.azyva.dragom.apiutil.ByReference;
+import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.maven.Pom;
 import org.azyva.dragom.maven.PomAggregation;
 import org.azyva.dragom.model.ArtifactGroupId;
@@ -62,6 +66,16 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * Logger for the class.
    */
   private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
+
+  /**
+   * See description in ResourceBundle.
+   */
+  protected static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
+
+  /**
+   * ResourceBundle specific to this class.
+   */
+  protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -196,6 +210,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     PomAggregation pomAggregation;
     String aggregationVersion;
     Set<ArtifactGroupId> setArtifactGroupIdAggregation;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     ArrayList<Reference> listReference;
     Model model;
     Pom.PomResolver pomResolver;
@@ -205,6 +220,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     aggregationVersion = pomAggregation.getPomMain().getVersion();
 
     setArtifactGroupIdAggregation = pomAggregation.getSetArtifactGroupId();
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     listReference = new ArrayList<Reference>();
 
@@ -257,6 +274,15 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
 
           moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
+
+          // We probably could simply perform an object equality here since Module's are
+          // singletons. But just in case, we compare their NodePath.
+          if (module.getNodePath().equals(this.getNode().getNodePath())) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+
+            continue;
+          }
+
         } else {
           moduleVersion = null;
         }

@@ -421,7 +421,7 @@ public class DefaultGitImpl implements Git {
     }
 
     // The empty String[] argument to toArray is required for proper typing in Java.
-    this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl != null, AllowExitCode.NONE, pathWorkspace, null, false);
+    this.executeGitCommand(listArg.toArray(new String[] {}), reposUrl == null, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override

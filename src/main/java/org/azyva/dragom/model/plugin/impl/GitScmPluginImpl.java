@@ -341,7 +341,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   private enum FetchPushBehavior {
     /**
      * Indicates to not fetch nor push, thus working in total isolation with respect
-     * to the remote repository.
+     * to the remote repository, except for {@link Module}'s which are not in the
+     * workspace for which a clone is required.
      */
     NO_FETCH_NO_PUSH,
 
@@ -457,8 +458,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // in order to obtain the true remote references.
       this.getGit().fetch(pathModuleWorkspace, reposUrl, "refs/remotes/origin/*:refs/remotes/origin/*", false);
 
-      this.getGit().checkout(pathModuleWorkspace, version);
+      if (version != null) {
+        this.getGit().checkout(pathModuleWorkspace, version);
+      }
     } else {
+      // version can be null.
       this.getGit().clone(null, version, pathModuleWorkspace);
 
       // If pathRemote is null it means we cloned from the real remote repository. We
@@ -726,6 +730,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
   //TODO: The path must come from the workspace so that caller can check what kind it is.
   //TODO: Caller must release workspace directory. Was accessed READ_WRITE.
+  // As a public method from the ScmPlugin interface, version must not be null.
+  // But it is allowed to be null since internally it occurs that we need a directory
+  // containing the module, but not a specific version.
   @Override
   public Path checkoutSystem(Version version) {
     WorkspacePlugin workspacePlugin;
@@ -738,15 +745,28 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
     nodePathModule = this.getModule().getNodePath();
 
-    // We first check if a user workspace directory exists for the ModuleVersion.
+    if (version != null) {
+      // We first check if a user workspace directory exists for the ModuleVersion.
 
-    workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, version));
+      workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, version));
 
-    if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-      // If the module is already checked out for the user, the path is reused as is,
-      // without caring to make sure it is up to date. It belongs to the user who is
-      // responsible for this, or the caller acting on behalf of the user.
-      return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
+        // If the module is already checked out for the user, the path is reused as is,
+        // without caring to make sure it is up to date. It belongs to the user who is
+        // responsible for this, or the caller acting on behalf of the user.
+        return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      }
+    } else {
+      Set<WorkspaceDir> setWorkspaceDir;
+
+      // If version is null, any user workspace directory for the Module will do.
+      // Generally there will be only one, but some WorkspacePlugin implementations
+      // could support multiple.
+      setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, null)));
+
+      if (setWorkspaceDir.size() >= 1) {
+        return workspacePlugin.getWorkspaceDir(setWorkspaceDir.iterator().next(), WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+      }
     }
 
     // If not, we check if a system workspace directory exists for the module.
@@ -771,7 +791,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // fact and not need use methods that are not allowed in which context, or
       // be aware of that fact and behave accordingly.
       if (versionTempDynamicBase != null) {
-        if (!versionTempDynamicBase.equals(version)) {
+        if ((version != null) && !versionTempDynamicBase.equals(version)) {
           throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
         }
 
@@ -779,29 +799,32 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       }
 
       this.fetch(pathModuleWorkspace);
-      this.getGit().checkout(pathModuleWorkspace, version);
 
-      // If the version is dynamic (a branch), we might have actually checked out the
-      // local version of it and it may not be up to date.
-      if (version.getVersionType() == VersionType.DYNAMIC) {
+      if (version != null) {
+        this.getGit().checkout(pathModuleWorkspace, version);
+
+        // If the version is dynamic (a branch), we might have actually checked out the
+        // local version of it and it may not be up to date.
+        if (version.getVersionType() == VersionType.DYNAMIC) {
         pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
-        if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
-          // We add "--" as a last argument since when a ref does no exist, Git complains
-          // about the fact that the command is ambiguous.
-          if (this.getGit().executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
-            // If the Workspace directory is not the main one, we fetch the same branch from
-            // the main Workspace directory into the current Workspace directory.
-            // This is the special handling of the synchronization between a workspace
-            // directory and the main one mentioned in the isSync method.
-            this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+          if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
+            // We add "--" as a last argument since when a ref does no exist, Git complains
+            // about the fact that the command is ambiguous.
+            if (this.getGit().executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
+              // If the Workspace directory is not the main one, we fetch the same branch from
+              // the main Workspace directory into the current Workspace directory.
+              // This is the special handling of the synchronization between a workspace
+              // directory and the main one mentioned in the isSync method.
+              this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+            }
           }
-        }
 
-        // And in all cases, we pull changes from the corresponding remote tracking
-        // branch.
-        if (this.gitPull(pathModuleWorkspace)) {
-          throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
+          // And in all cases, we pull changes from the corresponding remote tracking
+          // branch.
+          if (this.gitPull(pathModuleWorkspace)) {
+            throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
+          }
         }
       }
 
@@ -895,7 +918,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       return pathModuleWorkspace;
     }
 
-    pathModuleWorkspace = this.checkoutSystem(this.getDefaultVersion());
+    // We are not interested in a specific Version at this point.
+    pathModuleWorkspace = this.checkoutSystem(null);
     workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
     this.fetch(pathModuleWorkspace);
     return pathModuleWorkspace;

@@ -46,6 +46,8 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -106,6 +108,12 @@ import org.xml.sax.SAXException;
  */
 public class Pom {
   /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(Pom.class);
+
+  /**
+   *
    * Pattern used to resolve property references within arbitrary strings within
    * {@link Pom}'s.
    */
@@ -861,8 +869,10 @@ public class Pom {
           throw new RuntimeException(xpee);
         }
 
-        if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
-          listReferencedArtifact.add(referencedArtifact);
+        if (!this.isExcluded(nodeParent, referencedArtifact)) {
+          if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
+            listReferencedArtifact.add(referencedArtifact);
+          }
         }
       }
     }
@@ -908,8 +918,10 @@ public class Pom {
           throw new RuntimeException(xpee);
         }
 
-        if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
-          listReferencedArtifact.add(referencedArtifact);
+        if (!this.isExcluded(nodeDependency, referencedArtifact)) {
+          if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
+            listReferencedArtifact.add(referencedArtifact);
+          }
         }
       }
     }
@@ -987,16 +999,16 @@ public class Pom {
           continue;
         }
 
-        nodeProfileDependency.getParentNode().getParentNode();
-
         try {
-          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PROFILE_DEPENDENCY, xPath.evaluate("id", nodeProfileDependency), xPath.evaluate("groupId", nodeProfileDependency), xPath.evaluate("artifactId", nodeProfileDependency), version);
+          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PROFILE_DEPENDENCY, xPath.evaluate("id", nodeProfileDependency.getParentNode().getParentNode()), xPath.evaluate("groupId", nodeProfileDependency), xPath.evaluate("artifactId", nodeProfileDependency), version);
         } catch (XPathExpressionException xpee) {
           throw new RuntimeException(xpee);
         }
 
-        if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
-          listReferencedArtifact.add(referencedArtifact);
+        if (!this.isExcluded(nodeProfileDependency, referencedArtifact)) {
+          if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
+            listReferencedArtifact.add(referencedArtifact);
+          }
         }
       }
     }
@@ -1048,6 +1060,38 @@ public class Pom {
     }
 
     return listReferencedArtifact;
+  }
+
+  /**
+   * Verifies if a ReferencedArtifact must be excluded.
+   *
+   * <p>Some ReferencedArtifact must always be exluded. Currently, this includes all
+   * system scope references.
+   *
+   * @param node Node for the reference.
+   * @param referencedArtifact ReferencedArtifact which was already built from the
+   *   regular elements of the Node.
+   * @return See description.
+   */
+  private boolean isExcluded(Node node, ReferencedArtifact referencedArtifact) {
+    XPathFactory xPathFactory;
+    XPath xPath;
+    String scope;
+
+    xPathFactory = XPathFactory.newInstance();
+    xPath = xPathFactory.newXPath();
+    try {
+        scope = xPath.evaluate("scope",  node);
+      } catch (XPathExpressionException xpee) {
+        throw new RuntimeException(xpee);
+      }
+
+    if ((scope != null) && scope.equals("system")) {
+      Pom.logger.warn("Within POM " + this.pathPom + " system scope ReferencedArtifact " + referencedArtifact + " was excluded.");
+      return true;
+    }
+
+    return false;
   }
 
   /**
