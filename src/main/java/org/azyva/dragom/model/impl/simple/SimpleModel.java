@@ -78,7 +78,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    *
    * <p>For example if we try to find the Module which produced ArtifactGroupId
    * com.acme:my-module-main-sub, and
-   * {@link FindModuleByArtifactGoupId#getListModulePossiblyProduceArtifactGroupId}
+   * {@link FindModuleByArtifactGroupIdPlugin#getListModulePossiblyProduceArtifactGroupId}
    * returns my-module-sub, my-module and my as possible artifactId, if my-module
    * does correspond to an existing Module, the search will stop there and the
    * Module corresponding to artifactId my will not be tried.

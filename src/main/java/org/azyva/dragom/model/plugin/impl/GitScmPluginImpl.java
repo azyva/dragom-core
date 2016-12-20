@@ -762,7 +762,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // If version is null, any user workspace directory for the Module will do.
       // Generally there will be only one, but some WorkspacePlugin implementations
       // could support multiple.
-      setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, null)));
+      setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule)));
 
       if (setWorkspaceDir.size() >= 1) {
         return workspacePlugin.getWorkspaceDir(setWorkspaceDir.iterator().next(), WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);

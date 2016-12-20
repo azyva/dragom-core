@@ -40,11 +40,21 @@ import org.azyva.dragom.reference.support.SimpleReferenceGraph;
  *
  * @author David Raymond
  */
-public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl {
+public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
   /**
    * ReferenceGraph that will be built.
    */
   private ReferenceGraph referenceGraph;
+
+  @Override
+  public void setIndHandleStaticVersion(boolean indHandleStaticVersion) {
+    this.indHandleStaticVersion = indHandleStaticVersion;
+  }
+
+  @Override
+  public void setIndAvoidReentry(boolean indAvoidReentry) {
+    this.indAvoidReentry = indAvoidReentry;
+  }
 
   /**
    * Constructor.

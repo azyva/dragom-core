@@ -255,9 +255,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
         try {
           artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
           artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
-        } catch (Pom.ResolveException pre) {
-          MavenReferenceManagerPluginImpl.logger.warn("ReferencedArtifact " + referencedArtifact + " could not be resolved and is ignored. Reason:");
-          MavenReferenceManagerPluginImpl.logger.warn(pre.getMessage());
+        } catch (RuntimeException re) {
+          MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved and is ignored. Reason:", re);
           continue;
         }
 
@@ -282,7 +281,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
             continue;
           }
-
         } else {
           moduleVersion = null;
         }

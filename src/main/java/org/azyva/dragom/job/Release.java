@@ -404,13 +404,17 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         boolean indAbort;
         ByReference<Reference> byReferenceReference;
 
-        // Here we need to have access to the sources of the module so that we can obtain
-        // the list of references and iterate over them. If the user already has the
-        // correct version of the module checked out, we need to use it. If not, we need
-        // an internal working directory which we will not modify (for now).
-        // ScmPlugin.checkoutSystem does that.
+        try {
+          // Here we need to have access to the sources of the module so that we can obtain
+          // the list of references and iterate over them. If the user already has the
+          // correct version of the module checked out, we need to use it. If not, we need
+          // an internal working directory which we will not modify (for now).
+          // ScmPlugin.checkoutSystem does that.
+          pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
+        } catch (RuntimeException re) {
+          throw new RuntimeException("Could not checkout Version " + reference.getModuleVersion().getVersion() + " of Module " + module + '.', re);
+        }
 
-        pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
           throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
@@ -459,7 +463,13 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
           byReferenceVersionChild = new ByReference<Version>();
 
-          indVersionChanged = this.visitModuleVersionInternal(referenceChild, byReferenceVersionChild, indRelease);
+          try {
+            indVersionChanged = this.visitModuleVersionInternal(referenceChild, byReferenceVersionChild, indRelease);
+          } catch (RuntimeException re) {
+            Release.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            continue;
+          }
+
 
           if (indRelease) {
             if (!indVersionChanged) {

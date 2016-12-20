@@ -378,12 +378,17 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
       indReferenceProcessed = false;
 
-      // Here we need to have access to the sources of the module so that we can obtain
-      // the list of references and iterate over them. If the user already has the
-      // correct version of the module checked out, we need to use it. If not, we need
-      // an internal working directory which we will not modify (for now).
-      // ScmPlugin.checkoutSystem does that.
-      pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
+      try {
+        // Here we need to have access to the sources of the module so that we can obtain
+        // the list of references and iterate over them. If the user already has the
+        // correct version of the module checked out, we need to use it. If not, we need
+        // an internal working directory which we will not modify (for now).
+        // ScmPlugin.checkoutSystem does that.
+        pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
+      } catch (RuntimeException re) {
+        throw new RuntimeException("Could not checkout Version " + referenceParent.getModuleVersion().getVersion() + " of Module " + module + '.', re);
+      }
+
 
       // We want to ensure the workspace directory is synchronized. But it is not always
       // necessary or permitted to do so. The path returned by ScmPlugin.checkoutSystem
@@ -425,7 +430,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
           SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
-          visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
+          try {
+            visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
+          } catch (RuntimeException re) {
+            SwitchToDynamicVersion.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            continue;
+          }
 
           if (Util.isAbort()) {
             // We return NONE by default, but it does not really matter when aborting.

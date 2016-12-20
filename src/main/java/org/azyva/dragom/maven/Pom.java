@@ -376,61 +376,6 @@ public class Pom {
   }
 
   /**
-   * Thrown when a Pom cannot be resolved while resolving properties.
-   *
-   * <p>This is a checked exception which needs to be handled since there are many
-   * reasons why Pom resolving could fail.
-   *
-   * <p>This exception is used while resolving properties, and useful information is
-   * available at different levels in the call stack. The level at which the
-   * exception is expected to be created (initially thrown) is in
-   * {@link PomResolver#resolve}. But this occurs while resolving properties. The
-   * other levels in the call stack can modify the exception to add information.
-   * Ultimately, the code which requested the resolution of a property which caused
-   * the exception to be thrown can access the message which includes all the
-   * relevant information.
-   */
-  public static class ResolveException extends Exception {
-    /**
-     * To keep compiler happy.
-     */
-    private static final long serialVersionUID = 0;
-
-    /**
-     * The message can be completed with additional relevant information.
-     */
-    StringBuilder stringBuilderMessage;
-
-    /**
-     * Constructor.
-     *
-     * @param message Initial message when the exception is created.
-     */
-    public ResolveException(String message) {
-      this.stringBuilderMessage = new StringBuilder();
-
-      this.stringBuilderMessage.append(message).append('\n');
-    }
-
-    /**
-     * Adds information to the exception.
-     *
-     * <p>This is expected to be used while unwinding the call stack during the
-     * resolution of properties.
-     *
-     * @param message Additional message.
-     */
-    public void addMessage(String message) {
-      this.stringBuilderMessage.append(message).append('\n');
-    }
-
-    @Override
-    public String getMessage() {
-      return this.stringBuilderMessage.toString();
-    }
-  }
-
-  /**
    * Allows resolving external {@link Pom}'s.
    *
    * <p>Used for resolving property references within strings.
@@ -443,9 +388,8 @@ public class Pom {
      * @param artifactId ArtifactId.
      * @param version Version.
      * @return Pom.
-     * @throws ResolveException See ResolveException.
      */
-    Pom resolve(String groupId, String artifactId, String version) throws ResolveException;
+    Pom resolve(String groupId, String artifactId, String version);
   }
 
   /**
@@ -1361,9 +1305,8 @@ public class Pom {
    * @param string String.
    * @param pomResolver PomResolver to resolve parent Pom's. Can be null.
    * @return New string with property references resolved.
-   * @throws ResolveException See ResolveException.
    */
-  public String resolveProperties(String string, PomResolver pomResolver) throws ResolveException {
+  public String resolveProperties(String string, PomResolver pomResolver) {
     Matcher matcher;
 
     do {
@@ -1377,9 +1320,8 @@ public class Pom {
 
       try {
         value = this.evaluateProperty(matcher.group(2), pomResolver);
-      } catch (ResolveException re) {
-        re.addMessage("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
-        throw re;
+      } catch (RuntimeException re) {
+        throw new RuntimeException("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
       }
 
       if ((value == null) && (pomResolver == null)) {
@@ -1406,9 +1348,8 @@ public class Pom {
    * @param property Property.
    * @param pomResolver PomResolver to resolve parant Pom's. Can be null.
    * @return See description.
-   * @throws ResolveException See ResolveException.
    */
-  public String evaluateProperty(String property, PomResolver pomResolver) throws ResolveException {
+  public String evaluateProperty(String property, PomResolver pomResolver) {
     String value;
 
     if (   property.equals("project.version")
@@ -1471,16 +1412,14 @@ public class Pom {
 
       try {
         pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
-      } catch (ResolveException re) {
-        re.addMessage("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
-        throw re;
+      } catch (RuntimeException re) {
+        throw new RuntimeException("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
       }
 
       try {
         return pom.evaluateProperty(property, pomResolver);
-      } catch (ResolveException re) {
-        re.addMessage("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").");
-        throw re;
+      } catch (RuntimeException re) {
+        throw new RuntimeException("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
       }
     }
 

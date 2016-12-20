@@ -75,7 +75,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class Checkout extends RootModuleVersionJobAbstractImpl {
+public class Checkout extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
   /**
    * See description in ResourceBundle.
    */
@@ -138,6 +138,16 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Checkout.class.getName() + "ResourceBundle");
 
+  @Override
+  public void setIndHandleStaticVersion(boolean indHandleStaticVersion) {
+    this.indHandleStaticVersion = indHandleStaticVersion;
+  }
+
+  @Override
+  public void setIndAvoidReentry(boolean indAvoidReentry) {
+    this.indAvoidReentry = indAvoidReentry;
+  }
+
   /**
    * Constructor.
    *
@@ -182,6 +192,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl {
     buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
     buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
     buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
+    buildReferenceGraph.setIndHandleDynamicVersion(this.indHandleDynamicVersion);
     buildReferenceGraph.setIndAvoidReentry(this.indAvoidReentry);
     buildReferenceGraph.performJob();
 

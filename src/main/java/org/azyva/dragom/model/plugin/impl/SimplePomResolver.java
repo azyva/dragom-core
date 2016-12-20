@@ -147,7 +147,7 @@ public class SimplePomResolver implements Pom.PomResolver {
   }
 
   @Override
-  public Pom resolve(String groupId, String artifactId, String stringVersion) throws Pom.ResolveException {
+  public Pom resolve(String groupId, String artifactId, String stringVersion) {
     ArtifactGroupId artifactGroupId;
     Gav gav;
     Pom pom;
@@ -180,7 +180,7 @@ public class SimplePomResolver implements Pom.PomResolver {
     module = this.model.findModuleByArtifactGroupId(artifactGroupId);
 
     if (module == null) {
-      throw new Pom.ResolveException("Could not find Module corresponding to ArtifactGroupId " + artifactGroupId + '.');
+      throw new RuntimeException("Could not find Module corresponding to ArtifactGroupId " + artifactGroupId + '.');
     }
 
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -189,7 +189,11 @@ public class SimplePomResolver implements Pom.PomResolver {
 
     version = artifactVersionMapperPlugin.mapArtifactVersionToVersion(new ArtifactVersion(stringVersion));
 
-    pathModuleWorkspace = scmPlugin.checkoutSystem(version);
+    try {
+      pathModuleWorkspace = scmPlugin.checkoutSystem(version);
+    } catch (RuntimeException re) {
+      throw new RuntimeException("Could not checkout Version " + version + " of Module " + module + '.', re);
+    }
 
     try {
       pomAggregation = new PomAggregation(pathModuleWorkspace.resolve("pom.xml"));

@@ -168,13 +168,8 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
         String groupId;
         String artifactId;
 
-        try {
-          groupId = pom.resolveProperties(referencedArtifact.getGroupId(), null);
-          artifactId = pom.resolveProperties(referencedArtifact.getArtifactId(), null);
-        } catch (Pom.ResolveException pre) {
-          // We do not expect to get here since null is passed for the PomResolver.
-          throw new RuntimeException(pre);
-        }
+        groupId = pom.resolveProperties(referencedArtifact.getGroupId(), null);
+        artifactId = pom.resolveProperties(referencedArtifact.getArtifactId(), null);
 
         if ((groupId == null) || (artifactId == null)) {
           // As an optimization, if the groupId or artifactId cannot be resolved locally (

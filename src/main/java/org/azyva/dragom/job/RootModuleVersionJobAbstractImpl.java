@@ -25,14 +25,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
-import org.azyva.dragom.execcontext.plugin.WorkspaceDir;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
@@ -422,7 +420,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * @param indAvoidReentry Specifies to avoid reentry by using
    *   {@link ModuleReentryAvoider}. The default is to avoid reentry.
    */
-  public void setIndAvoidReentry(boolean indAvoidReentry) {
+  protected void setIndAvoidReentry(boolean indAvoidReentry) {
     this.indAvoidReentry = indAvoidReentry;
   }
 
@@ -471,9 +469,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * Main method for performing the job.
    * <p>
    * This class provides a default implementation which calls
-   * {@link #beforeValidateListModuleVersionRoot},
-   * {@link #validateListModuleVersionRoot},
    * {@link #beforeIterateListModuleVersionRoot},
+   * {@link #iterateListModuleVersionRoot} and
    * {@link #afterIterateListModuleVersionRoot}. If ever this behavior is not
    * appropriate for the job, subclasses can simply override the method.
    * Alternatively, the methods mentioned above can be overridden individually.
@@ -496,30 +493,33 @@ public abstract class RootModuleVersionJobAbstractImpl {
     listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
     System.out.println();
   } */
-    this.beforeValidateListModuleVersionRoot();
+//    this.beforeValidateListModuleVersionRoot();
 //    this.validateListModuleVersionRoot();
     this.beforeIterateListModuleVersionRoot();
     this.iterateListModuleVersionRoot();
     this.afterIterateListModuleVersionRoot();
   }
 
-  /**
+  /*
    * Called by {@link #performJob}. Subclasses can override to introduce
    * job-specific behavior.
    * <p>
    * This implementation does nothing.
-   */
   protected void beforeValidateListModuleVersionRoot() {
   }
+   */
 
-  /**
+  /*
+   * NOTE: It is not believed this method is really useful. It wastes processing
+   * time since when root ModuleVersion's were added to the list of root they can be
+   * assumed to have been valided then.
+   *
    * Called by {@link #performJob} to validate the root ModuleVersion's.
    * <p>
    * This performs a first pass to validate the root ModuleVersion's. The reason
    * is that if one ModuleVersion is invalid (module not known to the model or
    * Version does not exist), many actions may have already been performed and
    * it is better for the user to detect the error before doing anything.
-   */
   protected void validateListModuleVersionRoot() {
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     WorkspacePlugin workspacePlugin;
@@ -546,6 +546,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
       scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
+      // TODO: Version cannot be null anymore, if ever this is reintroduced.
       // The Version can be null to indicate the main version.
       if (moduleVersion.getVersion() == null) {
         Set<WorkspaceDir> setWorkspaceDir;
@@ -577,6 +578,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
     RootModuleVersionJobAbstractImpl.logger.info("Iteration among all root ModuleVersion's " + this.listModuleVersionRoot + " completed for validation.");
   }
+   */
 
   /**
    * Called by {@link #performJob}. Subclasses can override to introduce
@@ -727,16 +729,20 @@ public abstract class RootModuleVersionJobAbstractImpl {
         return false;
       }
 
-      // We need to have access to the sources of the Module at different places below:
-      // - For verifying for unsynchronized local or remote changes
-      // - To obtain the list of references and iterate over them
-      // There are a few combinations of cases where accessing the sources is not
-      // required at all, but they are few and we prefer simplicity here and to always
-      // obtain the path to the workspace directory.
-      // If the user already has the correct version of the module checked out, we need
-      // to use it. If not, we need an internal working directory.
-      // ScmPlugin.checkoutSystem does just that.
-      pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
+      try {
+        // We need to have access to the sources of the Module at different places below:
+        // - For verifying for unsynchronized local or remote changes
+        // - To obtain the list of references and iterate over them
+        // There are a few combinations of cases where accessing the sources is not
+        // required at all, but they are few and we prefer simplicity here and to always
+        // obtain the path to the workspace directory.
+        // If the user already has the correct version of the module checked out, we need
+        // to use it. If not, we need an internal working directory.
+        // ScmPlugin.checkoutSystem does just that.
+        pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
+      } catch (RuntimeException re) {
+        throw new RuntimeException("Could not checkout Version " + moduleVersion.getVersion() + " of Module " + module + '.', re);
+      }
 
       // We need to know if the workspace directory belongs to the user since system
       // workspace directories are always kept synchronized.
@@ -867,10 +873,15 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
           RootModuleVersionJobAbstractImpl.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
 
-          // Generally the byReferenceVersion parameter must not be null. But here we are
-          // recursively invoking the same non-overridden method and we know this parameter
-          // is actually not used.
-          this.visitModuleVersion(referenceChild, null);
+          try {
+            // Generally the byReferenceVersion parameter must not be null. But here we are
+            // recursively invoking the same non-overridden method and we know this parameter
+            // is actually not used.
+            this.visitModuleVersion(referenceChild, null);
+          } catch (RuntimeException re) {
+            RootModuleVersionJobAbstractImpl.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            continue;
+          }
 
           if (Util.isAbort()) {
             return false;

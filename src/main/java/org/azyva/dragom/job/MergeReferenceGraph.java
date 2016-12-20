@@ -175,6 +175,7 @@ import org.slf4j.LoggerFactory;
  * child references.
  *
  * @author David Raymond
+ * TODO: There should probably be resiliency points in this class which simply skips children in case of exception. See other classes.
  */
 public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
   /**

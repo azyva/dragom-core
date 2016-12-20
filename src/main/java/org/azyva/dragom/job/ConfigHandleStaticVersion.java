@@ -19,24 +19,25 @@
 
 package org.azyva.dragom.job;
 
-import org.azyva.dragom.util.ModuleReentryAvoider;
+import org.azyva.dragom.model.Version;
 
 /**
  * Implemented by jobs subclassing {@link RootModuleVersionJobAbstractImpl} which
- * need to expose {@link RootModuleVersionJobAbstractImpl#setIndAvoidReentry} so
- * that generic tools such as GenericRootModuleVersionjobInvokerTool from
+ * need to expose
+ * {@link RootModuleVersionJobAbstractImpl#setIndHandleStaticVersion} so that
+ * generic tools such as GenericRootModuleVersionjobInvokerTool from
  * dragom-cli-tools can provide an opion allowing the user to control whether
- * reentry should be avoided.
+ * static {@link Version}'s should be handled
  *
  * @author David Raymond
  */
-public interface ConfigReentryAvoider {
+public interface ConfigHandleStaticVersion {
   /**
    * This method is essentially the same as
-   * {@link RootModuleVersionJobAbstractImpl#setIndAvoidReentry}
+   * {@link RootModuleVersionJobAbstractImpl#setIndHandleStaticVersion}
    *
-   * @param indAvoidReentry Specifies to avoid reentry by using
-   *   {@link ModuleReentryAvoider}. The default is to avoid reentry.
+   * @param indHandleStaticVersion Specifies to handle or not static
+   *   {@link Version}'s. The default is to handle static Version's.
    */
-  void setIndAvoidReentry(boolean indAvoidReentry);
+  void setIndHandleStaticVersion(boolean indHandleStaticVersion);
 }
