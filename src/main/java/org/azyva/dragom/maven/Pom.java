@@ -1321,7 +1321,7 @@ public class Pom {
       try {
         value = this.evaluateProperty(matcher.group(2), pomResolver);
       } catch (RuntimeException re) {
-        throw new RuntimeException("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
+        throw new RuntimeException("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }
 
       if ((value == null) && (pomResolver == null)) {
@@ -1413,13 +1413,13 @@ public class Pom {
       try {
         pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
       } catch (RuntimeException re) {
-        throw new RuntimeException("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
+        throw new RuntimeException("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }
 
       try {
         return pom.evaluateProperty(property, pomResolver);
       } catch (RuntimeException re) {
-        throw new RuntimeException("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + '(' + this.getPathPom() + ").", re);
+        throw new RuntimeException("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }
     }
 

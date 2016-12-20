@@ -466,7 +466,8 @@ public class Release extends RootModuleVersionJobAbstractImpl {
           try {
             indVersionChanged = this.visitModuleVersionInternal(referenceChild, byReferenceVersionChild, indRelease);
           } catch (RuntimeException re) {
-            Release.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+            Release.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
             continue;
           }
 

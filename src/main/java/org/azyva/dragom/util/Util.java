@@ -319,6 +319,11 @@ public final class Util {
   public static final String MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM = "PREVIOUS_CHANGE_SCM";
 
   /**
+   * See description in ResourceBundle.
+   */
+  public static final String MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
+
+  /**
    * ResourceBundle specific to this class.
    * <p>
    * Being a utility class, this ResourceBundle also contains global locale-specific
