@@ -529,6 +529,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
   public ExecContext getExecContext(Properties propertiesInit) {
     String workspaceDir;
     Path pathWorkspaceDir;
+    File fileDragomMetadataDir;
     boolean indIgnoreCachedExecContext;
     DefaultExecContextImpl defaultExecContextImpl;
 
@@ -536,18 +537,22 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
     if (workspaceDir == null) {
       workspaceDir = System.getProperty("user.dir");
-    }
 
-    pathWorkspaceDir = Paths.get(workspaceDir).normalize();
+      pathWorkspaceDir = Paths.get(workspaceDir).normalize();
 
-    for (Path pathWorkspaceDirParent = pathWorkspaceDir.getParent(); pathWorkspaceDirParent != null; pathWorkspaceDirParent = pathWorkspaceDirParent.getParent()) {
-      File fileDragomMetadataDir;
+      fileDragomMetadataDir = pathWorkspaceDir.resolve(DefaultExecContextFactory.DRAGOM_METADATA_DIR).toFile();
 
-      fileDragomMetadataDir = pathWorkspaceDirParent.resolve(DefaultExecContextFactory.DRAGOM_METADATA_DIR).toFile();
+      if (!fileDragomMetadataDir.exists()) {
+        for (Path pathWorkspaceDirParent = pathWorkspaceDir.getParent(); pathWorkspaceDirParent != null; pathWorkspaceDirParent = pathWorkspaceDirParent.getParent()) {
+          fileDragomMetadataDir = pathWorkspaceDirParent.resolve(DefaultExecContextFactory.DRAGOM_METADATA_DIR).toFile();
 
-      if (fileDragomMetadataDir.exists()) {
-        throw new RuntimeExceptionUserError("Workspace directory " + pathWorkspaceDir + " is itself within a workspace directory (one of its parent contains a .dragom directory or file).");
+          if (fileDragomMetadataDir.exists()) {
+            throw new RuntimeExceptionUserError("Workspace directory " + pathWorkspaceDir + " is itself within a workspace directory (one of its parent contains a .dragom directory or file).");
+          }
+        }
       }
+    } else {
+        pathWorkspaceDir = Paths.get(workspaceDir).normalize();
     }
 
     indIgnoreCachedExecContext = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultExecContextFactory.INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT));

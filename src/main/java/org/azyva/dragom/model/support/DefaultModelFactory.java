@@ -21,6 +21,7 @@ package org.azyva.dragom.model.support;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -51,6 +52,8 @@ import org.azyva.dragom.util.Util;
 public class DefaultModelFactory implements ModelFactory {
   /**
    * Initialization property specifying the model URL.
+   *
+   * <p>As a convenience, this can also be a file path, relative or absolute.
    */
   private static final String URL_MODEL_INIT_PROP = "org.azyva.dragom.UrlModel";
 
@@ -91,8 +94,12 @@ public class DefaultModelFactory implements ModelFactory {
 
       try {
         urlXmlConfig = new URL(stringUrlXmlConfig);
-      } catch (MalformedURLException mue) {
-        throw new RuntimeException(mue);
+      } catch (MalformedURLException mue1) {
+        try {
+          urlXmlConfig = Paths.get(stringUrlXmlConfig).toUri().toURL();
+        } catch (MalformedURLException mue2) {
+            throw new RuntimeException(mue1);
+        }
       }
 
       xmlConfig = XmlConfig.load(urlXmlConfig);
