@@ -182,10 +182,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
-  protected static final String MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED = "MODULE_VERSION_ALREADY_PROCESSED";
-  /**
-   * See description in ResourceBundle.
-   */
   protected static final String MSG_PATTERN_KEY_ACTIONS_PERFORMED = "ACTIONS_PERFORMED";
 
   /**
@@ -614,7 +610,13 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION), moduleVersion));
 
-      indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
+      try {
+        indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
+      } catch (RuntimeException re) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), moduleVersion));
+        RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + moduleVersion + '.', re);
+        continue;
+      }
 
       RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at ModuleVersion " + moduleVersion + " is completed.");
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED), moduleVersion));
@@ -723,12 +725,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
         return false;
       }
 
-      if (!scmPlugin.isVersionExists(moduleVersion.getVersion())) {
-        // ??? Message
-        userInteractionCallbackPlugin.provideInfo("???????? Version of ModuleVersion " + moduleVersion + " does not exist. Skipping");
-        return false;
-      }
-
       try {
         // We need to have access to the sources of the Module at different places below:
         // - For verifying for unsynchronized local or remote changes
@@ -808,11 +804,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-
-              // We indent even if we are immediately exiting in order to have a more intuitive
-              // layout.
-              // TODO: Probably should remove altogether. Information not really useful and it litters de console.
-              // bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
+              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
               bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
@@ -879,7 +871,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
             // is actually not used.
             this.visitModuleVersion(referenceChild, null);
           } catch (RuntimeException re) {
-            RootModuleVersionJobAbstractImpl.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+            RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
             continue;
           }
 
@@ -901,9 +894,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
               }
 
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              // We indent even if we are immediately exiting in order to have a more intuitive
-              // layout.
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_PROCESSED), this.referencePath, moduleVersion));
+              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
               bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));

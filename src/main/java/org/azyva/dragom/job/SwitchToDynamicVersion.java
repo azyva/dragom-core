@@ -433,7 +433,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           try {
             visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
           } catch (RuntimeException re) {
-            SwitchToDynamicVersion.logger.error("An exception was thrown while visiting child Reference " + referenceChild + ". Skipping.", re);
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+            SwitchToDynamicVersion.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
             continue;
           }
 

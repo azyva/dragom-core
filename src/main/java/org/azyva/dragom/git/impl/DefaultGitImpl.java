@@ -188,8 +188,6 @@ public class DefaultGitImpl implements Git {
         commandLine.addArgument(arg, false);
       }
 
-      DefaultGitImpl.logger.trace(commandLine.toString());
-
       defaultExecutor = new DefaultExecutor();
       byteArrayOutputStreamOut = new ByteArrayOutputStream();
       byteArrayOutputStreamErr = new ByteArrayOutputStream();
@@ -198,9 +196,9 @@ public class DefaultGitImpl implements Git {
 
       if (pathWorkingDirectory != null) {
         defaultExecutor.setWorkingDirectory(pathWorkingDirectory.toFile());
-        DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + " within " + pathWorkingDirectory + '.');
+        DefaultGitImpl.logger.info("Invoking Git command " + commandLine + " within " + pathWorkingDirectory + '.');
       } else {
-        DefaultGitImpl.logger.trace("Invoking Git command " + commandLine + '.');
+        DefaultGitImpl.logger.info("Invoking Git command " + commandLine + '.');
       }
 
       try {
@@ -299,10 +297,10 @@ public class DefaultGitImpl implements Git {
     isReposExists = (this.executeGitCommand(new String[] {"ls-remote", this.reposUrl, "dummy"}, true, AllowExitCode.ALL, null, null, false) == 0);
 
     if (isReposExists) {
-      DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " exists.");
+      DefaultGitImpl.logger.info("Git repository " + this.reposUrl + " exists.");
       return true;
     } else {
-      DefaultGitImpl.logger.trace("Git repository " + this.reposUrl + " does not exist.");
+      DefaultGitImpl.logger.info("Git repository " + this.reposUrl + " does not exist.");
       return false;
     }
   }
@@ -520,10 +518,10 @@ public class DefaultGitImpl implements Git {
     // about the fact that the command is ambiguous.
     //TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
     if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) == 0) {
-      DefaultGitImpl.logger.trace("Version " + version + " exists.");
+      DefaultGitImpl.logger.info("Version " + version + " exists.");
       return true;
     } else {
-      DefaultGitImpl.logger.trace("Version " + version + " does not exist.");
+      DefaultGitImpl.logger.info("Version " + version + " does not exist.");
       return false;
     }
   }
