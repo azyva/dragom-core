@@ -66,6 +66,9 @@ import org.slf4j.LoggerFactory;
  * a file within the {@link ExecContext} workspace.
  */
 public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<WorkspacePlugin> {
+  /**
+   * Logger for the class.
+   */
   private static final Logger logger = LoggerFactory.getLogger(DefaultWorkspacePluginFactory.class);
 
   /**

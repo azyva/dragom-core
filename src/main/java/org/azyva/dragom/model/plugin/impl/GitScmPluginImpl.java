@@ -266,6 +266,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS = "ACCESS_REMOTE_REPOS";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
 
   /**
@@ -425,6 +430,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
   @Override
   public boolean isModuleExists() {
+    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), this.gitReposCompleteUrl, null, "ls-remote (isModuleExists)"));
     return this.getGit().isReposExists();
   }
 
@@ -462,6 +468,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         this.getGit().checkout(pathModuleWorkspace, version);
       }
     } else {
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "clone"));
+
       // version can be null.
       this.getGit().clone(null, version, pathModuleWorkspace);
 
@@ -550,6 +558,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         return;
       }
 
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "fetch" + ((refspec != null) ? (" refspec=" + refspec) : "")));
+
       // Causes the remote named "origin" to be used.
       reposUrl = null;
     }
@@ -635,7 +645,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       // We also perform a relatively useless push from the current workspace directory.
       // Since the remote repository has already been pushed-to above, the only benefit
-      // for this push is to update the remote tracking branche in the current workspace
+      // for this push is to update the remote tracking branch in the current workspace
       // directory.
       // TODO: May be optimized by only updating the remote tracking branch and not actually pushing nothing.
       this.gitPush(pathModuleWorkspace, "refs/heads/" + branch);
@@ -665,6 +675,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       GitScmPluginImpl.logger.trace("Pushing is disabled for module " + this.getModule() + " within " + pathModuleWorkspace + '.');
       return;
     }
+
+    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "push" + ((gitRef != null) ? (" gitRef=" + gitRef) : "")));
 
     // We always set the upstream tracking information (by passing gitRef) because
     // pushes can be delayed and new branches can be pushed on the call to this method
@@ -1440,7 +1452,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       try {
         message += " Dummy commit introduced to record the version attributes including the base version of the newly created version " + versionTarget + '.';
 
-        this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, true, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+        this.getGit().executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
         this.push(pathModuleWorkspace, "refs/heads/" + branch);
 
@@ -2005,7 +2017,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // Step 6: Perform the commit.
       //*********************************************************************************
 
-      this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, true, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+      this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
       this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
 
@@ -2091,7 +2103,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // Resume the merge by performing the final commit, but with a modified index
     // which represents the source Version state, effectivement replacing the
     // destination Version.
-    this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, true, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+    this.getGit().executeGitCommand(new String[] {"commit", "--no-edit"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
   }
@@ -2159,10 +2171,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       }
 
       if (isHttpProtocol) {
+        UserInteractionCallbackPlugin userInteractionCallbackPlugin;
         CredentialStorePlugin credentialStorePlugin;
         CredentialStorePlugin.Credentials credentials;
 
         runtimeProperty = runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_GIT_HTTP_USER);
+
+        userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
         credentialStorePlugin = execContext.getExecContextPlugin(CredentialStorePlugin.class);
 
@@ -2183,6 +2198,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
                 git.setReposUrl(GitScmPluginImpl.this.gitReposCompleteUrl);
                 git.setUser(user);
                 git.setPassword(password);
+
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, null, "ls-remote (validateCredentials), " + user));
 
                 return git.validateCredentials();
               }

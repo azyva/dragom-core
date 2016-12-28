@@ -298,6 +298,11 @@ public class RootManager {
     return true;
   }
 
+  /**
+   * Validates a ModuleVersion.
+   *
+   * @param moduleVersion ModuleVersion.
+   */
   private static void validateModuleVersion(ModuleVersion moduleVersion) {
     ExecContext execContext;
     Model model;

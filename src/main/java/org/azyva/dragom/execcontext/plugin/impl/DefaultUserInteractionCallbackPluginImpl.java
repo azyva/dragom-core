@@ -307,8 +307,8 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
       throw new RuntimeException("A WriterInfo is already active and has not been closed.");
     }
 
-    System.out.println();
     this.printWithIndent(info);
+    System.out.println();
     DefaultUserInteractionCallbackPluginImpl.logger.info("Information provided to user: " + info);
   }
 
@@ -331,7 +331,6 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
     this.validateBatchMode(prompt);
 
     System.out.println();
-    System.out.println();
     this.printWithIndent("##### Information request #####");
     this.printWithIndent(prompt);
     DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + prompt);
@@ -352,6 +351,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
       System.out.println("Information returned by user: " + info);
     }
 
+    System.out.println();
     System.out.println();
 
     DefaultUserInteractionCallbackPluginImpl.logger.info("Information returned by user: " + info);
@@ -386,7 +386,6 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
     this.validateBatchMode(prompt);
 
     System.out.println();
-    System.out.println();
     this.printWithIndent("##### Information request #####");
     this.printWithIndent(prompt);
     DefaultUserInteractionCallbackPluginImpl.logger.info("Information requested from user: " + prompt);
@@ -399,6 +398,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
     info = new String(arrayCharInfo);
 
+    System.out.println();
     System.out.println();
 
     return info;
@@ -415,7 +415,6 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
     this.validateBatchMode(prompt);
 
-    System.out.println();
     System.out.println();
     this.printWithIndent("##### Information request #####");
     this.printWithIndent(prompt);
@@ -438,6 +437,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
       System.out.println("Information returned by user: " + info);
     }
 
+    System.out.println();
     System.out.println();
 
     if (info.length() == 0) {

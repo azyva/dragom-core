@@ -36,6 +36,7 @@ import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.GetWorkspaceDirMode;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin.WorkspaceDirAccessMode;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.NodePath;
@@ -77,6 +78,19 @@ import org.azyva.dragom.util.Util;
  */
 public class Checkout extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
   /**
+   * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
+   * to switch the {@link Version} of a {@link Module} when a workspace directory
+   * already exists for another Version of the same Module.
+   */
+  private static final String RUNTIME_PROPERTY_SWITCH_MODULE_VERSION = "SWITCH_MODULE_VERSION";
+
+  /**
+   * Runtime property indicating to not checkout any {@link Version} of a
+   * {@link Module} when multiple Version's are matched to checkout. The possible
+   * values are true and false (or absent).
+   */
+  private static final String RUNTIME_PROPERTY_IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS = "IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS";
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_COMPUTING_LIST_MODULE_VERSION = "COMPUTING_LIST_MODULE_VERSION";
@@ -85,6 +99,11 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS = "MULTIPLE_MODULE_VERSIONS";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_NO_VERSION_CHECKED_OUT = "NO_VERSION_CHECKED_OUT";
 
   /**
    * See description in ResourceBundle.
@@ -127,13 +146,6 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
   private static final String MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION = "SWITCHING_MODULE_VERSION";
 
   /**
-   * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
-   * to switch the {@link Version} of a {@link Module} when a workspace directory
-   * already exists for another Version of the same Module.
-   */
-  private static final String RUNTIME_PROPERTY_SWITCH_MODULE_VERSION = "SWITCH_MODULE_VERSION";
-
-  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Checkout.class.getName() + "ResourceBundle");
@@ -170,8 +182,11 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     BuildReferenceGraph buildReferenceGraph;
     ReferenceGraph referenceGraph;
+    boolean indDoNotCheckoutMultipleVersions;
     List<ModuleVersion> listModuleVersion;
     WorkspacePlugin workspacePlugin;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    Model model;
 
     execContext = ExecContextHolder.get();
     userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
@@ -206,6 +221,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
     listModuleVersion = referenceGraph.getListModuleVersionMatched();
 
     workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
     if (!workspacePlugin.isSupportMultipleModuleVersion()) {
       Map<NodePath, List<Version>> mapModuleVersion;
@@ -228,6 +244,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
 
         listVersion.add(moduleVersion.getVersion());
       }
+
+      indDoNotCheckoutMultipleVersions = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, Checkout.RUNTIME_PROPERTY_IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS));
 
       // We reuse listModuleVersion for the new List of selected ModuleVersion's that
       // will be built.
@@ -256,6 +274,11 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
 
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MULTIPLE_MODULE_VERSIONS), mapEntry.getKey(), stringBuilder));
 
+          if (indDoNotCheckoutMultipleVersions) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_NO_VERSION_CHECKED_OUT), mapEntry.getKey()));
+            continue;
+          }
+
           versionSelected = null;
 
           do {
@@ -263,6 +286,11 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
 
             try {
               index = Integer.parseInt(selectedVersion);
+
+              // The user can enter 0 to mean to not checkout the ModuleVersion at all.
+              if (index == 0) {
+                break;
+              }
 
               if ((index < 1) || (index > mapEntry.getValue().size())) {
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_VERSION_INDEX_OUT_OF_BOUNDS), selectedVersion, 1, mapEntry.getValue().size()));
@@ -290,8 +318,9 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
             }
           } while (versionSelected == null);
 
-
-          listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
+          if (versionSelected != null) {
+            listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), versionSelected));
+          }
         } else {
           // If there is only one Version for the Module, we use it.
           listModuleVersion.add(new ModuleVersion(mapEntry.getKey(), mapEntry.getValue().get(0)));
@@ -303,8 +332,9 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
      * Perform the actual checkout for the selected ModuleVersion's
      * *******************************************************************************/
 
+    model = execContext.getModel();
+
     for (ModuleVersion moduleVersion: listModuleVersion) {
-      RuntimePropertiesPlugin runtimePropertiesPlugin;
       Module module;
       ScmPlugin scmPlugin;
       WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
@@ -312,8 +342,7 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
       AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
       Path pathModuleWorkspace;
 
-      runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-      module = ExecContextHolder.get().getModel().getModule(moduleVersion.getNodePath());
+      module = model.getModule(moduleVersion.getNodePath());
       scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
       workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);

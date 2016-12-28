@@ -19,10 +19,8 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.regex.Matcher;
 
@@ -36,6 +34,7 @@ import org.azyva.dragom.model.ModuleBuilder;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.UndefinedDescendantNodeManagerPlugin;
 import org.azyva.dragom.util.Util;
+import org.azyva.dragom.util.WormFile;
 
 /**
  * Simple implementation of {@link UndefinedDescendantNodeManagerPlugin}.
@@ -79,6 +78,8 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
   /**
    * Transient data for storing the module existence cache file name. This is to
    * avoid having to recompute its name each time it is needed.
+   *
+   * <p>This is a {@link org.azyva.dragom.util.WormFile.WormFileCache}.
    */
   private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCacheFile";
 
@@ -145,6 +146,8 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
     ExecContext execContext;
     Properties propertiesModuleExist;
     String moduleExistenceCacheFile;
+    WormFile.WormFileCache wormFileCacheModuleExistanceCache;
+    WormFile.AccessHandle accessHandle;
     String stringBoolean;
     ScmPlugin scmPlugin;
 
@@ -162,18 +165,26 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
           moduleExistenceCacheFile = moduleExistenceCacheFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
         }
 
-        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE, moduleExistenceCacheFile);
+        wormFileCacheModuleExistanceCache = WormFile.getCache(Paths.get(moduleExistenceCacheFile));
+        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE, wormFileCacheModuleExistanceCache);
 
         propertiesModuleExist = new Properties();
 
         execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE, propertiesModuleExist);
+      } else {
+        wormFileCacheModuleExistanceCache = (WormFile.WormFileCache)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE);
+      }
 
-        if ((new File(moduleExistenceCacheFile)).exists()) {
-          try {
-            propertiesModuleExist.load(new FileInputStream(moduleExistenceCacheFile));
-          } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
-          }
+      if (wormFileCacheModuleExistanceCache.isModified() && wormFileCacheModuleExistanceCache.isExists()) {
+        accessHandle = wormFileCacheModuleExistanceCache.reserveAccess(false);
+
+        try {
+          propertiesModuleExist.clear();
+          propertiesModuleExist.load(wormFileCacheModuleExistanceCache.getInputStream());
+        } catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        } finally {
+          accessHandle.release();
         }
       }
 
@@ -182,15 +193,22 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
       if (stringBoolean == null) {
         boolean indModuleExists;
 
-        scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-        indModuleExists = scmPlugin.isModuleExists();
-        propertiesModuleExist.setProperty(module.getNodePath().toString(), Boolean.toString(indModuleExists));
-        moduleExistenceCacheFile = (String)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE);
+        accessHandle = wormFileCacheModuleExistanceCache.reserveAccess(true);
 
         try {
-          propertiesModuleExist.store(new FileOutputStream(moduleExistenceCacheFile), null);
+          if (wormFileCacheModuleExistanceCache.isModified() && wormFileCacheModuleExistanceCache.isExists()) {
+            propertiesModuleExist.clear();
+            propertiesModuleExist.load(wormFileCacheModuleExistanceCache.getInputStream());
+          }
+
+          scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+          indModuleExists = scmPlugin.isModuleExists();
+          propertiesModuleExist.setProperty(module.getNodePath().toString(), Boolean.toString(indModuleExists));
+          propertiesModuleExist.store(wormFileCacheModuleExistanceCache.getOutputStream(), null);
         } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
+          throw new RuntimeException(ioe);
+        } finally {
+          accessHandle.release();
         }
 
         return indModuleExists;
