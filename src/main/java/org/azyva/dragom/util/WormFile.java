@@ -34,7 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * <ul>
  * <li>Multiple processes may want to update the file simultaneously
  * <li>A process may want to update the file while it is being read by another
- * </li>
+ * </ul>
  * so that synchronization is required. Also in some cases, synchronization may be
  * required between threads of the same process. Inter-process and inter-thread
  * synchronization functionality is provided for that purpose.
