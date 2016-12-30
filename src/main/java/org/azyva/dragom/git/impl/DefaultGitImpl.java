@@ -395,7 +395,7 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public void fetch(Path pathWorkspace, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch) {
+  public void fetch(Path pathWorkspace, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch, boolean indForce) {
     List<String> listArg;
 
     listArg = new ArrayList<String>();
@@ -404,6 +404,10 @@ public class DefaultGitImpl implements Git {
 
     if (indFetchingIntoCurrentBranch) {
       listArg.add("--update-head-ok");
+    }
+
+    if (indForce) {
+      listArg.add("--force");
     }
 
     if (reposUrl != null) {

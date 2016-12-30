@@ -46,6 +46,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -1320,6 +1321,8 @@ public class Pom {
 
       try {
         value = this.evaluateProperty(matcher.group(2), pomResolver);
+      } catch (RuntimeExceptionUserError reue) {
+        throw reue;
       } catch (RuntimeException re) {
         throw new RuntimeException("Could not evaluate property " + matcher.group(2) + " while resolving string " + string + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }
@@ -1412,12 +1415,16 @@ public class Pom {
 
       try {
         pom = pomResolver.resolve(referenceArtifactParent.groupId, referenceArtifactParent.artifactId, referenceArtifactParent.version);
+      } catch (RuntimeExceptionUserError reue) {
+        throw reue;
       } catch (RuntimeException re) {
         throw new RuntimeException("POM could not be resolved for parent artifact " + referenceArtifactParent.groupId + ':' + referenceArtifactParent.artifactId + ':' + referenceArtifactParent.version + " while evaluating property " + property + " within artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }
 
       try {
         return pom.evaluateProperty(property, pomResolver);
+      } catch (RuntimeExceptionUserError reue) {
+        throw reue;
       } catch (RuntimeException re) {
         throw new RuntimeException("Could not evaluate property " + property + " within parent artifact following it missing in the context of artifact " + this.getEffectiveGroupId() + ':' + this.getArtifactId() + ':' + this.getEffectiveVersion() + " (" + this.getPathPom() + ").", re);
       }

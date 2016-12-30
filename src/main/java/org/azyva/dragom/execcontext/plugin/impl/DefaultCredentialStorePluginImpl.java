@@ -201,7 +201,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
       pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
       pathCredentialFile = pathMetadataDir.resolve(DefaultCredentialStorePluginImpl.DEFAULT_CREDENTIAL_FILE);
     } else {
-      stringCredentialFile = stringCredentialFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+      stringCredentialFile = stringCredentialFile.replace("~", Matcher.quoteReplacement(System.getProperty("user.home")));
       pathCredentialFile = Paths.get(stringCredentialFile);
     }
 
@@ -383,7 +383,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
         }
       }
 
-      if ((credentialValidator != null) && !credentialValidator.validateCredentials(resource, user, password)) {
+      if (credentialValidator != null) {
         if (!Util.isNotNullAndTrue((Boolean)execContext.getTransientData(DefaultCredentialStorePluginImpl.TRANSIENT_DATA_PREFIX_CREDENTIALS_ALREADY_VALIDATED + resourceInfo.realm + '.' + user))) {
           if (!credentialValidator.validateCredentials(resource, user, password)) {
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_KEY_USER_PASSWORD_INVALID), user, resource));

@@ -93,6 +93,11 @@ public class MapXmlPluginDefConfigAdapter extends XmlAdapter<ListPluginDefConfig
     // LinkedHashMap is used to preserve insertion order.
     mapPluginDefConfigXml = new LinkedHashMap<PluginKey, XmlPluginDefConfig>();
 
+    // May be null when the XML file contains an empty containing element.
+    if (listPluginDefConfigXml.getListPluginDefConfigXml() == null) {
+      return mapPluginDefConfigXml;
+    }
+
     for (XmlPluginDefConfig xmlPluginDefConfig: listPluginDefConfigXml.getListPluginDefConfigXml()) {
       PluginKey pluginKey;
 

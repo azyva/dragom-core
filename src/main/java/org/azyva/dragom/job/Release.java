@@ -223,7 +223,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
      * changed.
      * <p>
      * This state is somewhat inconsistent since the {@link Version} at the source
-     * level, will still be dynamic, which the ArtifactVersion will be static. But
+     * level, will still be dynamic, and the ArtifactVersion will be static. But
      * this is supported and {@link SwitchToDynamicVersion} can be used to "correct"
      * the ArtifactVersion.
      * <p>
@@ -411,10 +411,11 @@ public class Release extends RootModuleVersionJobAbstractImpl {
           // an internal working directory which we will not modify (for now).
           // ScmPlugin.checkoutSystem does that.
           pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
+        } catch (RuntimeExceptionUserError reue) {
+          throw reue;
         } catch (RuntimeException re) {
           throw new RuntimeException("Could not checkout Version " + reference.getModuleVersion().getVersion() + " of Module " + module + '.', re);
         }
-
 
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
           throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
@@ -465,10 +466,20 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
           try {
             indVersionChanged = this.visitModuleVersionInternal(referenceChild, byReferenceVersionChild, indRelease);
+          } catch (RuntimeExceptionUserError reue) {
+            throw reue;
           } catch (RuntimeException re) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
-            Release.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
-            continue;
+            if (indRelease) {
+              Release.logger.error("Exception thrown while visiting " + referenceChild + " during the release process. Winding back the call stack to abort the release of the initial matching ModuleVersion.");
+
+              // We rethrow the exception until it is caught while not performing the actual
+              // release so that the matched ModuleVersion can be safely skipped.
+              throw re;
+            } else {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+              Release.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
+              continue;
+            }
           }
 
 

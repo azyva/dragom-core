@@ -203,8 +203,14 @@ public interface Git {
    *   refspec is specifed and ends with ":refs/heads/...". In such a case this
    *   method specifies the --update-head-ok option to "git fetch" (otherwise git
    *   complains that fetching into the current local branch is not allowed).
+   * @param indForce Indicates to include the --force option. This is to handle the
+   *   special case where fetch is used to update the remote references in a main
+   *   workspace directory which has just been cloned from a system workspace
+   *   directory. This special clone has made the remote references the main
+   *   references in the original system workspace directory, which may be ahead
+   *   of the true remote ones.
    */
-  void fetch(Path path, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch);
+  void fetch(Path path, String reposUrl, String refspec, boolean indFetchingIntoCurrentBranch, boolean indForce);
 
   /**
    * Git pull.

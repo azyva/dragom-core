@@ -156,6 +156,11 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
     // LinkedHashMap is used to preserve insertion order.
     mapPropertyDefConfigXml = new LinkedHashMap<String, XmlPropertyDefConfig>();
 
+    // May be null when the XML file contains an empty containing element.
+    if (listProperty.getListProperty() == null) {
+    	return mapPropertyDefConfigXml;
+    }
+
     // In unmarshal, the List is in fact a List<Node> and not a List<JAXBElement> as
     // declared. It seems we must live with this incoherence if elements with variable
     // names are to be supported.

@@ -218,7 +218,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     MERGE,
 
     /**
-     * Normal merge, excluding version-chaning commits, that is those which have the
+     * Normal merge, excluding version-changing commits, that is those which have the
      * dragom-version-change attribute set.
      *
      * <p>This is so that each {@link Version} maintains its own
@@ -392,7 +392,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // actual merge.
       //********************************************************************************
 
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
         // The return value not important since the caller is expected to check for
@@ -474,7 +474,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         break;
 
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
-        if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
+        if (!scmPlugin.getListCommitDiverge(moduleVersionDest.getVersion(), moduleVersionSrc.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
           // Will have call Util.setAbort in case we must not continue.

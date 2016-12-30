@@ -174,7 +174,8 @@ public class RootManager {
   public static boolean addModuleVersion(ModuleVersion moduleVersion, boolean indAllowDuplicateModule) {
     List<ModuleVersion> listModuleVersion;
 
-    RootManager.validateModuleVersion(moduleVersion);
+    //TODO: Probably should remove alltogether. Wastes time and not really useful.
+    //RootManager.validateModuleVersion(moduleVersion);
 
     listModuleVersion = RootManager.getListModuleVersion();
 
@@ -238,7 +239,8 @@ public class RootManager {
   public static boolean replaceModuleVersion(ModuleVersion moduleVersionOrg, ModuleVersion moduleVersionNew) {
     List<ModuleVersion> listModuleVersion;
 
-    RootManager.validateModuleVersion(moduleVersionNew);
+    //TODO: Probably should remove alltogether. Wastes time and not really useful.
+    //RootManager.validateModuleVersion(moduleVersionNew);
 
     listModuleVersion = RootManager.getListModuleVersion();
 
@@ -303,7 +305,7 @@ public class RootManager {
    *
    * @param moduleVersion ModuleVersion.
    */
-  private static void validateModuleVersion(ModuleVersion moduleVersion) {
+  public static void validateModuleVersion(ModuleVersion moduleVersion) {
     ExecContext execContext;
     Model model;
     Module module;

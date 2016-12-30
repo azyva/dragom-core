@@ -612,6 +612,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
       try {
         indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
+      } catch (RuntimeExceptionUserError reue) {
+        throw reue;
       } catch (RuntimeException re) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), moduleVersion));
         RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + moduleVersion + '.', re);
@@ -736,6 +738,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
         // to use it. If not, we need an internal working directory.
         // ScmPlugin.checkoutSystem does just that.
         pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
+      } catch (RuntimeExceptionUserError reue) {
+        throw reue;
       } catch (RuntimeException re) {
         throw new RuntimeException("Could not checkout Version " + moduleVersion.getVersion() + " of Module " + module + '.', re);
       }
@@ -870,6 +874,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
             // recursively invoking the same non-overridden method and we know this parameter
             // is actually not used.
             this.visitModuleVersion(referenceChild, null);
+          } catch (RuntimeExceptionUserError reue) {
+            throw reue;
           } catch (RuntimeException re) {
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
             RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + referenceChild + '.', re);

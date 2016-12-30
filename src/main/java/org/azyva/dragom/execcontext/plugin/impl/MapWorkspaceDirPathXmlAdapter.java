@@ -133,6 +133,11 @@ public class MapWorkspaceDirPathXmlAdapter extends XmlAdapter<ListWorkspaceDirPa
 
     mapWorkspaceDirPath = new HashMap<WorkspaceDir, Path>();
 
+    // May be null when the XML file contains an empty containing element.
+    if (listWorkspaceDirPath.getListWorkspaceDirPath() == null) {
+      return mapWorkspaceDirPath;
+    }
+
     for (WorkspaceDirPath workspaceDirPath: listWorkspaceDirPath.getListWorkspaceDirPath()) {
       WorkspaceDir workspaceDir;
       Class<? extends WorkspaceDir> classWorkspaceDir;

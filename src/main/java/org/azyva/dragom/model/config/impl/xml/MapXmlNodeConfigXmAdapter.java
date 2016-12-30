@@ -87,6 +87,11 @@ public class MapXmlNodeConfigXmAdapter extends XmlAdapter<ListNode, Map<String, 
     // LinkedHashMap is used to preserve insertion order.
     mapNodeConfigXml = new LinkedHashMap<String, XmlNodeConfig>();
 
+    // May be null when the XML file contains an empty containing element.
+    if (listNode.getListXmlNodeConfig() == null) {
+    	return mapNodeConfigXml;
+    }
+
     for (XmlNodeConfig xmlNodeConfig: listNode.getListXmlNodeConfig()) {
       mapNodeConfigXml.put(xmlNodeConfig.getName(), xmlNodeConfig);
     }
