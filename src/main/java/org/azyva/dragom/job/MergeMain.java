@@ -423,7 +423,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
         if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace));
 
           // Will have call Util.setAbort in case we must not continue.
           MergeMain.handleContinueOnMergeConflicts();
