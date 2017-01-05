@@ -267,7 +267,7 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
             // REUSE_PLUGIN_ID runtime property should also be set. But since these
             // properties are independent and stored externally, it can happen that they
             // are not synchronized. We make an adjustment here to avoid problems.
-            alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.ASK;
+            alwaysNeverAskUserResponseCanReusePluginId = AlwaysNeverAskUserResponse.YES_ASK;
           }
         }
 

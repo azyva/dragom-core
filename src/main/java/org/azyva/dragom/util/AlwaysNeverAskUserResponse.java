@@ -21,22 +21,34 @@ package org.azyva.dragom.util;
 
 /**
  * Enumerates the possible responses to a Always/Never/Ask type of user input.
+ *
+ * <p>Generally also persisted to introduce an automatic response to a subsequent
+ * similar user input.
  */
 public enum AlwaysNeverAskUserResponse {
   /**
-   * Indicates to silently assume a positive response.
+   * When used as a user input, indicates a positive response including to
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to silently assume a positive response.
    */
   ALWAYS,
 
   /**
-   * Indicates to silently assume a negative response.
+   * When used as a user input, indicates a negative response including to
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to silently assume a negative response.
    */
   NEVER,
 
   /**
-   * Indicates to ask the user.
+   * When used as a user input, indicates a positive response, but to ask again for
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to ask the user with positive response by default.
    */
-  ASK;
+  YES_ASK;
 
   /**
    * @return Indicates if ALWAYS.
@@ -56,7 +68,14 @@ public enum AlwaysNeverAskUserResponse {
    * @return Indicates if ASK.
    */
   public boolean isAsk() {
-    return this == ASK;
+    return this == YES_ASK;
+  }
+
+  /**
+   * @return Indicates if ALWAYS or YES_ASK.
+   */
+  public boolean isYes() {
+    return (this == ALWAYS) || (this == YES_ASK);
   }
 
   /**
@@ -68,7 +87,7 @@ public enum AlwaysNeverAskUserResponse {
    */
   public static AlwaysNeverAskUserResponse valueOfWithAskDefault(String value) {
     if (value == null) {
-      return AlwaysNeverAskUserResponse.ASK;
+      return AlwaysNeverAskUserResponse.YES_ASK;
     } else {
       return AlwaysNeverAskUserResponse.valueOf(value);
     }

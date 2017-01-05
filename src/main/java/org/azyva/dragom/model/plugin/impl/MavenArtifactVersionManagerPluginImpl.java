@@ -111,7 +111,7 @@ public class MavenArtifactVersionManagerPluginImpl extends ModulePluginAbstractI
     // are external. The version must be set on all internal dependencies.
     setArtifactGroupIdAggregation = pomAggregation.getSetArtifactGroupId();
 
-    newVersion = artifactVersion.getVersion();
+    newVersion = artifactVersion.toString();
 
     for (Pom pom: pomAggregation.getCollectionPom()) {
       String version;

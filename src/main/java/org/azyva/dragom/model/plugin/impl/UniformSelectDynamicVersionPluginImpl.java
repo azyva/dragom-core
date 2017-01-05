@@ -221,7 +221,7 @@ public class UniformSelectDynamicVersionPluginImpl extends SelectDynamicVersionP
             // REUSE_BASE_VERSION runtime property should also be set. But since these
             // properties are independent and stored externally, it can happen that they
             // are not synchronized. We make an adjustment here to avoid problems.
-            alwaysNeverAskUserResponseCanReuseBaseVersion = AlwaysNeverAskUserResponse.ASK;
+            alwaysNeverAskUserResponseCanReuseBaseVersion = AlwaysNeverAskUserResponse.YES_ASK;
           }
         }
 

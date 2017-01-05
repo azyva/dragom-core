@@ -210,7 +210,7 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
         // REUSE_DYNAMIC_VERSION runtime property should also be set. But since these
         // properties are independent and stored externally, it can happen that they
         // are not synchronized. We make an adjustment here to avoid problems.
-        alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.ASK;
+        alwaysNeverAskUserResponseCanReuseDynamicVersion = AlwaysNeverAskUserResponse.YES_ASK;
       }
     }
 

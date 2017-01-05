@@ -453,10 +453,19 @@ public class DefaultGitImpl implements Git {
       throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
     }
 
+    branch = "refs/remotes/origin/" + branch;
+
+    // We add "--" as a last argument since when a ref does no exist, Git complains
+    // about the fact that the command is ambiguous.
+    if (this.executeGitCommand(new String[] {"rev-parse", branch, "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) != 0) {
+      DefaultGitImpl.logger.info("No rebase performed in " + pathWorkspace + " since upstream branch " + branch + " does not exist.");
+      return false;
+    }
+
     // Rebase onto the upstream tracking branch corresponding to the current branch.
-    // This is the default behavior, but specifying @{u} is more symmetrical with the
-    // merge mode below.
-    exitCode = this.executeGitCommand(new String[] {"rebase", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null, false);
+    // This is the default behavior, but specifying the branch is more symmetrical
+    // with merge mode below.
+    exitCode = this.executeGitCommand(new String[] {"rebase", branch}, false, AllowExitCode.ONE, pathWorkspace, null, false);
 
     return exitCode == 1;
   }
@@ -472,7 +481,16 @@ public class DefaultGitImpl implements Git {
       throw new RuntimeException("Within " + pathWorkspace + " the HEAD is not a branch.");
     }
 
-    exitCode = this.executeGitCommand(new String[] {"merge", "@{u}"}, false, AllowExitCode.ONE, pathWorkspace, null, false);
+    branch = "refs/remotes/origin/" + branch;
+
+    // We add "--" as a last argument since when a ref does no exist, Git complains
+    // about the fact that the command is ambiguous.
+    if (this.executeGitCommand(new String[] {"rev-parse", branch, "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) != 0) {
+      DefaultGitImpl.logger.info("No merge performed in " + pathWorkspace + " since upstream branch " + branch + " does not exist.");
+      return false;
+    }
+
+    exitCode = this.executeGitCommand(new String[] {"merge", branch}, false, AllowExitCode.ONE, pathWorkspace, null, false);
 
     return exitCode == 1;
   }
@@ -520,8 +538,7 @@ public class DefaultGitImpl implements Git {
   public boolean isVersionExists(Path pathWorkspace, Version version) {
     // We add "--" as a last argument since when a ref does no exist, Git complains
     // about the fact that the command is ambiguous.
-    //TODO: This is probably right, but sounds strange: If version is not pushed yet, it is not remote and does not exist.
-    if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) == 0) {
+    if (this.executeGitCommand(new String[] {"rev-parse", this.convertToRef(pathWorkspace, version), "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) == 0) {
       DefaultGitImpl.logger.info("Version " + version + " exists.");
       return true;
     } else {
@@ -678,17 +695,17 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch) {
-    this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+  public void createBranch(Path pathWorkspace, String branch, boolean indSwitch) {
+    this.executeGitCommand(new String[] {"branch", branch}, false, AllowExitCode.NONE, pathWorkspace, null, false);
 
     if (indSwitch) {
-      this.checkout(pathModuleWorkspace, new Version(VersionType.DYNAMIC, branch));
+      this.checkout(pathWorkspace, new Version(VersionType.DYNAMIC, branch));
     }
   }
 
   @Override
-  public void createTag(Path pathModuleWorkspace, String tag, String message) {
-    this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+  public void createTag(Path pathWorkspace, String tag, String message) {
+    this.executeGitCommand(new String[] {"tag", "-m", message, tag}, false, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override
@@ -734,12 +751,22 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public String convertToRef(Version version) {
+  public String convertToRef(Path pathWorkspace, Version version) {
     if (version.getVersionType() == VersionType.STATIC) {
       // "^{tag}" ensures we consider only annotated tags.
       return "refs/tags/" + version.getVersion() + "^{tag}";
     } else {
-      return "refs/remotes/origin/" + version.getVersion();
+      String ref;
+
+      ref = "refs/heads/" + version.getVersion();
+
+      // We add "--" as a last argument since when a ref does no exist, Git complains
+      // about the fact that the command is ambiguous.
+      if (this.executeGitCommand(new String[] {"rev-parse", ref, "--"}, false, AllowExitCode.ALL, pathWorkspace, null, false) == 0) {
+        return ref;
+      } else {
+        return "refs/remotes/origin/" + version.getVersion();
+      }
     }
   }
 }

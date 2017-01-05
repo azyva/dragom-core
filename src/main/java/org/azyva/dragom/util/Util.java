@@ -191,41 +191,6 @@ public final class Util {
   /**
    * See description in ResourceBundle.
    */
-  public static final String MSG_PATTERN_KEY_ALWAYS_RESPONSE = "ALWAYS_RESPONSE";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_NEVER_RESPONSE = "NEVER_RESPONSE";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_ASK_RESPONSE = "ASK_RESPONSE";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_YES_ASK_RESPONSE = "YES_ASK_RESPONSE";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_NO_ASK_RESPONSE = "NO_ASK_RESPONSE";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  public static final String MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES = "YES_ALWAYS_NO_RESPONSE_CHOICES";
-
-  /**
-   * See description in ResourceBundle.
-   */
   public static final String MSG_PATTERN_KEY_YES_RESPONSE = "YES_RESPONSE";
 
   /**
@@ -236,7 +201,22 @@ public final class Util {
   /**
    * See description in ResourceBundle.
    */
+  public static final String MSG_PATTERN_KEY_NEVER_RESPONSE = "NEVER_RESPONSE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES";
+
+  /**
+   * See description in ResourceBundle.
+   */
   public static final String MSG_PATTERN_KEY_NO_RESPONSE = "NO_RESPONSE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  public static final String MSG_PATTERN_KEY_YES_ALWAYS_NO_RESPONSE_CHOICES = "YES_ALWAYS_NO_RESPONSE_CHOICES";
 
   /**
    * See description in ResourceBundle.
@@ -578,15 +558,14 @@ public final class Util {
   /**
    * Facilitates letting the user input a AlwaysNeverAskUserResponse.
    *
-   * If info ends with "*" it is replaced with
-   * " (Y(es always), N(ever), A(sk again)) [&lt;default&gt;]? " where &lt;default&gt;
-   * is "Y", "N" or "A" depending on alwaysNeverAskUserResponseDefaultValue.
+   * If info ends with "*" it is replaced with an appropriate response choice
+   * string.
    *
-   * As a convenience, "1" and "0" can also be entered by the user to mean "Yes
-   * always" and "Never" respectively.
+   * As a convenience, "1" and "0" can also be entered by the user to mean "ALWAYS"
+   * and "NEVER" respectively.
    *
    * The user can also enter the string value of the enum constants ("ALWAYS",
-   * "NEVER" and "ASK").
+   * "NEVER" and "YES_ASK").
    *
    * @param userInteractionCallbackPlugin UserInteractionCallbackPlugin.
    * @param prompt See corresponding parameter in
@@ -605,9 +584,9 @@ public final class Util {
     AlwaysNeverAskUserResponse alwaysNeverAskUserResponse;
 
     alwaysNeverAskResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES);
-    alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
+    alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
     neverResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
-    askResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ASK_RESPONSE);
+    askResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
 
     if (prompt.endsWith("*")) {
       String defaultValue = null;
@@ -621,7 +600,7 @@ public final class Util {
         defaultValue = neverResponse;
         break;
 
-      case ASK:
+      case YES_ASK:
         defaultValue = askResponse;
         break;
       }
@@ -639,12 +618,12 @@ public final class Util {
       try {
         alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOf(userResponse);
       } catch (IllegalArgumentException iae) {
-        if (userResponse.equals(alwaysResponse)) {
+        if (userResponse.equals(alwaysResponse) || userResponse.equals("1")) {
           alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.ALWAYS;
-        } else if (userResponse.equals(neverResponse)) {
+        } else if (userResponse.equals(neverResponse) || userResponse.equals("0")) {
             alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.NEVER;
         } else if (userResponse.equals(askResponse)) {
-          alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.ASK;
+          alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.YES_ASK;
         }
       }
 
@@ -687,7 +666,7 @@ public final class Util {
     alwaysNeverAskUserResponse = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(null, runtimeProperty));
 
     if (alwaysNeverAskUserResponse.isAsk()) {
-      alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, prompt, AlwaysNeverAskUserResponse.ASK);
+      alwaysNeverAskUserResponse = Util.getInfoAlwaysNeverAskUserResponse(userInteractionCallbackPlugin, prompt, AlwaysNeverAskUserResponse.YES_ASK);
 
       if (!alwaysNeverAskUserResponse.isAsk()) {
         runtimePropertiesPlugin.setProperty(null, runtimeProperty, alwaysNeverAskUserResponse.toString());
@@ -700,12 +679,11 @@ public final class Util {
   /**
    * Facilitates letting the user input a AlwaysNeverYesNoAskUserResponse.
    *
-   * If info ends with "*" it is replaced with
-   * " (Y(es always), N(ever), YA (Yes, Ask again), NA (No, Ask again)) [&lt;default&gt;]? "
-   * where &lt;default&gt; is "Y", "N", "YA" or "NA" depending on alwaysNeverYesNoAskUserResponseDefaultValue.
+   * If info ends with "*" it is replaced with an appropriate response choice
+   * string.
    *
-   * As a convenience, "1" and "0" can also be entered by the user to mean "Yes
-   * always" and "Never" respectively.
+   * As a convenience, "1" and "0" can also be entered by the user to mean "ALWAYS"
+   * and "NEVER" respectively.
    *
    * The user can also enter the string value of the enum constants ("ALWAYS",
    * "NEVER", "YES_ASK" and "NO_ASK").
@@ -728,10 +706,10 @@ public final class Util {
     AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
 
     alwaysNeverYesNoAskResponseChoices = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_NEVER_YES_NO_ASK_RESPONSE_CHOICES);
-    alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_ALWAYS_RESPONSE);
+    alwaysResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ALWAYS_RESPONSE);
     neverResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NEVER_RESPONSE);
-    yesAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_ASK_RESPONSE);
-    noAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_ASK_RESPONSE);
+    yesAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_YES_RESPONSE);
+    noAskResponse = Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_NO_RESPONSE);
 
     if (prompt.endsWith("*")) {
       String defaultValue = null;
@@ -836,12 +814,11 @@ public final class Util {
   /**
    * Facilitates letting the user input a YesAlwaysNoUserResponse.
    *
-   * If info ends with "*" it is replaced with
-   * " (Y(es), A(ways), N(o)) [&lt;default&gt;]? " where &lt;default&gt; is
-   * "Y", "A" or "N" depending on yesAlwaysNoUserResponseDefaultValue.
+   * If info ends with "*" it is replaced with an appropriate response choice
+   * string.
    *
-   * As a convenience, "1" and "0" can also be entered by the user to mean "Yes"
-   * and "No" respectively.
+   * As a convenience, "1" and "0" can also be entered by the user to mean
+   * "YES_ALWAYS" and "NO" respectively.
    *
    * The user can also enter the string value of the enum constants ("YES",
    * "YES_ALWAYS" and "NO").
@@ -900,9 +877,9 @@ public final class Util {
       try {
         yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.valueOf(userResponse);
       } catch (IllegalArgumentException iae) {
-        if (userResponse.equals(yesResponse) || userResponse.equals("1")) {
+        if (userResponse.equals(yesResponse)) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES;
-        } else if (userResponse.equals(yesAlwaysResponse)) {
+        } else if (userResponse.equals(yesAlwaysResponse) || userResponse.equals("1")) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES_ALWAYS;
         } else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
@@ -924,12 +901,11 @@ public final class Util {
    * Facilitates letting the user input a YesAlwaysNoUserResponse with support for
    * "no" and "abort" responses.
    *
-   * If info ends with "*" it is replaced with
-   * " (Y(es), A(ways), N(o), B(aBort)) [&lt;default&gt;]? " where &lt;default&gt; is
-   * "Y", "A", "N" or "B" depending on yesAlwaysNoUserResponseDefaultValue.
+   * If info ends with "*" it is replaced with an appropriate response choice
+   * string.
    *
-   * As a convenience, "1" and "0" can also be entered by the user to mean "Yes"
-   * and "No" respectively.
+   * As a convenience, "1" and "0" can also be entered by the user to mean
+   * "YES_ALWAYS" and "NO_ABORT" respectively.
    *
    * The user can also enter the string value of the enum constants ("YES",
    * "YES_ALWAYS", "NO" and "NO_ABORT").
@@ -991,13 +967,13 @@ public final class Util {
       try {
         yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.valueOf(userResponse);
       } catch (IllegalArgumentException iae) {
-        if (userResponse.equals(yesResponse) || userResponse.equals("1")) {
+        if (userResponse.equals(yesResponse)) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES;
-        } else if (userResponse.equals(yesAlwaysResponse)) {
+        } else if (userResponse.equals(yesAlwaysResponse) || userResponse.equals("1")) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.YES_ALWAYS;
-        } else if (userResponse.equals(noResponse) || userResponse.equals("0")) {
+        } else if (userResponse.equals(noResponse)) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO;
-        } else if (userResponse.equals(noAbortResponse)) {
+        } else if (userResponse.equals(noAbortResponse) || userResponse.equals("0")) {
           yesAlwaysNoUserResponse = YesAlwaysNoUserResponse.NO_ABORT;
         }
       }
@@ -1015,7 +991,7 @@ public final class Util {
 
   /**
    * This method is very similar to getInfoYesAlwaysNoUserResponse except that it
-   * does not support the "Always" response. It still returns a
+   * does not support the "YES_ALWAYS" response. It still returns a
    * YesAlwaysNoUserResponse but YesAlwaysNoUserResponse.YES_ALWAYS will not be
    * returned.
    *

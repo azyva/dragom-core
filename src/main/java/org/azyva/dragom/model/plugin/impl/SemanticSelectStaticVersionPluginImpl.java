@@ -299,7 +299,7 @@ public class SemanticSelectStaticVersionPluginImpl extends SelectStaticVersionPl
               // the REUSE_NEW_SEMANTIC_VERSION_TYPE runtime property should also be set. But
               // since these properties are independent and stored externally, it can happen
               // that they are not synchronized. We make an adjustment here to avoid problems.
-              alwaysNeverAskUserResponseCanReuseNewSemanticVersionType = AlwaysNeverAskUserResponse.ASK;
+              alwaysNeverAskUserResponseCanReuseNewSemanticVersionType = AlwaysNeverAskUserResponse.YES_ASK;
             }
           }
 

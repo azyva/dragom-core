@@ -148,7 +148,7 @@ public class UniformSelectStaticVersionPluginImpl extends SelectStaticVersionPlu
         // REUSE_STATIC_VERSION_PREFIX runtime property should also be set. But since these
         // properties are independent and stored externally, it can happen that they
         // are not synchronized. We make an adjustment here to avoid problems.
-        alwaysNeverAskUserResponseCanReuseStaticVersionPrefix = AlwaysNeverAskUserResponse.ASK;
+        alwaysNeverAskUserResponseCanReuseStaticVersionPrefix = AlwaysNeverAskUserResponse.YES_ASK;
       }
     }
 

@@ -324,7 +324,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           // REUSE_DEST_VERSION runtime property should also be set. But since these
           // properties are independent and stored externally, it can happen that they
           // are not synchronized. We make an adjustment here to avoid problems.
-          alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.ASK;
+          alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.YES_ASK;
         }
       }
 
@@ -534,7 +534,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     case NEVER:
       Util.setAbort();
       break;
-    case ASK:
+    case YES_ASK:
       break;
     }
   }

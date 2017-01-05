@@ -317,21 +317,21 @@ public interface Git {
   /**
    * Creates a branch.
    *
-   * @param pathModuleWorkspace Path to the workspace.
+   * @param pathWorkspace Path to the workspace.
    * @param branch Branch.
    * @param indSwitch Indicates whether we must switch (checkout) to the new
    *   branch.
    */
-  void createBranch(Path pathModuleWorkspace, String branch, boolean indSwitch);
+  void createBranch(Path pathWorkspace, String branch, boolean indSwitch);
 
   /**
    * Creates a tag.
    *
-   * @param pathModuleWorkspace Path to the workspace.
+   * @param pathWorkspace Path to the workspace.
    * @param tag Tag.
    * @param message Tag message.
    */
-  void createTag(Path pathModuleWorkspace, String tag, String message);
+  void createTag(Path pathWorkspace, String tag, String message);
 
   /**
    * Synchronizes the working copy with the index and commits.
@@ -345,13 +345,16 @@ public interface Git {
   void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush);
 
   /**
-   * Converts a {@link Version} to a Git reference such as refs/tags/&lt;tag&gt; or
-   * refs/remotes/origin/&lt;branch&gt;.
+   * Converts a {@link Version} to a Git reference such as refs/tags/&lt;tag&gt; if
+   * the Version is static, or refs/remotes/origin/&lt;branch&gt; or
+   * refs/heads/&lt;branch&gt; if it is dynamic.
    * <p>
-   * In the case of a dynamic Version, the remote branch is used.
+   * In the case of a dynamic Version, the local branch is favored, unless it does
+   * not exist, in which case the remote branch is used.
    *
+   * @param pathWorkspace Path to the workspace.
    * @param version Version.
    * @return Git reference.
    */
-  String convertToRef(Version version);
+  String convertToRef(Path pathWorkspace, Version version);
 }

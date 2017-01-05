@@ -549,7 +549,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
           // REUSE_SRC_VERSION runtime property should also be set. But since these
           // properties are independent and stored externally, it can happen that they
           // are not synchronized. We make an adjustment here to avoid problems.
-          alwaysNeverAskUserResponseCanReuseSrcVersion = AlwaysNeverAskUserResponse.ASK;
+          alwaysNeverAskUserResponseCanReuseSrcVersion = AlwaysNeverAskUserResponse.YES_ASK;
         }
       }
 
@@ -1196,7 +1196,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     case NEVER:
       Util.setAbort();
       break;
-    case ASK:
+    case YES_ASK:
       break;
     }
   }

@@ -33,22 +33,34 @@ package org.azyva.dragom.util;
  */
 public enum AlwaysNeverYesNoAskUserResponse {
   /**
-   * Indicates to silently assume a positive response.
+   * When used as a user input, indicates a positive response including to
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to silently assume a positive response.
    */
   ALWAYS,
 
   /**
-   * Indicates to silently assume a negative response.
+   * When used as a user input, indicates a negative response including to
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to silently assume a negative response.
    */
   NEVER,
 
   /**
-   * Indicates to ask the user, but with a positive default response.
+   * When used as a user input, indicates a positive response, but to ask again for
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to ask the user with positive response by default.
    */
   YES_ASK,
 
   /**
-   * Indicates to ask the user, but with a negative default response.
+   * When used as a user input, indicates a negative response, but to ask again for
+   * subsequent similar user input.
+   *
+   * <p>When persisted, indicates to ask the user with negative response by default.
    */
   NO_ASK;
 

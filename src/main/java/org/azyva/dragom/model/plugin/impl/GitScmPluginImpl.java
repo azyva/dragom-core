@@ -1109,29 +1109,19 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
   @Override
   public List<Commit> getListCommit(Version version, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
-    Git git;
-
-    git = this.getGit();
-
-    return this.getListCommitInternal(git.convertToRef(version), commitPaging, enumSetGetListCommitFlag);
+    return this.getListCommitDiverge(version, null, commitPaging, enumSetGetListCommitFlag);
   }
 
+  // An internal implementation detail of this method is that if versionDest is null it behaves like getListCommit (to factor out common functionality).
   @Override
-  public List<Commit> getListCommitDiverge(Version versionSrc, Version versionDest, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
-    Git git;
-
-    git = this.getGit();
-
-    return this.getListCommitInternal(git.convertToRef(versionDest) + ".." + git.convertToRef(versionSrc), commitPaging, enumSetGetListCommitFlag);
-  }
-
   @SuppressWarnings("unchecked")
-  private List<Commit> getListCommitInternal(String revisionRange, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
+  public List<Commit> getListCommitDiverge(Version versionSrc, Version versionDest, CommitPaging commitPaging, EnumSet<GetListCommitFlag> enumSetGetListCommitFlag) {
     Git git;
     Path pathModuleWorkspace;
     List<Commit> listCommit;
     StringBuilder stringBuilderCommits;
     List<String> listArg;
+    String revisionRange;
     BufferedReader bufferedReaderCommits;
     Map<String, Object> mapTag = null; // Map value can be a simple tag name (String) or a list of tag names (List<String>) in the case more than one tag is associated with the same commit.
     String commitString;
@@ -1160,6 +1150,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         if (commitPaging.maxCount != -1) {
           listArg.add("--max-count=" + commitPaging.maxCount);
         }
+      }
+
+      revisionRange = git.convertToRef(pathModuleWorkspace,  versionSrc);
+
+      if (versionDest != null) {
+        revisionRange = git.convertToRef(pathModuleWorkspace, versionDest) + ".." + revisionRange;
       }
 
       listArg.add(revisionRange);
@@ -1191,7 +1187,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         String tagLine;
 
         stringBuilderTags = new StringBuilder();
-        git.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderTags, true);
+
+        // It seems show-ref returns 1 when no reference is returned. This is not an
+        // exception.
+        git.executeGitCommand(new String[] {"show-ref", "--tag", "-d"}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderTags, true);
 
         bufferedReaderTags = new BufferedReader(new StringReader(stringBuilderTags.toString()));
         mapTag = new HashMap<String, Object>();
@@ -1590,7 +1589,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       String commitString;
 
       stringBuilderCommits = new StringBuilder();
-      git.executeGitCommand(new String[] {"rev-list", "--pretty=oneline", git.convertToRef(version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits, true);
+      git.executeGitCommand(new String[] {"rev-list", "--pretty=oneline", git.convertToRef(pathModuleWorkspace, version)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderCommits, true);
 
       bufferedReaderCommits = new BufferedReader(new StringReader(stringBuilderCommits.toString()));
 
@@ -1862,7 +1861,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mergeMessage = message + '\n' + mergeMessage;
     }
 
-    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
+    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
       return false;
     }
 
@@ -1933,7 +1932,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // Technically, the initial range start is the parent commit of the very first
       // commit in the list of commits to merge. But since that commit is necessarily
       // part of the parent hierarchy of the destination Version, it is equivalent.
-      commitIdRangeStart = git.convertToRef(versionDest);
+      commitIdRangeStart = git.convertToRef(pathModuleWorkspace, versionDest);
 
       // getListCommitDiverge return the most recent commits first. But we need to apply
       // the patches from the oldest commits.
@@ -2037,7 +2036,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         stringBuilderMergeMessage.setLength(stringBuilderMergeMessage.length() - 1);
       }
 
-      git.executeGitCommand(new String[] {"merge", "--no-commit", "--strategy", "ours", "-m", stringBuilderMergeMessage.toString(), git.convertToRef(versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+      git.executeGitCommand(new String[] {"merge", "--no-commit", "--strategy", "ours", "-m", stringBuilderMergeMessage.toString(), git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
       //*********************************************************************************
       // Step 4: Apply the patches.
@@ -2139,7 +2138,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-    if (git.executeGitCommand(new String[] {"diff", "--quiet", git.convertToRef(versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 0) {
+    if (git.executeGitCommand(new String[] {"diff", "--quiet", git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 0) {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_VERSIONS_EQUAL), pathModuleWorkspace, versionSrc, versionDest));
       return;
     }
@@ -2169,13 +2168,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     // First prepare the merge, without performing the commit and doing as if we
     // wanted to keep the destination Version.
-    git.executeGitCommand(new String[] {"merge", "--strategy", "ours", "--no-commit", "-m", mergeMessage, git.convertToRef(versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+    git.executeGitCommand(new String[] {"merge", "--strategy", "ours", "--no-commit", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     // Remove all files from working copy and from the index.
     git.executeGitCommand(new String[] {"rm", "-r", "."}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     // Get all files from source Version. This also updates the index.
-    git.executeGitCommand(new String[] {"checkout", git.convertToRef(versionSrc), "."}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
+    git.executeGitCommand(new String[] {"checkout", git.convertToRef(pathModuleWorkspace, versionSrc), "."}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     // Resume the merge by performing the final commit, but with a modified index
     // which represents the source Version state, effectivement replacing the
