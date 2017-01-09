@@ -190,7 +190,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
      * Compute the Path to the credential file.
      */
 
-    stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_CREDENTIAL_FILE);
+    stringCredentialFile = execContext.getInitProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_CREDENTIAL_FILE);
 
     if (stringCredentialFile == null) {
       pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
@@ -204,7 +204,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
      * Compute the Path to the master key file.
      */
 
-    stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE);
+    stringMasterKeyFile = execContext.getInitProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE);
 
     if (stringMasterKeyFile == null) {
       throw new RuntimeException("Initialization property " + DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE + " is not defined.");
