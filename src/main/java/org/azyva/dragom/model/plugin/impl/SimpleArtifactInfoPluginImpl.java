@@ -84,6 +84,10 @@ import org.json.JSONArray;
  *  @author David Raymond
  */
 public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl implements ArtifactInfoPlugin {
+  private static final String MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES = "MODULE_NODE_PATH_INFERENCE_RULES";
+  // Shared with SimpleFindModuleByArtifactGrouipIdPluginImpl.
+  private static final String MODEL_PROPERTY_BASE_GROUP_ID = "BASE_GROUP_ID";
+  private static final String MODEL_PROPERTY_ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED = "ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED";
   boolean isInferRuleSubmodules;
   String groupIdInferredSubmodules;
   Set<ArtifactGroupId> setDefiniteArtifactGroupIdProduced;
@@ -97,7 +101,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
     String groupId = null;
     String stringJsonArrayDefiniteArtifactGroupIdProduced;
 
-    inferenceRules = module.getProperty("MODULE_NODE_PATH_INFERENCE_RULES");
+    inferenceRules = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES);
 
     if ((inferenceRules == null) || inferenceRules.equals("ALL")) {
       isInferRuleBaseArtifactId = true;
@@ -114,7 +118,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
      * inferred from the module node path.
      */
     if (isInferRuleBaseArtifactId || this.isInferRuleSubmodules) {
-      baseGroupId = module.getProperty("BASE_GROUP_ID");
+      baseGroupId = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
 
       if (baseGroupId == null) {
         groupId = Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
@@ -137,7 +141,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
       this.groupIdInferredSubmodules = groupId;
     }
 
-    stringJsonArrayDefiniteArtifactGroupIdProduced = module.getProperty("ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED");
+    stringJsonArrayDefiniteArtifactGroupIdProduced = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED);
 
     if (stringJsonArrayDefiniteArtifactGroupIdProduced != null) {
       JSONArray jsonArrayDefiniteArtifactGroupIdProduced;

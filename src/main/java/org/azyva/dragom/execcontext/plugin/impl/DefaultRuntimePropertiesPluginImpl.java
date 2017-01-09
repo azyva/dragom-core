@@ -33,23 +33,19 @@ import org.azyva.dragom.model.NodePath;
  * provides a requested property is used):
  * <ul>
  * <li>Transient data within the {@link ExecContext}
- *     ({@link ExecContext#getTransientData}) having the prefix "runtime-property"
- * <li>Tool properties ({@link ToolLifeCycleExecContext#getToolProperty}) having
- *     the prefix "runtime-property", if the ExecContext implements
- *     {@link ToolLifeCycleExecContext}
- * <li>ExecContext properties ({@link ExecContext#getProperty}) having the prefix
- *     "runtime-property"
+ *     ({@link ExecContext#getTransientData})
+ * <li>Tool properties ({@link ToolLifeCycleExecContext#getToolProperty}), if the
+ *     ExecContext implements {@link ToolLifeCycleExecContext}
+ * <li>ExecContext properties ({@link ExecContext#getProperty})
  * <li>ExecContext initialization properties
- *     ({@link ExecContext#getInitProperty}) having the prefix "runtime-property"
- * <li>System properties (System.getProperty) having the prefix
- *     "org.azyva.dragom.runtime-property"
+ *     ({@link ExecContext#getInitProperty})
  * <li>{@link Node} properties within the {@link Model} (@link Node#getProperty}.
  * </ul>
- * The name of the property following the prefix is the the NodePath of the node
- * with "." separating the nodes and with the last token being the actual property
- * name. For example the following tool initialization property:
+ * The name of the property is the the NodePath of the node with "." separating the
+ * nodes and with the last token being the actual property name. For example the
+ * following tool initialization property:
  * <p>
- * org.azyva.dragom.runtime-property.Domain1.app-a.MY_PROPERTY=my-value
+ * Domain1.app-a.MY_PROPERTY=my-value
  * <p>
  * defines a property MY_PROPERTY associated with the module Domain1/app-a whose
  * value is my-value.
@@ -92,8 +88,9 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
       arrayNodeName = nodePath.getArrayNodeName();
     }
 
-    stringBuilder = new StringBuilder("runtime-property.");
-    foundPropertyValue = (String)execContext.getTransientData(stringBuilder.toString() + name);
+    stringBuilder = new StringBuilder();
+
+    foundPropertyValue = (String)execContext.getTransientData(name);
 
     for (String nodeName: arrayNodeName) {
       stringBuilder.append(nodeName).append('.');
@@ -114,8 +111,9 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
 
       toolLifeCycleExecContext = (ToolLifeCycleExecContext)execContext;
 
-      stringBuilder = new StringBuilder("runtime-property.");
-      foundPropertyValue = toolLifeCycleExecContext.getToolProperty(stringBuilder.toString() + name);
+      foundPropertyValue = toolLifeCycleExecContext.getToolProperty(name);
+
+      stringBuilder.setLength(0);
 
       for (String nodeName: arrayNodeName) {
         stringBuilder.append(nodeName).append('.');
@@ -134,8 +132,9 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
 
     execContext = ExecContextHolder.get();
 
-    stringBuilder = new StringBuilder("runtime-property.");
-    foundPropertyValue = execContext.getProperty(stringBuilder.toString() + name);
+    foundPropertyValue = execContext.getProperty(name);
+
+    stringBuilder.setLength(0);
 
     for (String nodeName: arrayNodeName) {
       stringBuilder.append(nodeName).append('.');
@@ -151,30 +150,14 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
       return foundPropertyValue;
     }
 
-    stringBuilder = new StringBuilder("runtime-property.");
-    foundPropertyValue = execContext.getInitProperty(stringBuilder.toString() + name);
+    foundPropertyValue = execContext.getInitProperty(name);
+
+    stringBuilder.setLength(0);
 
     for (String nodeName: arrayNodeName) {
       stringBuilder.append(nodeName).append('.');
 
       propertyValue = execContext.getInitProperty(stringBuilder.toString() + name);
-
-      if (propertyValue != null) {
-        foundPropertyValue = propertyValue;
-      }
-    }
-
-    if (foundPropertyValue != null) {
-      return foundPropertyValue;
-    }
-
-    stringBuilder = new StringBuilder("org.azyva.dragom.runtime-property.");
-    foundPropertyValue = System.getProperty(stringBuilder.toString() + name);
-
-    for (String nodeName: arrayNodeName) {
-      stringBuilder.append(nodeName).append('.');
-
-      propertyValue = System.getProperty(stringBuilder.toString() + name);
 
       if (propertyValue != null) {
         foundPropertyValue = propertyValue;
@@ -195,7 +178,6 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
   @Override
   public void setProperty(Node node, String name, String value) {
     NodePath nodePath;
-    String[] arrayNodeName;
     StringBuilder stringBuilder;
     ExecContext execContext;
 
@@ -204,17 +186,15 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
     nodePath = (node == null) ? null : node.getNodePath();
 
     if (nodePath == null) {
-      arrayNodeName = new String[0];
+      execContext.setTransientData(name, value);
     } else {
-      arrayNodeName = nodePath.getArrayNodeName();
+      stringBuilder = new StringBuilder();
+
+      for (String nodeName: nodePath.getArrayNodeName()) {
+        stringBuilder.append(nodeName).append('.');
+      }
+
+      execContext.setTransientData(stringBuilder.toString() + name, value);
     }
-
-    stringBuilder = new StringBuilder("runtime-property.");
-
-    for (String nodeName: arrayNodeName) {
-      stringBuilder.append(nodeName).append('.');
-    }
-
-    execContext.setTransientData(stringBuilder.toString() + name, value);
   }
 }

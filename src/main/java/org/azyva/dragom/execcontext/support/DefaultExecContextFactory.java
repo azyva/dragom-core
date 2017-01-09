@@ -80,7 +80,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
   /**
    * Initialization property specifying the workspace directory.
    */
-  private static final String INIT_PROPERTY_WORKSPACE_DIR = "org.azyva.dragom.WorkspacePath";
+  private static final String INIT_PROPERTY_WORKSPACE_DIR = "WORKSPACE_PATH";
 
   /**
    * Metadata directory.
@@ -90,12 +90,12 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
   /**
    * {@link ExecContext} property specifying the format of the workspace data.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_FORMAT = "workspace-format";
+  private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_FORMAT = "WORKSPACE_FORMAT";
 
   /**
    * {@link ExecContext} property specifying the version of the workspace data.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_VERSION = "workspace-version";
+  private static final String EXEC_CONTEXT_PROPERTY_WORKSPACE_VERSION = "WORKSPACE_VERSION";
 
   /**
    * Properties file within the Dragom metadata directory.
@@ -108,7 +108,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
    * Initialization property indicating to ignore any cached {@link ExecContext} and
    * instantiate a new one.
    */
-  private static final String INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT = "org.azyva.dragom.IndIgnoreCachedExecContext";
+  private static final String INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT = "IND_IGNORE_CACHED_EXEC_CONTEXT";
 
   /**
    * Map of workspace Path to DefaultExecContextImpl.

@@ -509,9 +509,10 @@ public abstract class SimpleNode implements Node, MutableNode {
       arrayNodeName = this.getNodePath().getArrayNodeName();
     }
 
-    stringBuilder = new StringBuilder("org.azyva.dragom.model-property.");
     propertiesInit = this.simpleModel.getInitProperties();
-    value = propertiesInit.getProperty(stringBuilder.toString() + name);
+    value = propertiesInit.getProperty(name);
+
+    stringBuilder = new StringBuilder();
 
     for (String nodeName: arrayNodeName) {
       String value2;

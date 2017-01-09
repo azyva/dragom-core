@@ -27,7 +27,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -119,29 +118,12 @@ import org.azyva.dragom.execcontext.plugin.impl.DefaultCredentialStorePluginImpl
  */
 public class CredentialStore {
   /**
-   * Default credential file. When no credential file is specified during
-   * initialization this file is used in the user home directory.
-   * <p>
-   * The caller can use this constant to construct a credential file Path which
-   * uses that same file name, but a different directory.
-   */
-  public static final String DEFAULT_CREDENTIAL_FILE = "dragom-credentials.properties";
-
-  /**
-   * Default master key file. When no master key file is specified during
-   * initialization this file is used in the user home directory.
-   * <p>
-   * The caller can use this constant to construct a master key file Path which uses
-   * that same file name, but a different directory.
-   */
-  public static final String DEFAULT_MASTER_KEY_FILE = "dragom-credentials-master-key";
-
-  /**
    * Hardcoded password generated using
    * https://lastpass.com/generatepassword.php. This is one part of the key material
    * used for encrypting and decrypting the passwords.
    * <p>
-   * A hardcode password such as this is not secure. But this in combination
+   * A hardcoded password such as this is not secure. But this in combination with
+   * a random master key, it is considered secure enough in the current context.
    */
   private static final String HARDCODED_PASSWORD = "S4ag$*v6G1kMGWvK";
 
@@ -279,16 +261,7 @@ public class CredentialStore {
   public CredentialStore(Path pathCredentialFile, Path pathMasterKeyFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
     byte[] arrayByteMasterKey;
 
-    if (pathMasterKeyFile == null) {
-      pathMasterKeyFile = Paths.get(System.getProperty("user.home")).resolve(CredentialStore.DEFAULT_MASTER_KEY_FILE);
-    }
-
     this.pathMasterKeyFile = pathMasterKeyFile;
-
-    if (pathCredentialFile == null) {
-      pathCredentialFile = Paths.get(System.getProperty("user.home")).resolve(CredentialStore.DEFAULT_CREDENTIAL_FILE);
-    }
-
     this.pathCredentialFile = pathCredentialFile;
 
     this.listResourcePatternRealmUser = listResourcePatternRealmUser;

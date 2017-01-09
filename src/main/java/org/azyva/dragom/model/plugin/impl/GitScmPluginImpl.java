@@ -163,7 +163,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * design, there is at most one system workspace directory so sharing is not a
    * problem.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_MAIN_WORKSPACE_DIR = "main-workspace-dir.";
+  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_MAIN_WORKSPACE_DIR = "MAIN_WORKSPACE_DIR.";
 
   /**
    * Runtime property specifying how to handle HTTP[S] credentials. The possible

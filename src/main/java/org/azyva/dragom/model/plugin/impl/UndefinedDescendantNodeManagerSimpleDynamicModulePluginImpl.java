@@ -53,7 +53,7 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
    *
    * <p>This is useful when module existence verification is costly.
    */
-  private static final String INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE = "org.azyva.dragom.IndCacheModuleExistence";
+  private static final String INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE = "IND_CACHE_MODULE_EXISTENCE";
 
   /**
    * Initialization property specifying the module existence cache file.
@@ -63,12 +63,7 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
    * <p>If not defined (and module existence should be cache), the file
    * "dragom-module-existence" in the user home durectory is used.
    */
-  private static final String INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE = "org.azyva.dragom.ModuleExistenceCacheFile";
-
-  /**
-   * Default module existence cache file, in the user home directory.
-   */
-  private static final String DEFAULT_MODULE_EXISTENCE_CACHE_FILE = "dragom-module-existence-cache.properties";
+  private static final String INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE = "MODULE_EXISTENCE_CACHE_FILE";
 
   /**
    * Transient data for storing the module existence cache. It is a Properties.
@@ -83,6 +78,11 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
    */
   private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCacheFile";
 
+  /**
+   * Constructor.
+   *
+   * @param classificationNode ClassificationNode.
+   */
   public UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl(ClassificationNode classificationNode) {
     super(classificationNode);
   }
@@ -160,7 +160,7 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
         moduleExistenceCacheFile = execContext.getInitProperty(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE);
 
         if (moduleExistenceCacheFile == null) {
-          moduleExistenceCacheFile = System.getProperty("user.home") + '/' + UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.DEFAULT_MODULE_EXISTENCE_CACHE_FILE;
+          throw new RuntimeException("Initialization property " + UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE + " is not defined.");
         } else {
           moduleExistenceCacheFile = moduleExistenceCacheFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
         }

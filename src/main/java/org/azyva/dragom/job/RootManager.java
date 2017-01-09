@@ -66,7 +66,7 @@ public class RootManager {
    * The value of this property is a space-separated list of stringified
    * ModuleVersion.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "root-module-versions";
+  private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "ROOT_MODULE_VERSIONS";
 
   /**
    * Prefix of the properties that hold the global ReferencePathMatcherOr.
@@ -76,7 +76,7 @@ public class RootManager {
    *
    * The ReferencePathMatcherByElement's are represented with their literal form.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "reference-path-matcher.";
+  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER = "REFERENCE_PATH_MATCHER.";
 
   /**
    * See description in ResourceBundle.

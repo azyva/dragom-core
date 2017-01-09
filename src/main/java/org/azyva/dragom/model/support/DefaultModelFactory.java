@@ -44,8 +44,7 @@ import org.azyva.dragom.util.Util;
  * can be useful in that regard).
  * <p>
  * The model URL is defined by the initialization property property
- * org.azyva.dragom.UrlModel which must be defined (if this class is used as the
- * ModelFactory).
+ * URL_MODEL which must be defined (if this class is used as the ModelFactory).
  *
  * @author David Raymond
  */
@@ -55,7 +54,7 @@ public class DefaultModelFactory implements ModelFactory {
    *
    * <p>As a convenience, this can also be a file path, relative or absolute.
    */
-  private static final String URL_MODEL_INIT_PROP = "org.azyva.dragom.UrlModel";
+  private static final String INIT_PROP_URL_MODEL = "URL_MODEL";
 
   /**
    * Map of URLs (of {@link XmlConfig} XML configuration) to Model.
@@ -66,7 +65,7 @@ public class DefaultModelFactory implements ModelFactory {
    * Initialization property indicating to ignore any cached Model and instantiate a
    * new one, essentially causing a reload of the {@link XmlConfig}.
    */
-  private static final String INIT_PROPERTY_IND_IGNORE_CACHED_MODEL = "org.azyva.dragom.IndIgnoreCachedModel";
+  private static final String INIT_PROPERTY_IND_IGNORE_CACHED_MODEL = "IND_IGNORE_CACHED_MODEL";
 
   @Override
   public Model getModel(Properties propertiesInit) {
@@ -74,10 +73,10 @@ public class DefaultModelFactory implements ModelFactory {
     boolean indIgnoreCachedModel;
     Model model;
 
-    stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.URL_MODEL_INIT_PROP);
+    stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_URL_MODEL);
 
     if (stringUrlXmlConfig == null) {
-      throw new RuntimeException("Initialization property " + DefaultModelFactory.URL_MODEL_INIT_PROP + " is not defined.");
+      throw new RuntimeException("Initialization property " + DefaultModelFactory.INIT_PROP_URL_MODEL + " is not defined.");
     }
 
     indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_IGNORE_CACHED_MODEL));

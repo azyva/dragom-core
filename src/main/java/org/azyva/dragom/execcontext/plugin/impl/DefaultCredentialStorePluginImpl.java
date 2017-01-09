@@ -43,15 +43,12 @@ import org.azyva.dragom.util.Util;
  * This default implementation of {@link CredentialStorePlugin} uses
  * {@link CredentialStore} to manage credentials.
  * <p>
- * The default master password file is that defined by CredentialStore, namely
- * dragom-master-password in the user home directory. If the
- * org.azyva.dragom.MasterKeyFile system property is defined, it specifies the
- * Path of the master password file.
+ * The MASTER_KEY_FILE initialization property specifies the Path of the master
+ * key file.
  * <p>
- * The default credential file is credentials.properties in the workspace metadata
- * directory. If the org.azyva.dragom.CredentialFile is defined, it specifies the
- * Path of the credential file. The default credential file defined by
- * CredentialStore is not used.
+ * If the CREDENTIAL_FILE initialization property is defined, it
+ * specifies the Path of the credential file. The default credential file is
+ * credentials.properties in the workspace metadata directory.
  * <p>
  * This mappings between resource Pattern's and corresponding realms and users are
  * defined using runtime properties defined on the root ClassificationNode:
@@ -84,47 +81,45 @@ import org.azyva.dragom.util.Util;
  */
 public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
   /**
-   * System property that specifies the file containing the credentials. "~" in the
-   * value of this property is replaced by the user home directory.
+   * Initialization property that specifies the file containing the credentials. "~"
+   * in the value of this property is replaced by the user home directory.
    */
-  private static final String SYS_PROPERTY_CREDENTIAL_FILE = "org.azyva.dragom.CredentialFile";
+  private static final String INIT_PROPERTY_CREDENTIAL_FILE = "CREDENTIAL_FILE";
 
   /**
    * Default credential file (within the workspace metadata directory) when the
-   * org.azyva.dragom.CredentialFile system property is not defined.
+   * CREDENTIAL_FILE initialization property is not defined.
    */
   private static final String DEFAULT_CREDENTIAL_FILE = "credentials.properties";
 
   /**
-   * System property that specifies the master key file. "~" in the
-   * value of this property is replaced by the user home directory. If that system
-   * property is not defined, the master key file is as defined by
-   * {@link CredentialStore}, namely "dragom-master-key"
+   * Initialization property that specifies the master key file. "~" in the
+   * value of this property is replaced by the user home directory.
    */
-  public static final String SYS_PROPERTY_MASTER_KEY_FILE = "org.azyva.dragom.MasterKeyFile";
+  public static final String INIT_PROPERTY_MASTER_KEY_FILE = "MASTER_KEY_FILE";
 
   /**
-   * Runtime property for the list of resource-pattern-realm-user mappings.
+   * Initialization property for the list of resource-pattern-realm-user mappings.
    */
-  public static final String RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS = "RESOURCE_PATTERN_REALM_USER_MAPPINGS";
+  public static final String INIT_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS = "RESOURCE_PATTERN_REALM_USER_MAPPINGS";
 
   /**
-   * Runtime property prefix for the resource Pattern for a given
+   * Initialization property prefix for the resource Pattern for a given
    * resource-pattern-realm-user mapping.
    */
-  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN = "RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.";
+  public static final String INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN = "RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN.";
 
   /**
-   * Runtime property prefix for the realm for a given
+   * Initialization property prefix for the realm for a given
    * resource-pattern-realm-user mapping.
    */
-  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM = "RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.";
+  public static final String INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM = "RESOURCE_PATTERN_REALM_USER_MAPPING_REALM.";
 
   /**
-   * Runtime property prefix for the user for a given
+   * Initialization property prefix for the user for a given
    * resource-pattern-realm-user mapping.
    */
-  public static final String RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER = "RESOURCE_PATTERN_REALM_USER_MAPPING_USER.";
+  public static final String INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER = "RESOURCE_PATTERN_REALM_USER_MAPPING_USER.";
 
   /**
    * Transient data prefix that stores whether credentials for a given realm and
@@ -195,7 +190,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
      * Compute the Path to the credential file.
      */
 
-    stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_CREDENTIAL_FILE);
+    stringCredentialFile = System.getProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_CREDENTIAL_FILE);
 
     if (stringCredentialFile == null) {
       pathMetadataDir = ((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir();
@@ -206,13 +201,13 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
     }
 
     /*
-     * Compute the Path to the master password file.
+     * Compute the Path to the master key file.
      */
 
-    stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.SYS_PROPERTY_MASTER_KEY_FILE);
+    stringMasterKeyFile = System.getProperty(DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE);
 
     if (stringMasterKeyFile == null) {
-      pathMasterKeyFile = null;
+      throw new RuntimeException("Initialization property " + DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE + " is not defined.");
     } else {
       stringMasterKeyFile = stringMasterKeyFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
       pathMasterKeyFile = Paths.get(stringMasterKeyFile);
@@ -226,7 +221,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-    stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS);
+    stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.INIT_PROPERTY_RESOURCE_PATTERN_REALM_USER_MAPPINGS);
 
     for (String mapping: stringRuntimeProperty.split(",")) {
       ResourcePatternRealmUser resourcePatternRealmUser;
@@ -235,16 +230,16 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
 
       mapping = mapping.trim();
 
-      stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN + mapping);
+      stringRuntimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_RESOURCE_PATTERN + mapping);
       resourcePatternRealmUser.patternResource = Pattern.compile(stringRuntimeProperty);
 
-      resourcePatternRealmUser.realm = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM + mapping);
+      resourcePatternRealmUser.realm = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_REALM + mapping);
 
       if (resourcePatternRealmUser.realm == null) {
         throw new RuntimeException("Realm cannot be null for mapping " + mapping + '.');
       }
 
-      resourcePatternRealmUser.user = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.RUNTIME_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER + mapping);
+      resourcePatternRealmUser.user = runtimePropertiesPlugin.getProperty(null, DefaultCredentialStorePluginImpl.INIT_PROPERTY_PREFIX_RESOURCE_PATTERN_REALM_USER_MAPPING_USER + mapping);
 
       listResourcePatternRealmUser.add(resourcePatternRealmUser);
     }

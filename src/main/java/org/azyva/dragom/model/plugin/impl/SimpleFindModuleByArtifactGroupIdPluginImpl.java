@@ -80,6 +80,9 @@ import org.azyva.dragom.util.Util;
  * @author David Raymond
  */
 public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationNodePluginAbstractImpl implements FindModuleByArtifactGroupIdPlugin {
+  // Shared with SimpleArtifactInfoPluginImpl.
+  private static final String MODEL_PROPERTY_BASE_GROUP_ID = "BASE_GROUP_ID";
+
   private String groupId;
 
   public SimpleFindModuleByArtifactGroupIdPluginImpl(ClassificationNode classificationNode) {
@@ -87,7 +90,7 @@ public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationN
 
     String baseGroupId;
 
-    baseGroupId = classificationNode.getProperty("BASE_GROUP_ID");
+    baseGroupId = classificationNode.getProperty(SimpleFindModuleByArtifactGroupIdPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
 
     if (baseGroupId == null) {
       // If there is no base groupId, we must not get here for the root ClassificationNode since an empty groupId is not allowed.

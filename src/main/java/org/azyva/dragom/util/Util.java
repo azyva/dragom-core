@@ -184,6 +184,12 @@ public final class Util {
   private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
 
   /**
+   * Path to the static default initialization properties resource within the
+   * classpath.
+   */
+  private static final String DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE = "/META-INF/dragom-init.properties";
+
+  /**
    * See description in ResourceBundle.
    */
   public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
@@ -317,6 +323,11 @@ public final class Util {
   private static boolean indDragomPropertiesLoaded;
 
   /**
+   * Default initialization properties.
+   */
+  private static Properties propertiesDefaultInit;
+
+  /**
    * Indicates that we are running on Windows.
    * <p>
    * A Boolean is used in order to have 3 states and implement a cache.
@@ -405,6 +416,12 @@ public final class Util {
     return stringBuilder.toString();
   }
 
+  /**
+   * Verifies if a directory is empty.
+   *
+   * @param path Path of the directory.
+   * @return See description.
+   */
   public static boolean isDirectoryEmpty(Path path) {
     DirectoryStream<Path> directoryStream;
 
@@ -440,11 +457,7 @@ public final class Util {
 
           propertiesDragom = new Properties();
 
-          try {
-            propertiesDragom.load(inputStream);
-          } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
-          }
+          propertiesDragom.load(inputStream);
 
           for (Map.Entry<Object, Object> mapEntry: propertiesDragom.entrySet()) {
             String key;
@@ -460,6 +473,30 @@ public final class Util {
         throw new RuntimeException(ioe);
       }
     }
+  }
+
+  /**
+   * @return Default initialization properties loaded from dragom-init.properties.
+   */
+  public static Properties getPropertiesDefaultInit() {
+    // Ideally this should be synchronized. But since it is expected that this method
+    // be called once during initialization in a single-threaded context, it is not
+    // worth bothering.
+    if (Util.propertiesDefaultInit == null) {
+      try (InputStream inputStream = Util.class.getResourceAsStream(Util.DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE)) {
+        if (inputStream != null) {
+          Util.logger.debug("Loading initialization properties from classpath resource " + Util.DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE + '.');
+
+          Util.propertiesDefaultInit = new Properties();
+
+          Util.propertiesDefaultInit.load(inputStream);
+        }
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+
+    return Util.propertiesDefaultInit;
   }
 
   /**

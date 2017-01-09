@@ -54,11 +54,10 @@ import org.azyva.dragom.util.Util;
  * allows customizing a Model locally, such as specifying a different base URL for
  * an SCM repository.
  * <p>
- * Initialization Properties that have the "org.azyva.dragom.model-property." prefix are
- * considered first, with inheritance. Only if the property is not found among
- * initialization Properties will real {@link Model} properties be considered.
- * Note that properties defined in such a way cannot be defined only for a
- * specific node, contrary to real Model properties.
+ * Initialization Properties are considered first, with inheritance. Only if the
+ * property is not found among initialization Properties will real {@link Model}
+ * properties be considered. Note that properties defined in such a way cannot be
+ * defined only for a specific node, contrary to real Model properties.
  * <p>
  * The fact that initialization Properties can be specified does not violate the
  * general principle that a Model is static since initialization Properties are
@@ -77,7 +76,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    * produces an {@link ArtifactGroupId} is optimistic.
    *
    * <p>For example if we try to find the Module which produced ArtifactGroupId
-   * com.acme:my-module-main-sub, and
+   * com.acme:my-module-sub, and
    * {@link FindModuleByArtifactGroupIdPlugin#getListModulePossiblyProduceArtifactGroupId}
    * returns my-module-sub, my-module and my as possible artifactId, if my-module
    * does correspond to an existing Module, the search will stop there and the
