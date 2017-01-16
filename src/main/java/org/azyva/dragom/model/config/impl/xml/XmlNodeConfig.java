@@ -43,10 +43,10 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
-import org.azyva.dragom.model.config.SimpleNodeConfigTransferObject;
 import org.azyva.dragom.model.config.impl.simple.SimpleClassificationNodeConfig;
 import org.azyva.dragom.model.config.impl.simple.SimpleConfig;
 import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfig;
+import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfigTransferObject;
 import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**

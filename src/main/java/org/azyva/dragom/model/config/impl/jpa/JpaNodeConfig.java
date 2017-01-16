@@ -17,8 +17,9 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.config.impl.simple;
+package org.azyva.dragom.model.config.impl.jpa;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,35 +35,42 @@ import org.azyva.dragom.model.config.OptimisticLockHandle;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
+import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfigTransferObject;
 import org.azyva.dragom.model.plugin.NodePlugin;
 
 /**
- * Simple implementation for {@link NodeConfig} and {@link MutableNodeConfig}.
+ * JPA implementation for {@link NodeConfig} and {@link MutableNodeConfig}.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.impl.simple
+ * @see org.azyva.dragom.model.config.impl.jpa
  */
-public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig {
+public abstract class JpaNodeConfig implements NodeConfig, MutableNodeConfig {
   /**
-   * Indicates that the {@link SimpleNodeConfig} is new and has not been finalized
+   * Indicates that the {@link JpaNodeConfig} is new and has not been finalized
    * yet. This is the state in which it is after having been created using the
-   * create methods of {@link SimpleConfig} or
-   * {@link SimpleClassificationNodeConfig}.
+   * create methods of {@link JpaConfig} or
+   * {@link JpaClassificationNodeConfig}.
    */
   protected boolean indNew;
 
   /**
-   * Parent {@link SimpleClassificationNodeConfig}.
+   * Id.
    */
-  private SimpleClassificationNodeConfig simpleClassificationNodeConfigParent;
+  private int id;
+
 
   /**
-   * Unique revision number to manage optimistic locking (see
-   * {@link OptimisticLockHandle}).
-   * <p>
-   * Starts at since 0 within OptimisticLockHandle means not locked.
+   * Default constructor.
+   *
+   * <p>Required for JPA.
    */
-  protected int revision;
+  protected JpaNodeConfig() {
+  }
+
+  /**
+   * Parent {@link JpaClassificationNodeConfig}.
+   */
+  private JpaClassificationNodeConfig jpaClassificationNodeConfigParent;
 
   /**
    * Name.
@@ -80,17 +88,22 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
   private Map<PluginKey, PluginDefConfig> mapPluginDefConfig;
 
   /**
+   * Last modification timestamp.
+   *
+   * <p>Used for optimistic locking.
+   */
+  private Timestamp timestampLastMod;
+
+  /**
    * Constructor.
    *
-   * @param simpleClassificationNodeConfigParent Parent
-   *   SimpleClassificationNodeConfig.
+   * @param jpaClassificationNodeConfigParent Parent
+   *   JpaClassificationNodeConfig.
    */
-  SimpleNodeConfig(SimpleClassificationNodeConfig simpleClassificationNodeConfigParent) {
+  JpaNodeConfig(JpaClassificationNodeConfig jpaClassificationNodeConfigParent) {
     this.indNew = true;
 
-    this.simpleClassificationNodeConfigParent = simpleClassificationNodeConfigParent;
-
-    this.revision = 1;
+    this.jpaClassificationNodeConfigParent = jpaClassificationNodeConfigParent;
 
     // LinkedHashMap are used to preserve insertion order.
     this.mapPropertyDefConfig = new LinkedHashMap<String, PropertyDefConfig>();
@@ -164,7 +177,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
   protected void checkOptimisticLock(OptimisticLockHandle optimisticLockHandle, boolean indRequireLock) {
     if (optimisticLockHandle != null) {
       if (optimisticLockHandle.isLocked()) {
-        if (((SimpleOptimisticLockHandle)optimisticLockHandle).getRevision() != this.revision) {
+        if (!((JpaOptimisticLockHandle)optimisticLockHandle).getTimestampLastMod().equals(this.timestampLastMod)) {
           throw new OptimisticLockException();
         }
       } else {
@@ -172,19 +185,19 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
           throw new RuntimeException("Lock required.");
         }
 
-        ((SimpleOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+        ((JpaOptimisticLockHandle)optimisticLockHandle).setTimestampLastMod(this.timestampLastMod);
       }
     }
   }
 
   @Override
   public OptimisticLockHandle createOptimisticLockHandle(boolean indLock) {
-    return new SimpleOptimisticLockHandle(indLock ? this.revision : 0);
+    return new JpaOptimisticLockHandle(indLock ? this.timestampLastMod : null);
   }
 
   @Override
   public boolean isOptimisticLockValid(OptimisticLockHandle optimisticLockHandle) {
-    return (((SimpleOptimisticLockHandle)optimisticLockHandle).getRevision() == this.revision);
+    return (((JpaOptimisticLockHandle)optimisticLockHandle).getTimestampLastMod().equals(this.timestampLastMod));
   }
 
   @Override
@@ -211,7 +224,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 
   /**
    * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
-   * them within the SimpleNodeConfig.
+   * them within the JpaNodeConfig.
    * <p>
    * Uses the indNew variable, but does not reset it. It is intended to be reset by
    * the subclass caller method, {@link MutableNodeConfig#setNodeConfigTransferObject}.
@@ -226,7 +239,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
    * ({@link OptimisticLockHandle#isLocked}) and its state must correspond to the
    * state of the data it represents, otherwise {@link OptimisticLockException} is
    * thrown. The state of the OptimisticLockHandle is updated to the new revision of
-   * the SimpleNodeConfig.
+   * the JpaNodeConfig.
    *
    * @param nodeConfigTransferObject NodeConfigTransferObject.
    * @param optimisticLockHandle OptimisticLockHandle. Can be null.
@@ -243,20 +256,20 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
 
     this.checkOptimisticLock(optimisticLockHandle, !this.indNew);
 
-    if ((nodeConfigTransferObject.getName() == null) && (this.simpleClassificationNodeConfigParent != null)) {
-      throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNodeConfig.");
+    if ((nodeConfigTransferObject.getName() == null) && (this.jpaClassificationNodeConfigParent != null)) {
+      throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root JpaClassificationNodeConfig.");
     }
 
     previousName = this.name;
     this.name = nodeConfigTransferObject.getName();
 
     if (this.indNew) {
-      if (this.simpleClassificationNodeConfigParent != null) {
-        this.simpleClassificationNodeConfigParent.setSimpleNodeConfigChild(this);
+      if (this.jpaClassificationNodeConfigParent != null) {
+        this.jpaClassificationNodeConfigParent.setJpaNodeConfigChild(this);
       }
     } else {
-      if ((this.simpleClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
-        this.simpleClassificationNodeConfigParent.renameSimpleNodeConfigChild(previousName, this.name);
+      if ((this.jpaClassificationNodeConfigParent != null) && (!this.name.equals(previousName))) {
+        this.jpaClassificationNodeConfigParent.renameJpaNodeConfigChild(previousName, this.name);
       }
     }
 
@@ -273,19 +286,19 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
     }
 
     if (!this.indNew) {
-      this.revision++;
+      this.timestampLastMod = new Timestamp(System.currentTimeMillis());;
     }
 
     if (optimisticLockHandle != null) {
-      ((SimpleOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+      ((JpaOptimisticLockHandle)optimisticLockHandle).setTimestampLastMod(this.timestampLastMod);
     }
   }
 
   @Override
   public void delete() {
-    if (!this.indNew && (this.simpleClassificationNodeConfigParent != null)) {
-      this.simpleClassificationNodeConfigParent.removeChildNodeConfig(this.name);
-      this.simpleClassificationNodeConfigParent = null;
+    if (!this.indNew && (this.jpaClassificationNodeConfigParent != null)) {
+      this.jpaClassificationNodeConfigParent.removeChildNodeConfig(this.name);
+      this.jpaClassificationNodeConfigParent = null;
     }
   }
 }

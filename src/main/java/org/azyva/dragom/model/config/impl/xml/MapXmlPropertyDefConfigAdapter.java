@@ -31,6 +31,7 @@ import javax.xml.bind.annotation.XmlAnyElement;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.namespace.QName;
 
+import org.azyva.dragom.model.config.impl.simple.SimplePropertyDefConfig;
 import org.azyva.dragom.model.config.impl.xml.MapXmlPropertyDefConfigAdapter.ListProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author David Raymond
  */
-public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map<String, XmlPropertyDefConfig>> {
+public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map<String, SimplePropertyDefConfig>> {
   private static final Logger logger = LoggerFactory.getLogger(MapXmlPropertyDefConfigAdapter.class);
 
   /**
@@ -131,7 +132,7 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
    * </ul>
    */
   @Override
-  public ListProperty marshal(Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml) {
+  public ListProperty marshal(Map<String, SimplePropertyDefConfig> mapPropertyDefConfigXml) {
     List<JAXBElement<String>> listProperty;
 
     if ((mapPropertyDefConfigXml == null) || mapPropertyDefConfigXml.isEmpty()) {
@@ -140,7 +141,7 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
 
     listProperty = new ArrayList<JAXBElement<String>>();
 
-    for (XmlPropertyDefConfig xmlPropertyDefConfig: mapPropertyDefConfigXml.values()) {
+    for (SimplePropertyDefConfig xmlPropertyDefConfig: mapPropertyDefConfigXml.values()) {
       listProperty.add(new JAXBElement<String>(new QName(xmlPropertyDefConfig.getName()), String.class, xmlPropertyDefConfig.getValue()));
     }
 
@@ -149,12 +150,12 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
 
   @Override
   @SuppressWarnings("unchecked")
-  public Map<String, XmlPropertyDefConfig> unmarshal(ListProperty listProperty) {
-    Map<String, XmlPropertyDefConfig> mapPropertyDefConfigXml;
+  public Map<String, SimplePropertyDefConfig> unmarshal(ListProperty listProperty) {
+    Map<String, SimplePropertyDefConfig> mapPropertyDefConfigXml;
 
 
     // LinkedHashMap is used to preserve insertion order.
-    mapPropertyDefConfigXml = new LinkedHashMap<String, XmlPropertyDefConfig>();
+    mapPropertyDefConfigXml = new LinkedHashMap<String, SimplePropertyDefConfig>();
 
     // May be null when the XML file contains an empty containing element.
     if (listProperty.getListProperty() == null) {
@@ -167,17 +168,17 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
     for (org.w3c.dom.Node property: (List<org.w3c.dom.Node>)(List<?>)listProperty.getListProperty()) {
       try {
         org.w3c.dom.Node attributeIndOnlyThisNode;
-        XmlPropertyDefConfig xmlPropertyDefConfig;
+        SimplePropertyDefConfig simplePropertyDefConfig;
 
         attributeIndOnlyThisNode = property.getAttributes().getNamedItem("ind-only-this-node");
 
-        xmlPropertyDefConfig = new XmlPropertyDefConfig(property.getLocalName(), property.getFirstChild().getTextContent(), (attributeIndOnlyThisNode == null) ? false : Boolean.parseBoolean(attributeIndOnlyThisNode.getTextContent()));
+        simplePropertyDefConfig = new SimplePropertyDefConfig(property.getLocalName(), property.getFirstChild().getTextContent(), (attributeIndOnlyThisNode == null) ? false : Boolean.parseBoolean(attributeIndOnlyThisNode.getTextContent()));
 
         if (mapPropertyDefConfigXml.containsKey(property.getLocalName())) {
-          throw new RuntimeException("Duplicate property definition " + xmlPropertyDefConfig + '.');
+          throw new RuntimeException("Duplicate property definition " + simplePropertyDefConfig + '.');
         }
 
-        mapPropertyDefConfigXml.put(property.getLocalName(), xmlPropertyDefConfig);
+        mapPropertyDefConfigXml.put(property.getLocalName(), simplePropertyDefConfig);
       } catch (Exception e) {
         // Unfortunately it seems like JAXB silently discards these exceptions. We at
         // least log them.

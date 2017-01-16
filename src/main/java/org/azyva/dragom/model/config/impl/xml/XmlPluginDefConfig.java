@@ -91,6 +91,9 @@ public class XmlPluginDefConfig implements PluginDefConfig {
       throw new RuntimeException("PluginDef cannot specify a null or empty plugin class.");
     }
 
+    this.pluginId = pluginId;
+    this.pluginClass = pluginClass;
+
     try {
       Class.forName(this.pluginClass);
     } catch (ClassNotFoundException cnfe) {

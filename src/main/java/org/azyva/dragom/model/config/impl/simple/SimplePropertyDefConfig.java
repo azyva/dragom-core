@@ -17,37 +17,50 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.config.impl.xml;
+package org.azyva.dragom.model.config.impl.simple;
 
 import org.azyva.dragom.model.Model;
-import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.config.NodeConfig;
+import org.azyva.dragom.model.config.NodeConfigTransferObject;
 import org.azyva.dragom.model.config.PropertyDefConfig;
 
 /**
- * Implementation for {@link PropertyDefConfig} that allows reading from an XML
- * file.
+ * Simple implementation for {@link PropertyDefConfig}.
  * <p>
- * This class is currently immutable and
- * {@link XmlNodeConfig#getPropertyDefConfig} relies on this immutability to
- * ensure {@link XmlConfig} and its members cannot be modified in an uncontrolled
- * manner. If modification of the {@link Config} is eventually possible and if
- * this class becomes mutable, XmlNodeConfig.getPropertyDefConfig will need to be
- * revised.
+ * Can be used as a simple PropertyDefConfig within {@link Node},
+ * {@link NodeConfig} and {@link NodeConfigTransferObject} implementations.
  * <p>
- * Although this class is used within a JAXB context, it does not need XML
- * annotations since properties are stored within the XML file in another format.
- * See {@link MapXmlPropertyDefConfigAdapter}.
+ * See org.azyva.dragom.model.config.impl.simple from dragom-core.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.config.impl.xml
  */
-public class XmlPropertyDefConfig implements PropertyDefConfig {
-  String name;
+public class SimplePropertyDefConfig implements PropertyDefConfig {
+  /**
+   * Property name.
+   */
+  private String name;
 
-  String value;
+  /**
+   * Property value.
+   */
+  private String value;
 
-  boolean indOnlyThisNode;
+  /**
+   * Indicates that this {@link PropertyDefConfig} applies specifically to the
+   * {@link NodeConfig} on which it is defined, as opposed to being inherited by
+   * child NodeConfig when interpreted by the {@link Model}.
+   */
+  private boolean indOnlyThisNode;
+
+  /**
+   * Default constructor.
+   *
+   * <p>This is not meant to be used by the caller. It is required when this class is
+   * used with frameworks which automatically create instances, such as JPA.
+   */
+  protected SimplePropertyDefConfig() {
+  }
 
   /**
    * Constructor.
@@ -58,7 +71,7 @@ public class XmlPropertyDefConfig implements PropertyDefConfig {
    *   {@link NodeConfig} on which it is defined, as opposed to being inherited by
    *   child NodeConfig when interpreted by the {@link Model}.
    */
-  public XmlPropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
+  public SimplePropertyDefConfig(String name, String value, boolean indOnlyThisNode) {
     if ((name == null) || name.isEmpty()) {
       throw new RuntimeException("PropertyDef cannot have null or empty name.");
     }
@@ -84,11 +97,11 @@ public class XmlPropertyDefConfig implements PropertyDefConfig {
   }
 
   /**
-   * @return String to help recognize the {@link PropertyDefConfig} instance, in
-   *   logs for example.
+   * @return String to help recognize the
+   *   {@link PropertyDefConfig} instance, in logs for example.
    */
   @Override
   public String toString() {
-    return "XmlPropertyDefConfig [name=" + this.name + ", value=" + this.value + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
+    return "SimplePropertyDefConfig [name=" + this.name + ", value=" + this.value + ", indOnlyThisNode=" + this.indOnlyThisNode + "]";
   }
 }
