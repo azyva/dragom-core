@@ -20,7 +20,7 @@ along with Dragom.  If not, see <http://www.gnu.org/licenses />.
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.azyva.dragom</groupId>
   <artifactId>dragom-core</artifactId>
-  <version>master-SNAPSHOT</version>
+  <version>0.1.2</version>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -91,7 +91,7 @@ along with Dragom.  If not, see <http://www.gnu.org/licenses />.
     <dependency>
       <groupId>org.azyva.dragom</groupId>
       <artifactId>dragom-api</artifactId>
-      <version>master-SNAPSHOT</version>
+      <version>0.1.2</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -175,7 +175,7 @@ along with Dragom.  If not, see <http://www.gnu.org/licenses />.
     <url>https://github.com/azyva/dragom-core</url>
     <connection>scm:git:https://github.com/azyva/dragom-core.git</connection>
     <developerConnection>scm:git:https://github.com/azyva/dragom-core.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v-0.1.2</tag>
   </scm>
   <distributionManagement>
     <snapshotRepository>
