@@ -73,6 +73,11 @@ import org.azyva.dragom.util.Util;
  * When obtaining an ExecContext using
  * {@link DefaultExecContextFactory#getExecContext} the workspace directory does
  * not need to exist and is automatically created and initialized if necessary.
+ * <p>
+ * Initialization of the workspace directory is lazy and is performed only when
+ * really needed. This avoids getting the workspace directory created and
+ * initialized by tools which do not really require it, such as the
+ * credential-manager tool when the credential file is not kept in the workspace.
  *
  * @author David Raymond
  */
@@ -130,6 +135,11 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
    * ExecContext).
    */
   private class DefaultExecContextImpl implements ExecContext, WorkspaceExecContext, ToolLifeCycleExecContext {
+    /**
+     * Indicates if the workspace directory has been initialized.
+     */
+    private boolean indWorkspaceDirInit;
+
     /**
      * Path to the workspace directory.
      */
@@ -218,6 +228,8 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
         } catch (IOException ioe) {
           throw new RuntimeException(ioe);
         }
+
+        this.indWorkspaceDirInit = true;
       } else {
         // The Properties file may not exist, but its containing directory may already
         // exist.
@@ -234,6 +246,28 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
       this.mapExecContextPluginInstantiated = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPlugin>();
       this.mapExecContextPluginTransientInstantiated = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPlugin>();
+    }
+
+    /**
+     * Initializes the workspace directory if not already initialized.
+     *
+     * <p>If the workspace directory is already initialized, this method does nothing
+     * and quickly returns.
+     */
+    private void initWorkspaceDir() {
+      if (!this.indWorkspaceDirInit) {
+        synchronized(this) {
+          if (!this.indWorkspaceDirInit) {
+            if (!this.pathMetadataDir.toFile().mkdirs()) {
+              throw new RuntimeException("Directory " + this.pathMetadataDir + " could not be created.");
+            }
+
+            this.saveProperties();
+
+            this.indWorkspaceDirInit = true;
+          }
+        }
+      }
     }
 
     /**
@@ -324,6 +358,8 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
         this.properties.setProperty(name,  value);
       }
 
+      this.initWorkspaceDir();
+
       this.saveProperties();
     }
 
@@ -349,9 +385,12 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
     @Override
     public void removeProperty(String name) {
-      this.properties.remove(name);
+      if (this.properties.remove(name) != null) {;
+        // No need to initialize the workspace since by definition, if there is a
+        // property to remove, it has already been initialized.
 
-      this.saveProperties();
+        this.saveProperties();
+      }
     }
 
     @Override
@@ -364,6 +403,9 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
         for (String property: setProperty) {
           this.properties.remove(property);
         }
+
+        // No need to initialize the workspace since by definition, if there is a
+        // property to remove, it has already been initialized.
 
         this.saveProperties();
       }
@@ -410,11 +452,19 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
     @Override
     public Path getPathWorkspaceDir() {
+      // If the caller requests the Path to the workspace directory, we presume it expects
+      // it to exist.
+      this.initWorkspaceDir();
+
       return this.pathWorkspaceDir;
     }
 
     @Override
     public Path getPathMetadataDir() {
+      // If the caller requests the Path to the workspace metadata directory, we presume
+      // it expects it to exist.
+      this.initWorkspaceDir();
+
       return this.pathMetadataDir;
     }
 

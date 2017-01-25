@@ -61,9 +61,10 @@ import org.azyva.dragom.model.event.StaticVersionCreatedEvent;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.util.ServiceLocator;
 import org.azyva.dragom.util.Util;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * ScmPlugin implementation that supports Git repositories using the git command
@@ -266,6 +267,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS_FROM_WORKSPACE = "ACCESS_REMOTE_REPOS_FROM_WORKSPACE";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS = "ACCESS_REMOTE_REPOS";
 
   /**
@@ -434,7 +440,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     git = this.getGit();
 
-    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), this.gitReposCompleteUrl, null, "ls-remote (isModuleExists)"));
+    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), this.gitReposCompleteUrl, "ls-remote (isModuleExists)"));
 
     return git.isReposExists();
   }
@@ -476,7 +482,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         git.checkout(pathModuleWorkspace, version);
       }
     } else {
-      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "clone"));
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS_FROM_WORKSPACE), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "clone"));
 
       // version can be null.
       git.clone(null, version, pathModuleWorkspace);
@@ -569,7 +575,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         return;
       }
 
-      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "fetch" + ((refspec != null) ? (" refspec=" + refspec) : "")));
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS_FROM_WORKSPACE), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "fetch" + ((refspec != null) ? (" refspec=" + refspec) : "")));
 
       // Causes the remote named "origin" to be used.
       reposUrl = null;
@@ -697,7 +703,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       return;
     }
 
-    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "push" + ((gitRef != null) ? (" gitRef=" + gitRef) : "")));
+    ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS_FROM_WORKSPACE), GitScmPluginImpl.this.gitReposCompleteUrl, pathModuleWorkspace, "push" + ((gitRef != null) ? (" gitRef=" + gitRef) : "")));
 
     // We always set the upstream tracking information (by passing gitRef) because
     // pushes can be delayed and new branches can be pushed on the call to this method
@@ -774,6 +780,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
     Path pathModuleWorkspace;
     WorkspaceDirSystemModule workspaceDirSystemModule;
+    WorkspaceDirSystemModule workspaceDirSystemModuleConflict;
     Path pathMainUserWorkspaceDir;
 
     git = this.getGit();
@@ -872,6 +879,20 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     pathModuleWorkspace = null;
 
     try {
+      // If there is already another Module which maps to the same workspace directory
+      // we replace the Module. Note that this is not possible for user workspace
+      // directories.
+
+      workspaceDirSystemModuleConflict = (WorkspaceDirSystemModule)workspacePlugin.getWorkspaceDirConflict(workspaceDirSystemModule);
+
+      if (workspaceDirSystemModuleConflict != null) {
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModuleConflict,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+
+        workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModuleConflict);
+      }
+
+      // Here we are sure the workspace directory does not exist and can be created.
+
       pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
       // But if there is a main user workspace directory for the Module (whatever the
@@ -1464,7 +1485,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mapVersionAttr2.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION, versionTempDynamicBase.toString());
     }
 
-    message = (new JSONObject(mapVersionAttr2)).toString();
+    try {
+      message = (new ObjectMapper()).writeValueAsString(mapVersionAttr2);
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+
     message = message.replace("\"", "\\\"");
 
     switch (versionTarget.getVersionType()) {
@@ -1806,7 +1832,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
 
   @Override
-  public boolean merge(Path pathModuleWorkspace, Version versionSrc, String message) {
+  public MergeResult merge(Path pathModuleWorkspace, Version versionSrc, String message) {
     Git git;
     Version versionDest;
     WorkspacePlugin workspacePlugin;
@@ -1841,7 +1867,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     if (listCommit.isEmpty()) {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
-      return true;
+      return MergeResult.NOTHING_TO_MERGE;
     }
 
     mergeMessage = "Merged " + versionSrc + " into " + versionDest + '.';
@@ -1862,16 +1888,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
 
     if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
-      return false;
+      return MergeResult.CONFLICTS;
     }
 
     this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
 
-    return true;
+    return MergeResult.MERGED;
   }
 
   @Override
-  public boolean mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
+  public MergeResult mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
     Git git;
     Version versionDest;
     WorkspacePlugin workspacePlugin;
@@ -1914,7 +1940,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       if (listCommit.isEmpty()) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
-        return true;
+        return MergeResult.NOTHING_TO_MERGE;
       }
 
       //*********************************************************************************
@@ -1982,7 +2008,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           git.executeGitCommand(new String[] {"diff", "--binary", commitIdRangeStart + ".." + commitIdRangeEnd}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilderPatch, false);
 
           patchCount++;
-          String.valueOf(patchCount);
+
           try {
             outputStreamWriterPatch = new OutputStreamWriter(new FileOutputStream(pathModuleWorkspace.resolve("dragom-patch-" + String.format("%02d", patchCount) + ".patch").toFile()));
             outputStreamWriterPatch.append(stringBuilderPatch);
@@ -1994,6 +2020,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
         commitIdRangeStart = lastCommitIdExclude;
       } while (commitIdRangeStart != null);
+
+      if (patchCount == 0) {
+        return MergeResult.NOTHING_TO_MERGE;
+      }
 
       //*********************************************************************************
       // Step 3: "prepare" a merge commit, but without actually performing any merge
@@ -2068,7 +2098,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           // user about what to do with the merge conflicts.
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest));
 
-          return false;
+          return MergeResult.CONFLICTS;
         }
 
         try {
@@ -2094,7 +2124,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
 
-      return true;
+      return MergeResult.MERGED;
     } catch (RuntimeException re) {
       throw new RuntimeException(
           "An unexpected exception occurred during the merge of version " + versionSrc + " into version " + versionDest + " within " + pathModuleWorkspace + ".\n"
@@ -2108,7 +2138,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   }
 
   @Override
-  public void replace(Path pathModuleWorkspace, Version versionSrc, String message) {
+  public MergeResult replace(Path pathModuleWorkspace, Version versionSrc, String message) {
     Git git;
     Version versionDest;
     WorkspacePlugin workspacePlugin;
@@ -2140,7 +2170,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     if (git.executeGitCommand(new String[] {"diff", "--quiet", git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 0) {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_VERSIONS_EQUAL), pathModuleWorkspace, versionSrc, versionDest));
-      return;
+      return MergeResult.NOTHING_TO_MERGE;
     }
 
     mergeMessage = "Replaced version " + versionDest + " with version " + versionSrc + '.';
@@ -2182,6 +2212,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     git.executeGitCommand(new String[] {"commit", "--no-edit"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
     this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+
+    return MergeResult.MERGED;
   }
 
   @Override
@@ -2275,7 +2307,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
                 git.setUser(user);
                 git.setPassword(password);
 
-                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, null, "ls-remote (validateCredentials), " + user));
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_ACCESS_REMOTE_REPOS), GitScmPluginImpl.this.gitReposCompleteUrl, "ls-remote (validateCredentials), " + user));
 
                 return git.validateCredentials();
               }

@@ -123,6 +123,15 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   private static final Logger logger = LoggerFactory.getLogger(MergeMain.class);
 
   /**
+   * Runtime property that specifies the specific destination {@link Version} to use.
+   *
+   * <p>This is similar to RUNTIME_PROPERTY_REUSE_DEST_VERSION, but the latter is
+   * generally used for user interaction in conjunction with
+   * RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION.
+   */
+  private static final String RUNTIME_PROPERTY_SPECIFIC_DEST_VERSION = "SPECIFIC_DEST_VERSION";
+
+  /**
    * Runtime property of type {@link AlwaysNeverAskUserResponse} that indicates if a
    * previously established destination {@link Version} can be reused.
    */
@@ -145,6 +154,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
    * processing should continue if merge conflicts are encountered.
    */
   private static final String RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS = "CONTINUE_ON_MERGE_CONFLICTS";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_DEST_VERSION_SPECIFIED = "DEST_VERSION_SPECIFIED";
 
   /**
    * See description in ResourceBundle.
@@ -279,14 +293,13 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     ModuleVersion moduleVersionSrc;
     Module module;
     ScmPlugin scmPlugin;
-    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDestVersion;
-    Version versionReuseDest;
     String runtimeProperty;
     Version versionDest;
     ModuleVersion moduleVersionDest;
     MergeMainMode mergeMainMode;
     WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
     Path pathModuleWorkspace;
+    ScmPlugin.MergeResult mergeResult;
     List<ScmPlugin.Commit> listCommit;
     Iterator<ScmPlugin.Commit> iteratorCommit;
     String message;
@@ -310,45 +323,55 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // into.
       //********************************************************************************
 
-      alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION));
-
-      runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION);
+      runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_SPECIFIC_DEST_VERSION);
 
       if (runtimeProperty != null) {
-        versionReuseDest = new Version(runtimeProperty);
+        versionDest = new Version(runtimeProperty);
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DEST_VERSION_SPECIFIED), moduleVersionSrc, versionDest));
       } else {
-        versionReuseDest = null;
+        AlwaysNeverAskUserResponse alwaysNeverAskUserResponseCanReuseDestVersion;
+        Version versionReuseDest;
+
+        alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.valueOfWithAskDefault(runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION));
+
+        runtimeProperty = runtimePropertiesPlugin.getProperty(module, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION);
+
+        if (runtimeProperty != null) {
+          versionReuseDest = new Version(runtimeProperty);
+        } else {
+          versionReuseDest = null;
+
+          if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
+            // Normally if the runtime property CAN_REUSE_DEST_VERSION is ALWAYS the
+            // REUSE_DEST_VERSION runtime property should also be set. But since these
+            // properties are independent and stored externally, it can happen that they
+            // are not synchronized. We make an adjustment here to avoid problems.
+            alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.YES_ASK;
+          }
+        }
 
         if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
-          // Normally if the runtime property CAN_REUSE_DEST_VERSION is ALWAYS the
-          // REUSE_DEST_VERSION runtime property should also be set. But since these
-          // properties are independent and stored externally, it can happen that they
-          // are not synchronized. We make an adjustment here to avoid problems.
-          alwaysNeverAskUserResponseCanReuseDestVersion = AlwaysNeverAskUserResponse.YES_ASK;
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED), moduleVersionSrc, versionReuseDest));
+          versionDest = versionReuseDest;
+        } else {
+          versionDest =
+              Util.getInfoVersion(
+                  null,
+                  scmPlugin,
+                  userInteractionCallbackPlugin,
+                  MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_INPUT_DEST_VERSION), moduleVersionSrc),
+                  versionReuseDest);
+
+          runtimePropertiesPlugin.setProperty(null, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION, versionDest.toString());
+
+          // The result is not useful. We only want to adjust the runtime property which
+          // will be reused the next time around.
+          Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
+              runtimePropertiesPlugin,
+              MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION,
+              userInteractionCallbackPlugin,
+              MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION), versionDest));
         }
-      }
-
-      if (alwaysNeverAskUserResponseCanReuseDestVersion.isAlways()) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DEST_VERSION_AUTOMATICALLY_REUSED), moduleVersionSrc, versionReuseDest));
-        versionDest = versionReuseDest;
-      } else {
-        versionDest =
-            Util.getInfoVersion(
-                null,
-                scmPlugin,
-                userInteractionCallbackPlugin,
-                MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_INPUT_DEST_VERSION), moduleVersionSrc),
-                versionReuseDest);
-
-        runtimePropertiesPlugin.setProperty(null, MergeMain.RUNTIME_PROPERTY_REUSE_DEST_VERSION, versionDest.toString());
-
-        // The result is not useful. We only want to adjust the runtime property which
-        // will be reused the next time around.
-        Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-            runtimePropertiesPlugin,
-            MergeMain.RUNTIME_PROPERTY_CAN_REUSE_DEST_VERSION,
-            userInteractionCallbackPlugin,
-            MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_DEST_VERSION), versionDest));
       }
 
       moduleVersionDest = new ModuleVersion(module.getNodePath(), versionDest);
@@ -403,8 +426,10 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       switch (mergeMainMode) {
       case MERGE:
         // ScmPlugin.merge ensures that the working directory is synchronized.
-        if (!scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null)) {
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
+        mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+
+        if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
 
           this.listActionsPerformed.add(message);
 
@@ -413,12 +438,15 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           // Will have call Util.setAbort in case we must not continue.
           MergeMain.handleContinueOnMergeConflicts();
 
-          // The return value not important since the caller is expected to check for
+          // The return value is not important since the caller is expected to check for
           // Util.isAbort.
           return true;
         }
 
-        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+        }
+
         break;
 
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
@@ -455,7 +483,9 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         }
 
         // ScmPlugin.merge ensures that the working directory is synchronized.
-        if (!scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
+        mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+
+        if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
           message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
 
           this.listActionsPerformed.add(message);
@@ -470,7 +500,10 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           return true;
         }
 
-        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        }
+
         break;
 
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
@@ -489,9 +522,12 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case SRC_UNCONDITIONAL:
         // ScmPlugin.merge ensures that the working directory is synchronized.
-        scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+        mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
-        this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+        }
+
         break;
       }
     } finally {

@@ -19,14 +19,18 @@
 
 package org.azyva.dragom.model.plugin.impl;
 
+import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.util.Util;
-import org.json.JSONArray;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Factory for ArtifactInfoPlugin that assumes a simple equivalence between a
@@ -100,6 +104,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
     String baseGroupId;
     String groupId = null;
     String stringJsonArrayDefiniteArtifactGroupIdProduced;
+    Iterator<JsonNode> iteratorJsonNodeElement;
 
     inferenceRules = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES);
 
@@ -144,17 +149,28 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
     stringJsonArrayDefiniteArtifactGroupIdProduced = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED);
 
     if (stringJsonArrayDefiniteArtifactGroupIdProduced != null) {
-      JSONArray jsonArrayDefiniteArtifactGroupIdProduced;
+      JsonNode jsonNode;
 
       this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
 
-      jsonArrayDefiniteArtifactGroupIdProduced = new JSONArray(stringJsonArrayDefiniteArtifactGroupIdProduced);
+      try {
+        jsonNode = (new ObjectMapper()).readTree(stringJsonArrayDefiniteArtifactGroupIdProduced);
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
 
-      for (int i = 0; i < jsonArrayDefiniteArtifactGroupIdProduced.length(); i++) {
-        this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId((String)jsonArrayDefiniteArtifactGroupIdProduced.get(i)));
+      iteratorJsonNodeElement = jsonNode.elements();
+
+      while (iteratorJsonNodeElement.hasNext()) {
+        JsonNode jsonNodeElement;
+
+        jsonNodeElement = iteratorJsonNodeElement.next();
+
+        if (jsonNodeElement.isTextual()) {
+          this.setDefiniteArtifactGroupIdProduced.add(new ArtifactGroupId(jsonNodeElement.asText()));
+        }
       }
     }
-
   }
 
   @Override

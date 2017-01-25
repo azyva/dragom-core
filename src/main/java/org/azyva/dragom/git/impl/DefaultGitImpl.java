@@ -48,9 +48,10 @@ import org.azyva.dragom.git.Git;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.util.Util;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Main implementation of {@link Git}.
@@ -734,13 +735,17 @@ public class DefaultGitImpl implements Git {
     // For these reasons commit attributes are stored within the commit messages
     // themselves.
     if (mapCommitAttr != null) {
-      message = (new JSONObject(mapCommitAttr)).toString() + ' ' + message;
+      try {
+        message = (new ObjectMapper()).writeValueAsString(mapCommitAttr) + ' ' + message;
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
     }
 
     // Commons Exec ends up calling Runtime.exec(String[], ...) with the command line
     // arguments. It looks like along the way double quotes within the arguments get
     // removed which, apart from being undesirable, causes a bug with the commit
-    // messages that included a JSONObject for the commit attributes. At the very
+    // messages that included a JSON object for the commit attributes. At the very
     // least it is required to use the addArgument(String, boolean handleQuote) method
     // to disable quote handling. Otherwise Commons Exec surrounds the argument with
     // single quotes when it contains double quotes, which we do not want. But we must

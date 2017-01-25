@@ -693,6 +693,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     List<ScmPlugin.Commit> listCommit;
     Iterator<ScmPlugin.Commit> iteratorCommit;
     Path pathModuleWorkspaceSrc;
+    ScmPlugin.MergeResult mergeResult;
 
     this.referencePath.add(referenceDest);
 
@@ -768,7 +769,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       if (listCommit.isEmpty()) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
       } else {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, listCommit));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, listCommit));
       }
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
@@ -776,10 +777,12 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       }
 
       // ScmPlugin.merge ensures that the working directory is synchronized.
-      if (!scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null)) {
-        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+      mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
 
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+      if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
+        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
 
         // Will have call Util.setAbort in case we must not continue.
         MergeReferenceGraph.handleContinueOnMergeConflicts();
@@ -787,7 +790,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
         return true;
       }
 
-      this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+      if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+      }
 
       //********************************************************************************
       // Handle matching child references and recurse.

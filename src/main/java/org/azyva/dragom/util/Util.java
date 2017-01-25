@@ -30,6 +30,7 @@ import java.text.MessageFormat;
 import java.text.ParseException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
@@ -52,9 +53,11 @@ import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.ReferencePath;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Static utility methods.
@@ -65,6 +68,9 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public final class Util {
+  /**
+   * Logger for the class.
+   */
   private static final Logger logger = LoggerFactory.getLogger(Util.class);
 
   /**
@@ -519,21 +525,37 @@ public final class Util {
    */
   public static Map<String, String> getJsonAttr(String message, Map<String, String> mapAttr) {
     int indexClosingBrace;
-    JSONObject jsonObjectAttributes;
+    JsonNode jsonNode;
+    Iterator<String> iteratorFieldName;
 
     if ((message.length() == 0) || (message.charAt(0) != '{')) {
       return Collections.<String, String>emptyMap();
     }
 
     indexClosingBrace = message.indexOf('}');
-    jsonObjectAttributes = new JSONObject(message.substring(0, indexClosingBrace + 1));
+
+    try {
+      jsonNode = (new ObjectMapper()).readTree(message.substring(0, indexClosingBrace + 1));
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
 
     if (mapAttr == null) {
       mapAttr = new HashMap<String, String>();
     }
 
-    for (String name: JSONObject.getNames(jsonObjectAttributes)) {
-      mapAttr.put(name, jsonObjectAttributes.getString(name));
+    iteratorFieldName = jsonNode.fieldNames();
+
+    while (iteratorFieldName.hasNext()) {
+      String fieldName;
+      JsonNode jsonNodeFieldValue;
+
+      fieldName = iteratorFieldName.next();
+      jsonNodeFieldValue = jsonNode.get(fieldName);
+
+      if ((jsonNodeFieldValue != null) && jsonNodeFieldValue.isTextual()) {
+        mapAttr.put(fieldName, jsonNodeFieldValue.asText());
+      }
     }
 
     return mapAttr;
