@@ -24,7 +24,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -155,7 +157,11 @@ public class DefaultGitImpl implements Git {
             throw new RuntimeException("User " + userFromReposUrl + " extracted from repository URL " + this.reposUrl + " does not correspond to user provided in credentials " + this.user + '.');
           }
 
-          this.httpCredentials = matcher.group(1) + this.user + ':' + this.password + '@' + matcher.group(3);
+          try {
+            this.httpCredentials = matcher.group(1) + URLEncoder.encode(this.user, "UTF-8") + ':' + URLEncoder.encode(this.password, "UTF-8") + '@' + matcher.group(3);
+          } catch (UnsupportedEncodingException uee) {
+            throw new RuntimeException(uee);
+          }
         }
 
         try {

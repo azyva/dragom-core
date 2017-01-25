@@ -135,7 +135,7 @@ public class CredentialStore {
   /**
    * Property suffix for a password. The prefix is &lt;realm&gt;.&lt;user&gt;.
    */
-  public static final String PROPERTY_SUFFIX_PASSWORD = ".Password.";
+  public static final String PROPERTY_SUFFIX_PASSWORD = ".Password";
 
   /**
    * Because realms are used as property keys, the characters used must be
