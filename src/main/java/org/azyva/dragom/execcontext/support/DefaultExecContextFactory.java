@@ -27,12 +27,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.azyva.dragom.execcontext.ExecContext;
@@ -43,11 +45,13 @@ import org.azyva.dragom.execcontext.WorkspaceExecContextFactory;
 import org.azyva.dragom.execcontext.plugin.ExecContextPlugin;
 import org.azyva.dragom.execcontext.plugin.ExecContextPluginFactory;
 import org.azyva.dragom.execcontext.plugin.ToolLifeCycleExecContextPlugin;
+import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.support.ExecContextPluginFactoryHolder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelFactory;
 import org.azyva.dragom.model.support.ModelFactoryHolder;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
+import org.azyva.dragom.util.SortedProperties;
 import org.azyva.dragom.util.Util;
 
 /**
@@ -114,6 +118,16 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
    * instantiate a new one.
    */
   private static final String INIT_PROPERTY_IND_IGNORE_CACHED_EXEC_CONTEXT = "IND_IGNORE_CACHED_EXEC_CONTEXT";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_WORKSPACE_DIR_INIT = "WORKSPACE_DIR_INIT";
+
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultExecContextFactory.class.getName() + "ResourceBundle");
 
   /**
    * Map of workspace Path to DefaultExecContextImpl.
@@ -212,34 +226,20 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
       this.model = ModelFactoryHolder.getModelFactory().getModel(propertiesInit);
 
-      this.properties = new Properties();
+      this.properties = new SortedProperties();
 
       // The existence of the Properties file is used as an indication of whether the
       // workspace directory is initialized. If the file does not exist the workspace
       // directory is automatically initialized.
 
       if (this.pathPropertiesFile.toFile().isFile()) {
-        try {
-          InputStream inputStreamProperties;
-
-          inputStreamProperties = new FileInputStream(this.pathPropertiesFile.toFile());
+        try (InputStream inputStreamProperties = new FileInputStream(this.pathPropertiesFile.toFile())) {
           this.properties.load(inputStreamProperties);
-          inputStreamProperties.close();
         } catch (IOException ioe) {
           throw new RuntimeException(ioe);
         }
 
         this.indWorkspaceDirInit = true;
-      } else {
-        // The Properties file may not exist, but its containing directory may already
-        // exist.
-        if (!this.pathPropertiesFile.getParent().toFile().isDirectory()) {
-          if (!this.pathPropertiesFile.getParent().toFile().mkdirs()) {
-            throw new RuntimeException("Parent directory of " + this.pathPropertiesFile + " could not be created.");
-          }
-        }
-
-        this.saveProperties();
       }
 
       this.mapTransientData = new HashMap<String, Object>();
@@ -258,13 +258,20 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
       if (!this.indWorkspaceDirInit) {
         synchronized(this) {
           if (!this.indWorkspaceDirInit) {
-            if (!this.pathMetadataDir.toFile().mkdirs()) {
-              throw new RuntimeException("Directory " + this.pathMetadataDir + " could not be created.");
+            if (!this.pathMetadataDir.toFile().isDirectory()) {
+              if (!this.pathMetadataDir.toFile().mkdirs()) {
+                throw new RuntimeException("Directory " + this.pathMetadataDir + " could not be created.");
+              }
             }
 
             this.saveProperties();
 
             this.indWorkspaceDirInit = true;
+
+            // Using UserInteractionCallbackPlugin here seems a little bit inappropriate given
+            // that we are in the ExecContext implementation itself which is responsible for
+            // providing such plugins. Nevertheless it works and still seems clean.
+            this.getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(DefaultExecContextFactory.resourceBundle.getString(DefaultExecContextFactory.MSG_PATTERN_KEY_WORKSPACE_DIR_INIT), this.pathWorkspaceDir));
           }
         }
       }
@@ -415,12 +422,8 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
      * Saves the Properties.
      */
     private void saveProperties() {
-      try {
-        OutputStream outputStreamProperties;
-
-        outputStreamProperties = new FileOutputStream(this.pathPropertiesFile.toFile());
+      try (OutputStream outputStreamProperties = new FileOutputStream(this.pathPropertiesFile.toFile())){
         this.properties.store(outputStreamProperties, null);
-        outputStreamProperties.close();
       } catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }

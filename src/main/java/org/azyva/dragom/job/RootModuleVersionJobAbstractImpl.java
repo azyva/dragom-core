@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -39,6 +40,7 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
+import org.azyva.dragom.model.plugin.ModuleVersionMatcherPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
@@ -190,6 +192,11 @@ public abstract class RootModuleVersionJobAbstractImpl {
   protected static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
 
   /**
+   * See description in ResourceBundle.
+   */
+  protected static final String MSG_PATTERN_KEY_MATCH_MESSAGES = "MATCH_MESSAGES";
+
+  /**
    * ResourceBundle specific to this class.
    */
   protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobAbstractImpl.class.getName() + "ResourceBundle");
@@ -307,6 +314,12 @@ public abstract class RootModuleVersionJobAbstractImpl {
   protected List<String> listActionsPerformed;
 
   /**
+   * Used to accumulate the messages returned by
+   * {@link ModuleVersionMatcherPlugin#matches}.
+   */
+  protected List<String> listMatchMessages;
+
+  /**
    * Indicates that the List of root {@link ModuleVersion} passed to the constructor
    * was changed and should be saved by the caller if persisted.
    */
@@ -328,6 +341,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
     this.referencePath = new ReferencePath();
     this.listActionsPerformed = new ArrayList<String>();
+    this.listMatchMessages = new ArrayList<String>();
   }
 
   /**
@@ -472,23 +486,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * Alternatively, the methods mentioned above can be overridden individually.
    */
   public void performJob() {
-/*
-  {
-    Model model;
-    Module module;
-    ScmPlugin scmPlugin;
-    Path pathModuleWorkspace;
-    ReferenceManagerPlugin referenceManagerPlugin;
-    List<Reference> listReference;
-
-    model = ExecContextHolder.get().getModel();
-    module = model.getModule(new NodePath("EpargnePlacement/Supervision/epsupf-spr-modele"));
-    scmPlugin = module.getNodePlugin(ScmPlugin.class,  null);
-    pathModuleWorkspace = scmPlugin.checkoutSystem(new Version("D/livr-20170122"));
-    referenceManagerPlugin = module.getNodePlugin(ReferenceManagerPlugin.class,  null);
-    listReference = referenceManagerPlugin.getListReference(pathModuleWorkspace);
-    System.out.println();
-  } */
 //    this.beforeValidateListModuleVersionRoot();
 //    this.validateListModuleVersionRoot();
     this.beforeIterateListModuleVersionRoot();
@@ -508,7 +505,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
   /*
    * NOTE: It is not believed this method is really useful. It wastes processing
    * time since when root ModuleVersion's were added to the list of root they can be
-   * assumed to have been valided then.
+   * be assumed to have been validated then.
    *
    * Called by {@link #performJob} to validate the root ModuleVersion's.
    * <p>
@@ -645,6 +642,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
       userInteractionCallbackPlugin.provideInfo(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED));
     }
 
+    if (this.listMatchMessages.size() != 0) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_MATCH_MESSAGES), StringUtils.join(this.listMatchMessages, '\n')));
+    }
+
     userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_COMPLETED), this.getClass().getSimpleName()));
   }
 
@@ -692,6 +693,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
     AlwaysNeverYesNoAskUserResponse alwaysNeverYesNoAskUserResponse;
     boolean indReferencePathAlreadyReverted;
     boolean indVisitChildren;
+    ModuleVersionMatcherPlugin moduleVersionMatcherPlugin;
+    EnumSet<ModuleVersionMatcherPlugin.MatchFlag> enumSetMatchFlag;
 
     this.referencePath.add(reference);
     indReferencePathAlreadyReverted = false;
@@ -800,7 +803,10 @@ public abstract class RootModuleVersionJobAbstractImpl {
         }
       }
 
+      moduleVersionMatcherPlugin = module.getNodePlugin(ModuleVersionMatcherPlugin.class, null);
+
       indVisitChildren = true;
+      enumSetMatchFlag = null;
 
       if (!this.indDepthFirst) {
         if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
@@ -810,36 +816,54 @@ public abstract class RootModuleVersionJobAbstractImpl {
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
-            } else {
+            }
+
+            if (moduleVersionMatcherPlugin != null) {
+              ByReference<String> byReferenceMessage;
+
+              byReferenceMessage = new ByReference<String>();
+
+              enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
+
+              if (byReferenceMessage.object != null) {
+                this.listMatchMessages.add(byReferenceMessage.object);
+              }
+            }
+
+            if ((enumSetMatchFlag == null) || enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.MATCH)) {
               bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+
+              // We are about to delegate to visitMatchedModuleVersion for the rest of the
+              // processing. This method starts working on the same current module and also
+              // manages the ReferencePath. We must therefore reset it now. And we must prevent
+              // the finally block from resetting it.
+              this.referencePath.removeLeafReference();;
+              indReferencePathAlreadyReverted = true;
+
+              // We need to release before visiting the matched ModuleVersion since the
+              // workspace directory may need to be accessed again.
+              workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+              pathModuleWorkspace = null;
+
+              indVisitChildren = this.visitMatchedModuleVersion(reference);
+
+              if (Util.isAbort()) {
+                return false;
+              }
+
+              // We redo the things that were undone before calling visitMatchedModuleVersion.
+              this.referencePath.add(reference);
+              indReferencePathAlreadyReverted = false;
             }
-
-            // We are about to delegate to visitMatchedModuleVersion for the rest of the
-            // processing. This method starts working on the same current module and also
-            // manages the ReferencePath. We must therefore reset it now. And we must prevent
-            // the finally block from resetting it.
-            this.referencePath.removeLeafReference();;
-            indReferencePathAlreadyReverted = true;
-
-            // We need to release before visiting the matched ModuleVersion since the
-            // workspace directory may need to be accessed again.
-            workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-            pathModuleWorkspace = null;
-
-            indVisitChildren = this.visitMatchedModuleVersion(reference);
-
-            if (Util.isAbort()) {
-              return false;
-            }
-
-            // We redo the things that were undone before calling visitMatchedModuleVersion.
-            this.referencePath.add(reference);
-            indReferencePathAlreadyReverted = false;
           }
         }
       }
 
-      if (indVisitChildren && this.getReferencePathMatcher().canMatchChildren(this.referencePath)) {
+      if (   indVisitChildren
+          && this.getReferencePathMatcher().canMatchChildren(this.referencePath)
+          && (   (enumSetMatchFlag == null)
+              || !enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.SKIP_CHILDREN))) {
+
         ReferenceManagerPlugin referenceManagerPlugin = null;
         List<Reference> listReference;
 
@@ -903,33 +927,48 @@ public abstract class RootModuleVersionJobAbstractImpl {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+
+            bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+
+            if (moduleVersionMatcherPlugin != null) {
+                ByReference<String> byReferenceMessage;
+
+                byReferenceMessage = new ByReference<String>();
+
+                enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
+
+                if (byReferenceMessage.object != null) {
+                  this.listMatchMessages.add(byReferenceMessage.object);
+                }
+              }
             }
 
-            // We are about to delegate to visitMatchedModuleVersion for the rest of the
-            // processing. This method starts working on the same current module and also
-            // manages the ReferencePath. We must therefore reset it now. And we must prevent
-            // the finally block from resetting it.
-            this.referencePath.removeLeafReference();;
-            indReferencePathAlreadyReverted = true;
+            if ((enumSetMatchFlag == null) || enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.MATCH)) {
+              // We are about to delegate to visitMatchedModuleVersion for the rest of the
+              // processing. This method starts working on the same current module and also
+              // manages the ReferencePath. We must therefore reset it now. And we must prevent
+              // the finally block from resetting it.
+              this.referencePath.removeLeafReference();;
+              indReferencePathAlreadyReverted = true;
 
-            // We need to release before iterating through the references since the workspace
-            // directory may need to be accessed again.
-            if (pathModuleWorkspace != null) {
-              workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-              pathModuleWorkspace = null;
+              // We need to release before iterating through the references since the workspace
+              // directory may need to be accessed again.
+              if (pathModuleWorkspace != null) {
+                workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+                pathModuleWorkspace = null;
+              }
+
+              // Return value is useless when the traversal is depth first.
+              this.visitMatchedModuleVersion(reference);
+
+              if (Util.isAbort()) {
+                return false;
+              }
+
+              // We redo the things that were undone before calling visitMatchedModuleVersion.
+              this.referencePath.add(reference);
+              indReferencePathAlreadyReverted = false;
             }
-
-            // Return value is useless when the traversal is depth first.
-            this.visitMatchedModuleVersion(reference);
-
-            if (Util.isAbort()) {
-              return false;
-            }
-
-            // We redo the things that were undone before calling visitMatchedModuleVersion.
-            this.referencePath.add(reference);
-            indReferencePathAlreadyReverted = false;
           }
         }
       }

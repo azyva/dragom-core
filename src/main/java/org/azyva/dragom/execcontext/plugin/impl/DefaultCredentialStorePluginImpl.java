@@ -132,6 +132,16 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_MASTER_KEY_FILE_CREATED = "MASTER_KEY_FILE_CREATED";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_CREDENTIAL_KEY_FILE_CREATED = "CREDENTIAL_FILE_CREATED";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_INPUT_USER_FOR_RESOURCE = "INPUT_USER_FOR_RESOURCE";
 
   /**
@@ -183,6 +193,9 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
     List<CredentialStore.ResourcePatternRealmUser> listResourcePatternRealmUser;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     String stringRuntimeProperty;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    boolean indMasterKeyFileExists;
+    boolean indCredentialFileExists;
 
     Util.applyDragomSystemProperties();
 
@@ -248,7 +261,20 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
      * Construct CredentialStore.
      */
 
+    indMasterKeyFileExists = pathMasterKeyFile.toFile().isFile();
+    indCredentialFileExists = pathCredentialFile.toFile().isFile();
+
     this.credentialStore = new CredentialStore(pathCredentialFile, pathMasterKeyFile, listResourcePatternRealmUser);
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    if (!indMasterKeyFileExists && pathMasterKeyFile.toFile().isFile()) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_MASTER_KEY_FILE_CREATED), pathMasterKeyFile));
+    }
+
+    if (!indCredentialFileExists && pathCredentialFile.toFile().isFile()) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(DefaultCredentialStorePluginImpl.resourceBundle.getString(DefaultCredentialStorePluginImpl.MSG_PATTERN_CREDENTIAL_KEY_FILE_CREATED), pathCredentialFile));
+    }
   }
 
   /**

@@ -20,7 +20,6 @@
 package org.azyva.dragom.security;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,6 +50,9 @@ import javax.crypto.spec.PBEParameterSpec;
 import javax.xml.bind.DatatypeConverter;
 
 import org.azyva.dragom.execcontext.plugin.impl.DefaultCredentialStorePluginImpl;
+import org.azyva.dragom.util.SortedProperties;
+import org.azyva.dragom.util.WormFile;
+import org.azyva.dragom.util.WormFile.WormFileCache;
 
 /**
  * This class allows managing credentials securely. It is used by
@@ -231,6 +233,13 @@ public class CredentialStore {
   private List<ResourcePatternRealmUser> listResourcePatternRealmUser;
 
   /**
+   * Credential file.
+   *
+   * <p>WormFileCache is used since the credential file is typically shared by
+   * multiple (Dragom) processes.
+   */
+  private WormFileCache wormFileCacheCredentials;
+  /**
    * Properties containing the credentials. Read from the credential file.
    * <p>
    * null indicates the credentials are not loaded and causes
@@ -304,20 +313,38 @@ public class CredentialStore {
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }
+
+    this.wormFileCacheCredentials = WormFile.getCache(this.pathCredentialFile);
+
+    // We could behave lazily and create the credential file only when needed. But
+    // creating the file early and at predetermined point in time allows the caller
+    // to know when the file gets created and inform the user. We do not want to
+    // interact with the user in this lower-level class.
+    if (!this.pathCredentialFile.toFile().isFile()) {
+      this.readPropertiesCredentials();
+      this.savePropertiesCredentials();
+    }
   }
 
   /**
    * Reads the credential Properties from the credential file.
    */
   private void readPropertiesCredentials() {
-    if (this.propertiesCredentials == null) {
-      this.propertiesCredentials = new Properties();
+    if (this.wormFileCacheCredentials.isModified()) {
+      this.propertiesCredentials = new SortedProperties();
 
-      try {
-        this.propertiesCredentials.load(new FileInputStream(this.pathCredentialFile.toFile()));
-      } catch (FileNotFoundException fnfe) {
-      } catch (IOException ioe) {
-        throw new RuntimeException(ioe);
+      if (this.wormFileCacheCredentials.isExists()) {
+        WormFile.AccessHandle accessHandle;
+
+        accessHandle = this.wormFileCacheCredentials.reserveAccess(false);
+
+        try {
+          this.propertiesCredentials.load(this.wormFileCacheCredentials.getInputStream());
+        } catch (IOException ioe) {
+        	throw new RuntimeException(ioe);
+        } finally {
+          accessHandle.release();
+        }
       }
     }
   }
@@ -326,10 +353,26 @@ public class CredentialStore {
    * Saves the properties for the credentials to the credential file.
    */
   private void savePropertiesCredentials() {
+    WormFile.AccessHandle accessHandle;
+
+    // Here we handle the access reservation only for the save operation, after the
+    // data has been actually written to the Properties. This opens the door to a
+    // situation where between the time the Properties is read and then saved (after
+    // new data is written), another process has had the time to do the same, and this
+    // save would overwrite the changes.
+    // Strictly speaking, we should reserve access, reload if required, write data,
+    // save and then release access. But given this file is not expected to be written
+    // often, we neglect to perform this more complex processing. Actually, even using
+    // WormFile is probably overkill.
+
+    accessHandle = this.wormFileCacheCredentials.reserveAccess(true);
+
     try {
-      this.propertiesCredentials.store(new FileOutputStream(this.pathCredentialFile.toFile()), null);
+      this.propertiesCredentials.store(this.wormFileCacheCredentials.getOutputStream(), null);
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
+    } finally {
+      accessHandle.release();
     }
   }
 

@@ -61,12 +61,13 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  */
 public class RootManager {
   /**
-   * ExecContext property that holds the list of root MovuleVersion's.
+   * Prefix for the ExecContext properties that hold the list of root
+   * ModuleVersion's.
    *
-   * The value of this property is a space-separated list of stringified
-   * ModuleVersion.
+   * <p>Each root ModuleVersion is defined with a property having this prefix plus
+   * an incremental numeric suffix.
    */
-  private static final String EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS = "ROOT_MODULE_VERSIONS";
+  private static final String EXEC_CONTEXT_PROPERTY_PREFIX_ROOT_MODULE_VERSION = "ROOT_MODULE_VERSIONS.";
 
   /**
    * Prefix of the properties that hold the global ReferencePathMatcherOr.
@@ -106,19 +107,23 @@ public class RootManager {
     listModuleVersion = (List<ModuleVersion>)execContext.getTransientData(RootManager.class.getName() + ".ListModuleVersion");
 
     if (listModuleVersion == null) {
-      String roots;
+      int index;
 
-      roots = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS);
+      listModuleVersion = new ArrayList<ModuleVersion>();
 
-      if (roots == null) {
-        listModuleVersion = new ArrayList<ModuleVersion>();
-      } else {
-        listModuleVersion = new ArrayList<ModuleVersion>();
+      index = 1;
 
-        for (String root: roots.split(",")) {
-          listModuleVersion.add(new ModuleVersion(root));
+      do {
+        String rootModuleVersion;
+
+        rootModuleVersion = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_ROOT_MODULE_VERSION + String.format("%03d", index));
+
+        if (rootModuleVersion != null) {
+          listModuleVersion.add(new ModuleVersion(rootModuleVersion));
+        } else {
+          index = 0;
         }
-      }
+      } while (index++ != 0);
 
       execContext.setTransientData(RootManager.class.getName() + ".ListModuleVersion", listModuleVersion);
     }
@@ -341,26 +346,18 @@ public class RootManager {
    */
   public static void saveListModuleVersion() {
     List<ModuleVersion> listModuleVersion;
-    StringBuilder stringBuilderRoots;
     ExecContext execContext;
+    int index;
 
     execContext = ExecContextHolder.get();
     listModuleVersion = RootManager.getListModuleVersion();
 
-    if ((listModuleVersion == null) || listModuleVersion.isEmpty()) {
-      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, null);
-    } else {
-      stringBuilderRoots = new StringBuilder();
+    execContext.removeProperties(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_ROOT_MODULE_VERSION);
 
-      for (ModuleVersion moduleVersion: listModuleVersion) {
-        if (stringBuilderRoots.length() != 0) {
-          stringBuilderRoots.append(',');
-        }
+    index = 1;
 
-        stringBuilderRoots.append(moduleVersion.toString());
-      }
-
-      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_ROOT_MODULE_VERSIONS, stringBuilderRoots.toString());
+    for (ModuleVersion moduleVersion: listModuleVersion) {
+      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_ROOT_MODULE_VERSION + String.format("%03d", index++), moduleVersion.toString());
     }
   }
 
@@ -391,12 +388,12 @@ public class RootManager {
       do {
         String stringReferencePathMatcherByElement;
 
-        stringReferencePathMatcherByElement = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + index);
+        stringReferencePathMatcherByElement = execContext.getProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + String.format("%03d", index));
 
-        if (stringReferencePathMatcherByElement == null) {
-          index = 0;
+        if (stringReferencePathMatcherByElement != null) {
+            referencePathMatcherOr.addReferencePathMatcher(new ReferencePathMatcherByElement(stringReferencePathMatcherByElement, execContext.getModel()));
         } else {
-          referencePathMatcherOr.addReferencePathMatcher(new ReferencePathMatcherByElement(stringReferencePathMatcherByElement, execContext.getModel()));
+            index = 0;
         }
       } while (index++ != 0);
 
@@ -433,7 +430,7 @@ public class RootManager {
     index = 1;
 
     for (ReferencePathMatcher referencePathMatcher: referencePathMatcherOr.getListReferencePathMatcher()) {
-      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + (index++), ReferencePathMatcherByElement.class.cast(referencePathMatcher).toString());
+      execContext.setProperty(RootManager.EXEC_CONTEXT_PROPERTY_PREFIX_REFERENCE_PATH_MATCHER + String.format("%03d", index++), ReferencePathMatcherByElement.class.cast(referencePathMatcher).toString());
     }
   }
 }

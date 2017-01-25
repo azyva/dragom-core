@@ -90,7 +90,7 @@ public class WormFile {
   private boolean indWrite;
 
   /**
-   * WorkFile by itself does not manage the last modification timestamp of the file
+   * WormFile by itself does not manage the last modification timestamp of the file
    * nor its comparison with the timestamp corresponding to the time the data was
    * loaded into memory. This is not possible since only one instance of WormFile
    * exists for each file, and multiple threads in the same process may need to
@@ -122,7 +122,7 @@ public class WormFile {
     }
 
     /**
-     * Passthrough for the {@link WormFile#getInputStream}.
+     * Passthrough for {@link WormFile#getInputStream}.
      *
      * @return See description.
      */
@@ -131,7 +131,7 @@ public class WormFile {
     }
 
     /**
-     * Passthrough for the {@link WormFile#getOutputStream}.
+     * Passthrough for {@link WormFile#getOutputStream}.
      *
      * @return See description.
      */
@@ -140,7 +140,7 @@ public class WormFile {
     }
 
     /**
-     * Passthrough for the {@link WormFile#reserveAccess}.
+     * Passthrough for {@link WormFile#reserveAccess}.
      *
      * @param indWriteRequest See description.
      * @return See description.
@@ -154,7 +154,7 @@ public class WormFile {
     }
 
     /**
-     * Passthrough for the {@link WormFile#getInputStream}.
+     * Passthrough for {@link WormFile#isExists}.
      *
      * @return See description.
      */
@@ -293,7 +293,7 @@ public class WormFile {
    *
    * <p>Access to the file must have been reserved before.
    *
-   * <p>The InputStream must not be closed by the called. It will get implicitly
+   * <p>The InputStream must not be closed by the caller. It will get implicitly
    * closed when the underlying FileChannel gets closed by releasing access to the
    * file.
    *
@@ -315,7 +315,7 @@ public class WormFile {
 
         return Channels.newInputStream(fileChannel);
       } else {
-        // TODO: We thing that by creating a new FileInputStream withough going through
+        // TODO: We think that by creating a new FileInputStream without going through
         // the FileChannel, they will be independent and will not interfere. But this has
         // not been tested.
         return new FileInputStream(this.pathFile.toFile());
@@ -334,7 +334,7 @@ public class WormFile {
    *
    * <p>Access to the file must have been reserved for writing before.
    *
-   * <p>The OutputStream must not be closed by the called. It will get implicitly
+   * <p>The OutputStream must not be closed by the caller. It will get implicitly
    * closed when the underlying FileChannel gets closed by releasing access to the
    * file.
    *
