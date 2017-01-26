@@ -21,6 +21,7 @@ package org.azyva.dragom.model.plugin.impl;
 
 import java.text.MessageFormat;
 import java.util.HashSet;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
@@ -245,7 +246,12 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
       if (specificPluginId != null) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));
 
-        return node.getNodePlugin(classNodePlugin, specificPluginId);
+        // An empty string means to do as if the plugin was not supported.
+        if (specificPluginId.length() == 0) {
+          return null;
+        } else {
+          return node.getNodePlugin(classNodePlugin, specificPluginId);
+        }
       }
 
       pluginId = null;
@@ -268,10 +274,17 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_AUTOMATICALLY_REUSED), stringClassNodePlugin, node, reusePluginId));
         pluginId = reusePluginId;
       } else {
+        List<String> listPluginId;
+
+        listPluginId = node.getListPluginId(classNodePlugin);
+
+        // We do not allow specifying the null plugin ID.
+        listPluginId.remove(null);
+
         if (reusePluginId == null) {
-          pluginId = userInteractionCallbackPlugin.getInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID), stringClassNodePlugin, node));
+          pluginId = userInteractionCallbackPlugin.getInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID), stringClassNodePlugin, node, String.join(", ", listPluginId)));
         } else {
-          pluginId = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT), stringClassNodePlugin, node, reusePluginId), reusePluginId);
+          pluginId = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_INPUT_PLUGIN_ID_WITH_DEFAULT), stringClassNodePlugin, node, String.join(", ", listPluginId), reusePluginId), reusePluginId);
         }
 
         runtimePropertiesPlugin.setProperty(null, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID + stringClassNodePlugin, pluginId);
@@ -285,7 +298,12 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
             MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
       }
 
-      return node.getNodePlugin(classNodePlugin, pluginId);
+      // An empty string means to do as if the plugin was not supported.
+      if (pluginId.length() == 0) {
+        return null;
+      } else {
+        return node.getNodePlugin(classNodePlugin, pluginId);
+      }
     } finally {
       setCurrentPluginRequest.remove(currentPluginRequest);
     }
