@@ -529,7 +529,7 @@ public final class Util {
     Iterator<String> iteratorFieldName;
 
     if ((message.length() == 0) || (message.charAt(0) != '{')) {
-      return Collections.<String, String>emptyMap();
+      return (mapAttr == null) ? Collections.<String, String>emptyMap() : mapAttr;
     }
 
     indexClosingBrace = message.indexOf('}');

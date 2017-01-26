@@ -37,6 +37,8 @@ import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.SelectStaticVersionPlugin;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
 import org.azyva.dragom.util.Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link NodePluginFactory} which allows selecting a specific {@link NodePlugin}
@@ -75,6 +77,11 @@ import org.azyva.dragom.util.Util;
  */
 public class RuntimeSelectionPluginFactory implements NodePluginFactory {
   /**
+   * Logger for the class.
+   */
+  private static final Logger logger = LoggerFactory.getLogger(RuntimeSelectionPluginFactory.class);
+
+  /**
    * Prefix for the runtime property specifying the specific plugin ID to delegate
    * to.
    */
@@ -90,11 +97,6 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
    * Prefix for the runtime property that specifies the plugin ID to reuse.
    */
   private static final String RUNTIME_PROPERTY_PREFIX_REUSE_PLUGIN_ID = "REUSE_PLUGIN_ID.";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED = "PLUGIN_ID_SPECIFIED";
 
   /**
    * See description in ResourceBundle.
@@ -244,7 +246,7 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
       specificPluginId = runtimePropertiesPlugin.getProperty(node, RuntimeSelectionPluginFactory.RUNTIME_PROPERTY_PREFIX_SPECIFIC_PLUGIN_ID + stringClassNodePlugin);
 
       if (specificPluginId != null) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_PLUGIN_ID_SPECIFIED), stringClassNodePlugin, node, specificPluginId));
+        RuntimeSelectionPluginFactory.logger.info("Plugin ID " + specificPluginId + " specified for plugin " + stringClassNodePlugin + " of node " + node + " is used as is.");
 
         // An empty string means to do as if the plugin was not supported.
         if (specificPluginId.length() == 0) {

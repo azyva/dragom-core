@@ -695,6 +695,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
     boolean indVisitChildren;
     ModuleVersionMatcherPlugin moduleVersionMatcherPlugin;
     EnumSet<ModuleVersionMatcherPlugin.MatchFlag> enumSetMatchFlag;
+    ByReference<String> byReferenceMessage;
 
     this.referencePath.add(reference);
     indReferencePathAlreadyReverted = false;
@@ -805,8 +806,13 @@ public abstract class RootModuleVersionJobAbstractImpl {
 
       moduleVersionMatcherPlugin = module.getNodePlugin(ModuleVersionMatcherPlugin.class, null);
 
+      if (moduleVersionMatcherPlugin != null) {
+        RootModuleVersionJobAbstractImpl.logger.info("ModuleVersionMatcherPlugin defined for module " + module + ". It will be invoked for matching the ModuleVersion's.");
+      }
+
       indVisitChildren = true;
       enumSetMatchFlag = null;
+      byReferenceMessage = new ByReference<String>();
 
       if (!this.indDepthFirst) {
         if ((moduleVersion.getVersion().getVersionType() == VersionType.DYNAMIC) && !this.indHandleDynamicVersion) {
@@ -819,13 +825,14 @@ public abstract class RootModuleVersionJobAbstractImpl {
             }
 
             if (moduleVersionMatcherPlugin != null) {
-              ByReference<String> byReferenceMessage;
-
-              byReferenceMessage = new ByReference<String>();
+              byReferenceMessage.object = null;
 
               enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
 
+              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersionMatcherPlugin EnumSet<MatchFlag> for module " + module + ": " + enumSetMatchFlag);
+
               if (byReferenceMessage.object != null) {
+                userInteractionCallbackPlugin.provideInfo(byReferenceMessage.object);
                 this.listMatchMessages.add(byReferenceMessage.object);
               }
             }
@@ -917,27 +924,25 @@ public abstract class RootModuleVersionJobAbstractImpl {
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-              // This is not required since bracketHandle can only be null here, but the
-              // compiler does not know. This avoids a warning.
-              if (bracketHandle != null) {
-                bracketHandle.close();
-              }
+            // This is not required since bracketHandle can only be null here, but the
+            // compiler does not know. This avoids a warning.
+            if (bracketHandle != null) {
+              bracketHandle.close();
+            }
 
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
+              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
 
-            bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
-
-            if (moduleVersionMatcherPlugin != null) {
-                ByReference<String> byReferenceMessage;
-
-                byReferenceMessage = new ByReference<String>();
+              if (moduleVersionMatcherPlugin != null) {
+                byReferenceMessage.object = null;
 
                 enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
 
                 if (byReferenceMessage.object != null) {
+                  userInteractionCallbackPlugin.provideInfo(byReferenceMessage.object);
                   this.listMatchMessages.add(byReferenceMessage.object);
                 }
               }

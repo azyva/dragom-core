@@ -1627,7 +1627,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           indexSplit = commitString.indexOf(' ');
           commitMessage = commitString.substring(indexSplit + 1);
 
-          mapVersionAttr = Util.getJsonAttr(commitMessage, mapVersionAttr);
+          // We create the Map in advance since if we let Util.getJsonAttr do it, it may be
+          // empty and immutable.
+          mapVersionAttr = new HashMap<String, String>();
+
+          Util.getJsonAttr(commitMessage, mapVersionAttr);
 
           // For dynamic Versions, the Version attribute dragom-base-version is actually
           // stored as a commit attribute in Git since Git does not support messages for
@@ -1668,7 +1672,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       tagMessage = stringBuilder.toString().split("\\s+")[1];
 
-      mapVersionAttr = Util.getJsonAttr(tagMessage, mapVersionAttr);
+      // We create the Map in advance since if we let Util.getJsonAttr do it, it may be
+      // empty and immutable.
+      mapVersionAttr = new HashMap<String, String>();
+
+      Util.getJsonAttr(tagMessage, mapVersionAttr);
 
       stringBuilder.setLength(0);
       git.executeGitCommand(new String[] {"rev-parse", version.getVersion() + "^{}"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, stringBuilder, true);
@@ -1678,6 +1686,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       }
 
       mapVersionAttr.put(GitScmPluginImpl.VERSION_ATTR_BASE_VERSION_COMMIT_ID, stringBuilder.toString());
+
+      return mapVersionAttr;
 
     default:
       throw new RuntimeException("Invalid version type.");
