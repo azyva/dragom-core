@@ -494,7 +494,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     WorkspacePlugin workspacePlugin;
     Model model;
     Module module;
@@ -517,10 +517,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
     model = execContext.getModel();
 
-    bracketHandle = null;
+    indentHandle = null;
 
     try {
-      bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION), this.referencePath));
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION), this.referencePath));
 
       //********************************************************************************
       // Determine the source Version corresponding to the root destination
@@ -639,12 +640,12 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
       // We are about to delegate to mergeModuleVersion for the rest of the processing.
       // This method starts working on the same current module and also
-      // manages the ReferencePath and UserInteractionCallback BracketHandle. We must
+      // manages the ReferencePath and UserInteractionCallback IndentHandle. We must
       // therefore reset them now. And we must prevent the finally block to reset them.
       this.referencePath.removeLeafReference();
       indReferencePathAlreadyReverted = true;
-      bracketHandle.close();
-      bracketHandle = null;
+      indentHandle.close();
+      indentHandle = null;
 
       this.mergeModuleVersion(referencePathSrc, reference);
     } finally {
@@ -652,8 +653,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
         this.referencePath.removeLeafReference();
       }
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
 
@@ -681,7 +682,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
   private boolean mergeModuleVersion(ReferencePath referencePathSrc, Reference referenceDest) {
     ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     WorkspacePlugin workspacePlugin;
     Model model;
     ModuleVersion moduleVersionDest;
@@ -705,7 +706,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     pathModuleWorkspace = null;
     pathModuleWorkspaceSrc = null;
 
-    bracketHandle = null;
+    indentHandle = null;
 
     try {
       moduleVersionDest = referenceDest.getModuleVersion();
@@ -719,7 +720,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       module = model.getModule(moduleVersionDest.getNodePath());
       scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
-      bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGING_LEAF_MODULE_VERSION), referencePathSrc, this.referencePath));
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGING_LEAF_MODULE_VERSION), referencePathSrc, this.referencePath));
 
       //********************************************************************************
       // Ensure destination ModuleVersion is in a user workspace directory.
@@ -1000,8 +1002,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
       this.referencePath.removeLeafReference();
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
 

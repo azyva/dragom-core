@@ -48,9 +48,9 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   private static final String RUNTIME_PROPERTY_IND_BATCH_MODE = "IND_BATCH_MODE";
 
   /**
-   * Runtime property specifying the indentation for each bracket level.
+   * Runtime property specifying the indentation for each indent level.
    */
-  private static final String RUNTIME_PROPERTY_BRACKET_INDENT = "BRACKET_INDENT";
+  private static final String RUNTIME_PROPERTY_INDENT = "INDENT";
 
   /**
    * Runtime property indicating to treat password input as normal.
@@ -69,10 +69,10 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   private static final String RUNTIME_PROPERTY_IND_ECHO_INFO = "IND_ECHO_INFO";
 
   /**
-   * Default indentation for each bracket level when the runtime property
-   * BRACKET_INDENT is not defined.
+   * Default indentation for each indent level when the runtime property
+   * INDENT is not defined.
    */
-  private static final int DEFAULT_BRACKET_INDENT = 4;
+  private static final int DEFAULT_INDENT = 4;
 
   /**
    * Runtime property specifying the WrapMode.
@@ -95,14 +95,14 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   boolean indBatchMode;
 
   /**
-   * Indentation for each bracket level.
+   * Indentation for each indent level.
    */
-  int bracketIndent;
+  int indent;
 
   /**
-   * String of this.bracketIndent spaces.
+   * String of this.indent spaces.
    */
-  char arrayCharBracketIndent[];
+  char arrayCharIndentIndent[];
 
   /**
    * Defines the wrap modes.
@@ -144,32 +144,32 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   private int wrapWidth;
 
   /**
-   * Opaque handle to a bracket.
+   * Opaque handle to a indent.
    *
    * @author David Raymond
    */
-  private class BracketHandleImpl implements BracketHandle {
-    private BracketHandleImpl() {
+  private class IndentHandleImpl implements IndentHandle {
+    private IndentHandleImpl() {
     }
 
     @Override
     public void close() {
-      if (DefaultUserInteractionCallbackPluginImpl.this.stackBracketHandle.pop() != this) {
-        throw new RuntimeException("Incorrect bracketing.");
+      if (DefaultUserInteractionCallbackPluginImpl.this.stackIndentHandle.pop() != this) {
+        throw new RuntimeException("Incorrect indentation.");
       }
     }
   }
 
   /**
    * Stack of
-   * {@link org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin.BracketHandle}'s.
+   * {@link org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin.IndentHandle}'s.
    * <p>
    * The depth of the Stack defines the indentation levels.
    * <p>
-   * Proper bracketing is validated by ensuring that a BracketHandle being closed
+   * Proper indentation is validated by ensuring that a IndentHandle being closed
    * is at the top of the Stack.
    */
-  private Stack<BracketHandle> stackBracketHandle;
+  private Stack<IndentHandle> stackIndentHandle;
 
   /**
    * Active {@link WriterInfo}.
@@ -258,18 +258,18 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
     this.indBatchMode = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_IND_BATCH_MODE));
 
-    runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_BRACKET_INDENT);
+    runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_INDENT);
 
     if (runtimeProperty == null) {
-      this.bracketIndent = DefaultUserInteractionCallbackPluginImpl.DEFAULT_BRACKET_INDENT;
+      this.indent = DefaultUserInteractionCallbackPluginImpl.DEFAULT_INDENT;
     } else {
-      this.bracketIndent = Integer.parseInt(runtimeProperty);
+      this.indent = Integer.parseInt(runtimeProperty);
     }
 
-    this.arrayCharBracketIndent = new char[this.bracketIndent];
-    Arrays.fill(this.arrayCharBracketIndent, ' ');
+    this.arrayCharIndentIndent = new char[this.indent];
+    Arrays.fill(this.arrayCharIndentIndent, ' ');
 
-    this.stackBracketHandle = new Stack<BracketHandle>();
+    this.stackIndentHandle = new Stack<IndentHandle>();
 
     runtimeProperty = runtimePropertiesPlugin.getProperty(null, DefaultUserInteractionCallbackPluginImpl.RUNTIME_PROPERTY_WRAP_MODE);
 
@@ -289,16 +289,8 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
   }
 
   @Override
-  public BracketHandle startBracket(String info) {
-    BracketHandle bracketHandle;
-
-    bracketHandle = new BracketHandleImpl();
-
-    this.stackBracketHandle.push(bracketHandle);
-
-    this.provideInfo(info);
-
-    return bracketHandle;
+  public IndentHandle startIndent() {
+    return this.stackIndentHandle.push(new IndentHandleImpl());
   }
 
   @Override
@@ -463,7 +455,7 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
       break;
 
     case WRAP_WITH_INDENT:
-      string = WordUtils.wrap(string, this.wrapWidth - (this.stackBracketHandle.size() * this.bracketIndent), "\n", false);
+      string = WordUtils.wrap(string, this.wrapWidth - (this.stackIndentHandle.size() * this.indent), "\n", false);
       break;
 
     case WRAP_WITHOUT_INDENT:
@@ -478,8 +470,8 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
     arrayLine = string.split("\n");
 
     for (int i = 0; i < arrayLine.length; i++) {
-      for (int j = 0 ; j < this.stackBracketHandle.size(); j++) {
-        System.out.print(this.arrayCharBracketIndent);
+      for (int j = 0 ; j < this.stackIndentHandle.size(); j++) {
+        System.out.print(this.arrayCharIndentIndent);
       }
 
       System.out.println(arrayLine[i]);

@@ -63,8 +63,8 @@ import org.azyva.dragom.util.Util;
  * needing to be built are built.
  * <p>
  * Since BuildReferenceGraph is used, this class derives from
- * {@link RootModuleVersionJobAbstractImpl}, but performs its job by overriding
- * {@link RootModuleVersionJobAbstractImpl#performJob} and delegating to
+ * {@link RootModuleVersionJobSimpleAbstractImpl}, and performs its job by
+ * defining {@link RootModuleVersionJob#performJob} and delegating to
  * {@link BuildReferenceGraph#performJob} to build the ReferenceGraph before
  * performing the rest of the processing.
  * <p>
@@ -87,7 +87,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class BuildRemote extends RootModuleVersionJobAbstractImpl {
+public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
   /**
    * Runtime property of type boolean that specifies whether to also build
    * ModuleVersion's within the ReferencePath's to the matched ModuleVersion's. The

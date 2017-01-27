@@ -328,7 +328,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
    */
   private VisitModuleActionPerformed visitModuleForSwitchToDynamicVersion(Reference referenceParent, ByReference<Version> byReferenceVersionParent) {
     Map<Reference, VisitModuleActionPerformed> mapReferenceVisitModuleActionPerformed;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     Module module;
     ScmPlugin scmPlugin;
     WorkspacePlugin workspacePlugin = null;
@@ -351,13 +351,23 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-    bracketHandle = null;
+    indentHandle = null;
 
     // We use a try-finally construct to ensure that the current ModuleVersion always
     // gets removed for the current ReferencePath, and that the
-    // UserInteractionCallback BracketHandle gets closed.
+    // UserInteractionCallback IndentHandle gets closed.
     try {
-      bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, referenceParent.getModuleVersion()));
+      SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion " + referenceParent.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+
+      // Usually startIndent is followed by provideInfo to provide an initial message
+      // following the new indent. But the message here ("visiting leaf ModuleVersion")
+      // would be often not useful if no particular action is performed. We therefore
+      // simply start the indent and wait for the first useful information, if any.
+
+      //TODO: Probably should remove altogether, including message in bundle. Redundant.
+      //userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, referenceParent.getModuleVersion()));
 
       mapReferenceVisitModuleActionPerformed = new HashMap<Reference, VisitModuleActionPerformed>();
 
@@ -485,11 +495,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
         if (indParentSwitched) {
           List<Reference> listReferenceNew;
           boolean indDifferencesInReferences;
-          UserInteractionCallbackPlugin.BracketHandle bracketHandleReferenceDifferences;
+          UserInteractionCallbackPlugin.IndentHandle indentHandleReferenceDifferences;
 
           visitModuleActionPerformed = VisitModuleActionPerformed.SWITCH;
 
-          bracketHandleReferenceDifferences = userInteractionCallbackPlugin.startBracket(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION), referenceParent.getModuleVersion(), byReferenceVersionParent.object));
+          indentHandleReferenceDifferences = userInteractionCallbackPlugin.startIndent();
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REVIEW_CHANGES_TO_REAPPLY_TO_NEW_PARENT_VERSION), referenceParent.getModuleVersion(), byReferenceVersionParent.object));
 
           try {
             pathModuleWorkspace = scmPlugin.checkoutSystem(byReferenceVersionParent.object);
@@ -594,7 +605,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
               userInteractionCallbackPlugin.provideInfo(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_NO_REFERENCE_DIFFERENCES));
             }
           } finally {
-            bracketHandleReferenceDifferences.close();
+            indentHandleReferenceDifferences.close();
           }
 
           if (indDifferencesInReferences) {
@@ -833,8 +844,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
         workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
       }
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
   }
@@ -859,7 +870,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
    */
   private boolean processSwitchToDynamicVersion(ModuleVersion moduleVersion, ByReference<Version> byReferenceVersion) {
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     Module module;
     ScmPlugin scmPlugin;
     SelectDynamicVersionPlugin selectDynamicVersionPlugin;
@@ -927,13 +938,15 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
     indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
 
-    bracketHandle = null;
+    indentHandle = null;
 
     try {
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+
       if (indSameVersion) {
-        bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_DYNAMIC_MODULE_VERSION_KEPT), moduleVersion));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_DYNAMIC_MODULE_VERSION_KEPT), moduleVersion));
       } else {
-        bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_WILL_BE_SWITCHED), moduleVersion, versionDynamicSelected));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_WILL_BE_SWITCHED), moduleVersion, versionDynamicSelected));
       }
 
       if (indUserWorkspaceDir) {
@@ -1134,8 +1147,8 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
         workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
       }
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
 

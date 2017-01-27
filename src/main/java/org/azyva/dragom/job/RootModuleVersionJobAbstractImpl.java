@@ -35,7 +35,6 @@ import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.plugin.WorkspaceDirUserModuleVersion;
 import org.azyva.dragom.execcontext.plugin.WorkspacePlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
-import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
@@ -44,37 +43,32 @@ import org.azyva.dragom.model.plugin.ModuleVersionMatcherPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
-import org.azyva.dragom.reference.ReferenceGraph;
-import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
-import org.azyva.dragom.reference.ReferencePathMatcherAll;
-import org.azyva.dragom.reference.ReferencePathMatcherAnd;
-import org.azyva.dragom.reference.ReferencePathMatcherVersionAttribute;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
-import org.azyva.dragom.util.ModuleReentryAvoider;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for implementing jobs based on root {@link ModuleVersion}'s and
+ * Base class that builds upon RootModuleVersionJobSimpleAbstractImpl for
+ * implementing jobs based on root {@link ModuleVersion}'s and
  * which traverse the reference graph by checking out the {@link ModuleVersion}
  * source code and using {@link ReferenceManagerPlugin} and other
  * (@link NodePlugin}'s to obtain {@link Reference}'s.
- * <p>
- * It factors out code that is often encountered in these types of tasks.
- * <p>
- * After validating the root ModuleVersion's, it iterates over them. For each
+ *
+ * <p>It factors out code that is often encountered in these types of tasks.
+ *
+ * <p>After validating the root ModuleVersion's, it iterates over them. For each
  * ModuleVersion it calls {@link #visitModuleVersion}.
- * <p>
- * This class does not attempt to completely encapsulate its implementation. It
+ *
+ * <p>This class does not attempt to completely encapsulate its implementation. It
  * has protected instance variables available to subclasses to simplify
  * implementation.
  *
  * @author David Raymond
  */
-public abstract class RootModuleVersionJobAbstractImpl {
+public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersionJobSimpleAbstractImpl {
   /**
    * Logger for the class.
    */
@@ -86,30 +80,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
    * exist.
    */
   protected static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
-
-  /**
-   * Runtime property specifying a project code which many job honour when
-   * traversing {@link ReferenceGraph}'s.
-   * <p>
-   * This provides a matching mechanism for {@link ModuleVersion}'s within a
-   * ReferenceGraph. It also has impacts on {@link Version} creations.
-   * <p>
-   * The idea is that in some cases, Dragom will be used to manage ReferenceGraph's
-   * in the context of a project, in the sense of a time-constrained development
-   * effort. When switching to dynamic Version's of {@link Module}'s,
-   * (@link SwitchToDynamicVesion} can optionnally specify a project code as a
-   * Version attribute for newly created dynamic Versions. Similarly with
-   * {@link Release} for static Versions. And for may other jobs which traverse
-   * a ReferenceGraph ({@link Checkout}, {@link MergeMain}, etc.), this same project
-   * code specified by this runtime property is used for matching
-   * {@link ModuleVersion}'s based on their Version's project code attribute, in
-   * addition to the matching performed by {@link ReferencePathMatcher}'s
-   * (implied "and").
-   * <p>
-   * Accessed on the root {@link ClassificationNode}.
-   */
-  // TODO: Eventually this may be handled with generic expression-language-based matchers.
-  protected static final String RUNTIME_PROPERTY_PROJECT_CODE = "PROJECT_CODE";
 
   /**
    * See description in ResourceBundle.
@@ -154,7 +124,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
-  protected static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
+  //TODO: Probably should remove altogether, including message in bundle. Redundant.
+  //protected static final String MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION = "VISITING_LEAF_MODULE_VERSION";
 
   /**
    * See description in ResourceBundle.
@@ -202,113 +173,6 @@ public abstract class RootModuleVersionJobAbstractImpl {
   protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobAbstractImpl.class.getName() + "ResourceBundle");
 
   /**
-   * List root ModuleVersion's on which to initiate the traversal of the reference
-   * graphs.
-   */
-  protected List<ModuleVersion> listModuleVersionRoot;
-
-  /**
-   * ReferencePathMatcher defining on which ModuleVersion's in the reference graphs
-   * the job will be applied.
-   */
-  private ReferencePathMatcher referencePathMatcherProvided;
-
-  /**
-   * ReferencePathMatcher for filtering based on the project code.
-   */
-  private ReferencePathMatcher referencePathMatcherProjectCode;
-
-  /**
-   * "and"-combined {@link ReferencePathMatcher} for
-   * {@link #referencePathMatcherProvided} and
-   * {@link #referencePathMatcherProjectCode}.
-   * <p>
-   * Calculated once the first time it is used and cached in this variable
-   * afterward.
-   */
-  private ReferencePathMatcher referencePathMatcherCombined;
-
-  /**
-   * Indicates that dynamic {@link Version}'s must be considered during the
-   * traversal of the reference graphs. The default value is true.
-   */
-  protected boolean indHandleDynamicVersion = true;
-
-  /**
-   * Indicates that static {@link Version}'s must be considered during the
-   * traversal of the reference graphs. The default value is true.
-   */
-  protected boolean indHandleStaticVersion = true;
-
-  /**
-   * Indicates that {@link #visitModuleVersion} avoids reentry by using
-   * {@link ModuleReentryAvoider}. The default value is true.
-   */
-  protected boolean indAvoidReentry = true;
-
-  /**
-   * Indicates that traversal must be depth first, as opposed to parent first.
-   */
-  protected boolean indDepthFirst;
-
-  /**
-   * Possible behaviors related to unsynchronized changes in a user working
-   * directory.
-   */
-  public static enum UnsyncChangesBehavior {
-    /**
-     * Do not test or handle unsynchronized changes.
-     */
-    DO_NOT_HANDLE,
-
-    /**
-     * Throws {@link RuntimeExceptionUserError} if unsynchronized changes are
-     * detected.
-     */
-    USER_ERROR,
-
-    /**
-     * Interact with the user if unsynchronized changes are detected. In the case of
-     * local changes, "do you want to continue"-style interaction. In the case of
-     * remote changes, interaction for updating.
-     */
-    INTERACT
-  }
-
-  /**
-   * Specifies the behavior related to unsynchronized local changes.
-   */
-  protected UnsyncChangesBehavior unsyncChangesBehaviorLocal;
-
-  /**
-   * Specifies the behavior related to unsynchronized remote changes.
-   */
-  protected UnsyncChangesBehavior unsyncChangesBehaviorRemote;
-
-  /**
-   * {@link ModuleReentryAvoider}.
-   * <p>
-   * Used by this class when matching {@link ReferencePath} if
-   * indAvoidReentry. Available to subclasses as well independently of
-   * indAvoidReentry.
-   */
-  protected ModuleReentryAvoider moduleReentryAvoider;
-
-  /**
-   * Subclasses can use this variable during the traversal of a reference graph to
-   * maintain the current ReferencePath being visited. Upon entry in a method that
-   * visits a ModuleVersion, this variable represents the ReferencePath of the
-   * parent. During processing it is modified to represent the ReferencePath of the
-   * current ModuleVersion and referenced modules as the graph is traversed. Upon
-   * exit it is reset to what it was upon entry.
-   *
-   * This is used mainly in messages since it is useful for the user to know from
-   * which Reference a ModuleVersion within a ReferencePath comes from. A root
-   * ModuleVersion is wrapped in a Reference.
-   */
-  protected ReferencePath referencePath;
-
-  /**
    * Used to accumulate a description for the actions performed.
    */
   protected List<String> listActionsPerformed;
@@ -332,159 +196,21 @@ public abstract class RootModuleVersionJobAbstractImpl {
    *   the traversal of the reference graphs.
    */
   protected RootModuleVersionJobAbstractImpl(List<ModuleVersion> listModuleVersionRoot) {
-    this.listModuleVersionRoot = listModuleVersionRoot;
+    super(listModuleVersionRoot);
 
-    this.moduleReentryAvoider = new ModuleReentryAvoider();
-
-    this.unsyncChangesBehaviorLocal = UnsyncChangesBehavior.DO_NOT_HANDLE;
-    this.unsyncChangesBehaviorRemote = UnsyncChangesBehavior.DO_NOT_HANDLE;
-
-    this.referencePath = new ReferencePath();
     this.listActionsPerformed = new ArrayList<String>();
     this.listMatchMessages = new ArrayList<String>();
   }
 
-  /**
-   * Sets the {@link ReferencePathMatcher} profided by the caller defining on which
-   * ModuleVersion's in the reference graphs the job will be applied.
-   *
-   * @param referencePathMatcherProvided See description.
-   */
-  public void setReferencePathMatcherProvided(ReferencePathMatcher referencePathMatcherProvided) {
-    this.referencePathMatcherProvided = referencePathMatcherProvided;
-  }
-
-  /**
-   * @return The project code specified by the user with the PROJECT_CODE runtime
-   *   property.
-   */
-  protected String getProjectCode() {
-    return ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class).getProperty(null, RootModuleVersionJobAbstractImpl.RUNTIME_PROPERTY_PROJECT_CODE);
-  }
-
-  /**
-   * Setup the {@link ReferencePathMatcher} so that only {@link ModuleVersion}'s
-   * having the {@link Version} attribute dragom-project-code equal to that
-   * defined by the runtime property PROJECT_CODE are matched.
-   */
-  protected void setupReferencePathMatcherForProjectCode() {
-    String projectCode;
-
-    projectCode = this.getProjectCode();
-
-    if (projectCode != null) {
-      this.referencePathMatcherProjectCode = new ReferencePathMatcherVersionAttribute(ScmPlugin.VERSION_ATTR_PROJECT_CODE, projectCode, ExecContextHolder.get().getModel());
-    }
-  }
-
-  /**
-   * @return ReferencePathMatcher to use for matching the {@link ReferencePath}'s.
-   *   "and" combination of the ReferencePathMatcher provided with
-   *   {@link #setReferencePathMatcherProvided} and that setup by
-   *   {@link #setupReferencePathMatcherForProjectCode}.
-   */
-  protected ReferencePathMatcher getReferencePathMatcher() {
-    if (this.referencePathMatcherCombined == null) {
-      if ((this.referencePathMatcherProvided != null) && (this.referencePathMatcherProjectCode != null)) {
-        ReferencePathMatcherAnd referencePathMatcherAnd;
-
-        referencePathMatcherAnd = new ReferencePathMatcherAnd();
-
-        referencePathMatcherAnd.addReferencePathMatcher(this.referencePathMatcherProvided);
-        referencePathMatcherAnd.addReferencePathMatcher(this.referencePathMatcherProjectCode);
-
-        this.referencePathMatcherCombined = referencePathMatcherAnd;
-      } else if (this.referencePathMatcherProvided != null) {
-        this.referencePathMatcherCombined = this.referencePathMatcherProvided;
-      } else if (this.referencePathMatcherProjectCode != null) {
-        // This case if rather rare since tools generally require the user to specify a
-        // ReferencePathMatcher.
-        this.referencePathMatcherCombined = this.referencePathMatcherProjectCode;
-      } else {
-        // If absolutely no ReferencePathMatcher is specified, which is also rare, we
-        // match everything.
-        this.referencePathMatcherCombined = new ReferencePathMatcherAll();
-      }
-    }
-
-    return this.referencePathMatcherCombined;
-  }
-
-  /**
-   * @param indHandleDynamicVersion Specifies to handle or not dynamic
-   *   {@link Version}'s. The default is to handle dynamic {@link Version}.
-   */
-  protected void setIndHandleDynamicVersion(boolean indHandleDynamicVersion) {
-    this.indHandleDynamicVersion = indHandleDynamicVersion;
-  }
-
-  /**
-   * @param indHandleStaticVersion Specifies to handle or not static
-   *   {@link Version}'s. The default is to handle static {@link Version}.
-   */
-  protected void setIndHandleStaticVersion(boolean indHandleStaticVersion) {
-    this.indHandleStaticVersion = indHandleStaticVersion;
-  }
-
-  /**
-   * @param indAvoidReentry Specifies to avoid reentry by using
-   *   {@link ModuleReentryAvoider}. The default is to avoid reentry.
-   */
-  protected void setIndAvoidReentry(boolean indAvoidReentry) {
-    this.indAvoidReentry = indAvoidReentry;
-  }
-
-  /**
-   * @param indDepthFirst Specifies to traverse depth first. The default is to
-   *   traverse parent-first.
-   */
-  protected void setIndDepthFirst(boolean indDepthFirst) {
-    this.indDepthFirst = indDepthFirst;
-  }
-
-  /**
-   * @param unsyncChangesBehaviorLocal Behavior related to unsynchronized local
-   * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
-   */
-  public void setUnsyncChangesBehaviorLocal(UnsyncChangesBehavior unsyncChangesBehaviorLocal) {
-    this.unsyncChangesBehaviorLocal = unsyncChangesBehaviorLocal;
-  }
-
-  /**
-   * @param unsyncChangesBehaviorRemote Behavior related to unsynchronized remote
-   * changes. The default is {@link UnsyncChangesBehavior#DO_NOT_HANDLE}.
-   */
-  public void setUnsyncChangesBehaviorRemote(UnsyncChangesBehavior unsyncChangesBehaviorRemote) {
-    this.unsyncChangesBehaviorRemote = unsyncChangesBehaviorRemote;
-  }
-
-  /**
-   * Called by methods of this class or subclasses to indicate that the List of root
-   * {@link ModuleVersion} passed to the constructor was changed and should be
-   * saved by the caller if persisted.
-   */
-  protected void setIndListModuleVersionRootChanged() {
-    this.indListModuleVersionRootChanged = true;
-  }
-
-  /**
-   * @return Indicate that the List of root {@link ModuleVersion} passed to the
-   * constructor was changed and should be saved by the caller if persisted.
-   */
-  public boolean isListModuleVersionRootChanged() {
-    return this.indListModuleVersionRootChanged;
-  }
-
-  /**
-   * Main method for performing the job.
-   * <p>
-   * This class provides a default implementation which calls
-   * {@link #beforeIterateListModuleVersionRoot},
-   * {@link #iterateListModuleVersionRoot} and
-   * {@link #afterIterateListModuleVersionRoot}. If ever this behavior is not
-   * appropriate for the job, subclasses can simply override the method.
-   * Alternatively, the methods mentioned above can be overridden individually.
-   */
+ /*
+  * This class provides a default implementation which calls
+  * {@link #beforeIterateListModuleVersionRoot},
+  * {@link #iterateListModuleVersionRoot} and
+  * {@link #afterIterateListModuleVersionRoot}. If ever this behavior is not
+  * appropriate for the job, subclasses can simply override the method.
+  * Alternatively, the methods mentioned above can be overridden individually.
+  */
+  @Override
   public void performJob() {
 //    this.beforeValidateListModuleVersionRoot();
 //    this.validateListModuleVersionRoot();
@@ -684,7 +410,7 @@ public abstract class RootModuleVersionJobAbstractImpl {
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     WorkspacePlugin workspacePlugin;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     ModuleVersion moduleVersion;
     Module module;
     ScmPlugin scmPlugin;
@@ -706,16 +432,22 @@ public abstract class RootModuleVersionJobAbstractImpl {
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
     pathModuleWorkspace = null;
-    bracketHandle = null;
+    indentHandle = null;
 
     // We use a try-finally construct to ensure that the current ModuleVersion always
     // gets removed for the current ReferencePath, and that the
-    // UserInteractionCallback BracketHandle gets closed.
+    // UserInteractionCallback IndentHandle gets closed.
     try {
+      RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+
+      // Usually startIndent is followed by provideInfo to provide an initial message
+      // following the new indent. But the message here ("visiting leaf ModuleVersion")
+      // would be often not useful if no particular action is performed. We therefore
+      // simply start the indent and wait for the first useful information, if any.
       //TODO: Probably should remove altogether, including message in bundle. Redundant.
-      // We bracket even if the ReferencePath will not be matched in order to better
-      // show the traversal.
-      //bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
+      //userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
       moduleVersion = reference.getModuleVersion();
       module = execContext.getModel().getModule(moduleVersion.getNodePath());
@@ -838,7 +570,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
             }
 
             if ((enumSetMatchFlag == null) || enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.MATCH)) {
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+              indentHandle = userInteractionCallbackPlugin.startIndent();
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
 
               // We are about to delegate to visitMatchedModuleVersion for the rest of the
               // processing. This method starts working on the same current module and also
@@ -924,17 +657,18 @@ public abstract class RootModuleVersionJobAbstractImpl {
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-            // This is not required since bracketHandle can only be null here, but the
+            // This is not required since indentHandle can only be null here, but the
             // compiler does not know. This avoids a warning.
-            if (bracketHandle != null) {
-              bracketHandle.close();
+            if (indentHandle != null) {
+              indentHandle.close();
             }
 
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
-              bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+              indentHandle = userInteractionCallbackPlugin.startIndent();
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
 
               if (moduleVersionMatcherPlugin != null) {
                 byReferenceMessage.object = null;
@@ -982,8 +716,8 @@ public abstract class RootModuleVersionJobAbstractImpl {
         this.referencePath.removeLeafReference();
       }
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
 
       if (pathModuleWorkspace != null) {

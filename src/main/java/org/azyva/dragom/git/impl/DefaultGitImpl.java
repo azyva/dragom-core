@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FileUtils;
+import org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory;
 import org.azyva.dragom.git.Git;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -68,6 +70,39 @@ public class DefaultGitImpl implements Git {
    * Pattern to extract the user from a HTTP[S] repository URL.
    */
   private static final Pattern patternExtractHttpReposUrlUser = Pattern.compile("([hH][tT][tT][pP][sS]?://)(?:([a-zA-Z0-9_\\.\\-]+)@)?([^/]+)/.*");
+
+  /**
+   * Set of paths to delete on shutdown.
+   *
+   * <p>Paths are added to this list during clone operations and removed once they
+   * complete. A shutdown hook is registered to delete those paths upon forceful
+   * shutdown.
+   *
+   * <p>This is to prevent having a partial invalid Git local repository if the user
+   * halts the process during a clone operation (SIGINT, Ctrl-C).
+   *
+   * <p>Arguably there are many other cases where cleanup would be pertinent upon
+   * forceful shutdown. But it is not reasonable to handle them all. Forcefully
+   * shutting down during a lengthy clone operation is easy and renders the
+   * directory useless, so this case is specifically handled.
+   *
+   * <p>The directory may not have been created by this class, so deleting it may
+   * not be the logical thing to do. But we expect other classes that manage
+   * directories, such as {@link DefaultWorkspacePluginFactory}, to handle the case
+   * of missing directories.
+   */
+  private static Set<Path> setPathToDeleteOnShutdown = Collections.synchronizedSet(new HashSet<Path>());
+
+  static {
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      @Override
+      public void run() {
+        for (Path path: DefaultGitImpl.setPathToDeleteOnShutdown) {
+          FileUtils.deleteQuietly(path.toFile());
+        }
+      }
+    });
+  }
 
   /**
    * Path to the git Executable.
@@ -352,30 +387,36 @@ public class DefaultGitImpl implements Git {
       isConfiguredReposUrl = false;
     }
 
-    // We always specify --no-local in order to prevent Git from implementing its
-    // optimizations when the remote is a file-based repository (or a simple path).
-    // This is necessary in the context of Dragom since repositories within a
-    // workspace can be used as remotes of each other for improving the performance of
-    // some operations, but can come and go as the workspace evolves.
-    if (version == null) {
-      this.executeGitCommand(
-          new String[] {"clone", "--no-local", "--no-checkout", reposUrl, pathWorkspace.toString()},
-          isConfiguredReposUrl,
-          AllowExitCode.NONE,
-          null,
-          null,
-          false);
-    } else {
-      // The -b option takes a branch or tag name, but without the complete reference
-      // prefix such as heads/master or tags/v-1.2.3. This means that it is not
-      // straightforward to distinguish between branches and tags.
-      this.executeGitCommand(
-          new String[] {"clone", "--no-local", "-b", version.getVersion(), reposUrl, pathWorkspace.toString()},
-          isConfiguredReposUrl,
-          AllowExitCode.NONE,
-          null,
-          null,
-          false);
+    DefaultGitImpl.setPathToDeleteOnShutdown.add(pathWorkspace);
+
+    try {
+      // We always specify --no-local in order to prevent Git from implementing its
+      // optimizations when the remote is a file-based repository (or a simple path).
+      // This is necessary in the context of Dragom since repositories within a
+      // workspace can be used as remotes of each other for improving the performance of
+      // some operations, but can come and go as the workspace evolves.
+      if (version == null) {
+        this.executeGitCommand(
+            new String[] {"clone", "--no-local", "--no-checkout", reposUrl, pathWorkspace.toString()},
+            isConfiguredReposUrl,
+            AllowExitCode.NONE,
+            null,
+            null,
+            false);
+      } else {
+        // The -b option takes a branch or tag name, but without the complete reference
+        // prefix such as heads/master or tags/v-1.2.3. This means that it is not
+        // straightforward to distinguish between branches and tags.
+        this.executeGitCommand(
+            new String[] {"clone", "--no-local", "-b", version.getVersion(), reposUrl, pathWorkspace.toString()},
+            isConfiguredReposUrl,
+            AllowExitCode.NONE,
+            null,
+            null,
+            false);
+      }
+    } finally {
+      DefaultGitImpl.setPathToDeleteOnShutdown.remove(pathWorkspace);
     }
 
     if (version != null) {

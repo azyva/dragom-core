@@ -25,7 +25,7 @@ import org.azyva.dragom.util.ModuleReentryAvoider;
  * Implemented by jobs subclassing {@link RootModuleVersionJobAbstractImpl} which
  * need to expose {@link RootModuleVersionJobAbstractImpl#setIndAvoidReentry} so
  * that generic tools such as GenericRootModuleVersionjobInvokerTool from
- * dragom-cli-tools can provide an opion allowing the user to control whether
+ * dragom-cli-tools can provide an option allowing the user to control whether
  * reentry should be avoided.
  *
  * @author David Raymond

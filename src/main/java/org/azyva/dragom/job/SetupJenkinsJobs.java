@@ -77,7 +77,7 @@ import org.azyva.dragom.util.ServiceLocator;
  *
  * @author David Raymond
  */
-public class SetupJenkinsJobs extends RootModuleVersionJobAbstractImpl {
+public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   /**
    * Runtime property specifying the Jenkins base URL (e.g.:
    * https://acme.com/jenkins). Accessed on the root {@link ClassificationNode}.

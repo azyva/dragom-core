@@ -26,7 +26,7 @@ import org.azyva.dragom.model.Version;
  * need to expose
  * {@link RootModuleVersionJobAbstractImpl#setIndHandleStaticVersion} so that
  * generic tools such as GenericRootModuleVersionjobInvokerTool from
- * dragom-cli-tools can provide an opion allowing the user to control whether
+ * dragom-cli-tools can provide an option allowing the user to control whether
  * static {@link Version}'s should be handled
  *
  * @author David Raymond

@@ -331,7 +331,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     Module module;
     ScmPlugin scmPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     boolean indTempDynamicVersionCreated;
     Path pathModuleWorkspace = null;
     String property;
@@ -356,20 +356,30 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
 
     this.referencePath.add(reference);
-    bracketHandle = null;
+    indentHandle = null;
     indTempDynamicVersionCreated = false;
 
     // We use a try-finally construct to ensure that the current ModuleVersion always
     // gets removed for the current ReferencePath, and that the
-    // UserInteractionCallback BracketHandle gets closed.
+    // UserInteractionCallback IndentHandle gets closed.
     try {
-      bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, reference.getModuleVersion()));
+      Release.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+
+      // Usually startIndent is followed by provideInfo to provide an initial message
+      // following the new indent. But the message here ("visiting leaf ModuleVersion")
+      // would be often not useful if no particular action is performed. We therefore
+      // simply start the indent and wait for the first useful information, if any.
+
+      //TODO: Probably should remove altogether, including message in bundle. Redundant.
+      //userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, reference.getModuleVersion()));
 
       // As an optimization we first verify if a Version was already selected for the
       // ModuleVersion during the execution of the job. If so, we must reuse it. It is
       // not essential to perform this verification here since it would be naturally
-      // performed later in visitModuleForRelease. But it avoids useless processing and
-      // more importantly it is less confusing for the user.
+      // performed later. But it avoids useless processing and more importantly it is
+      // less confusing for the user.
       if (this.handleAlreadyCreatedStaticVersion(reference.getModuleVersion(), byReferenceVersion)) {
         return true;
       }
@@ -611,8 +621,8 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
       this.referencePath.removeLeafReference();
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
 
@@ -642,7 +652,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
   private boolean processSelectStaticVersion(Path pathModuleWorkspace, ModuleVersion moduleVersion, ByReference<Version> byReferenceVersion, ReleaseIsolationMode releaseIsolationMode, boolean indTempDynamicVersionCreated) {
     ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    UserInteractionCallbackPlugin.BracketHandle bracketHandle;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     boolean indTempDynamicVersionCreatedLocally;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     Version versionStaticSelected;
@@ -695,11 +705,12 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(moduleVersion);
     indUserWorkspaceDir = workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion);
 
-    bracketHandle = null;
+    indentHandle = null;
     indTempDynamicVersionCreatedLocally = false;
 
     try {
-      bracketHandle = userInteractionCallbackPlugin.startBracket(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_CREATING_NEW_STATIC_VERSION), moduleVersion, versionStaticSelected));
+      indentHandle = userInteractionCallbackPlugin.startIndent();
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_CREATING_NEW_STATIC_VERSION), moduleVersion, versionStaticSelected));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_STATIC_VERSION)) {
         return false;
@@ -872,8 +883,8 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         scmPlugin.releaseTempDynamicVersion(pathModuleWorkspace);
       }
 
-      if (bracketHandle != null) {
-        bracketHandle.close();
+      if (indentHandle != null) {
+        indentHandle.close();
       }
     }
 

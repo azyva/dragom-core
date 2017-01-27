@@ -76,7 +76,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class Checkout extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
+public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
   /**
    * Runtime property of the type {@link AlwaysNeverYesNoAskUserResponse} indicating
    * to switch the {@link Version} of a {@link Module} when a workspace directory
@@ -205,8 +205,8 @@ public class Checkout extends RootModuleVersionJobAbstractImpl implements Config
 
     buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
     buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
-    buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.USER_ERROR);
-    buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJobAbstractImpl.UnsyncChangesBehavior.INTERACT);
+    buildReferenceGraph.setUnsyncChangesBehaviorLocal(RootModuleVersionJob.UnsyncChangesBehavior.USER_ERROR);
+    buildReferenceGraph.setUnsyncChangesBehaviorRemote(RootModuleVersionJob.UnsyncChangesBehavior.INTERACT);
     buildReferenceGraph.setIndHandleDynamicVersion(this.indHandleDynamicVersion);
     buildReferenceGraph.setIndAvoidReentry(this.indAvoidReentry);
     buildReferenceGraph.performJob();

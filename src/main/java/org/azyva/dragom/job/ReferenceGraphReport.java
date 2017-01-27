@@ -75,7 +75,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *
  * @author David Raymond
  */
-public class ReferenceGraphReport extends RootModuleVersionJobAbstractImpl {
+public class ReferenceGraphReport extends RootModuleVersionJobSimpleAbstractImpl {
   public enum OutputFormat {
     XML,
     JSON,
