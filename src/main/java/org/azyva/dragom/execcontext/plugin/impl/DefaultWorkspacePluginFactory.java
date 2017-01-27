@@ -190,7 +190,24 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
      */
     @SuppressWarnings("unused")
     private void afterUnmarshal(Unmarshaller unmarshaller, Object parent) {
-      for (Map.Entry<WorkspaceDir, Path> mapEntry: this.mapWorkspaceDirPath.entrySet()) {
+      Iterator<Map.Entry<WorkspaceDir, Path>> iteratorMapEntry;
+
+      iteratorMapEntry = this.mapWorkspaceDirPath.entrySet().iterator();
+
+      // In order to not be too strict, we verify if for each WorkspaceDir, the
+      // corresponding directory exists and if not, we remove the WorkspaceDir.
+      // We clean the workspace during initialization since doing it during
+      // execution is much harder to get right.
+      while (iteratorMapEntry.hasNext()) {
+        Map.Entry<WorkspaceDir, Path> mapEntry;
+
+        mapEntry = iteratorMapEntry.next();
+
+        if (!mapEntry.getValue().toFile().isDirectory()) {
+          iteratorMapEntry.remove();
+          continue;
+        }
+
         this.mapPathWorkspaceDir.put(mapEntry.getValue(), mapEntry.getKey());
       }
     }
@@ -256,7 +273,7 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
 
     @Override
     public Path getWorkspaceDir(WorkspaceDir workspaceDir, EnumSet<GetWorkspaceDirMode> enumSetGetWorkspaceDirMode, WorkspaceDirAccessMode workspaceDirAccessMode) {
-      Integer readCount;
+      Integer readCount = null;
       Path path;
 
       if (workspaceDirAccessMode != WorkspaceDirAccessMode.PEEK) {
@@ -267,14 +284,6 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
             throw new RuntimeException("Workspace directory " + workspaceDir + " already accessed for writing (and new acces is " + workspaceDirAccessMode + ").");
           } else if (workspaceDirAccessMode == WorkspaceDirAccessMode.READ_WRITE) {
             throw new RuntimeException("New access is for writing and workspace directory " + workspaceDir + " already accessed for reading (with level " + readCount + ").");
-          }
-
-          this.mapWorkspaceDirAccessMode.put(workspaceDir, readCount + 1);
-        } else {
-          if (workspaceDirAccessMode == WorkspaceDirAccessMode.READ){
-            this.mapWorkspaceDirAccessMode.put(workspaceDir, 1);
-          } else {
-            this.mapWorkspaceDirAccessMode.put(workspaceDir, 0);
           }
         }
       }
@@ -300,6 +309,18 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
       if ((path != null) && !path.toFile().isDirectory() && !enumSetGetWorkspaceDirMode.contains(GetWorkspaceDirMode.DO_NOT_CREATE_PATH)) {
         if (!path.toFile().mkdir()) {
           throw new RuntimeException("The path " + path + " could not be created for an unknown reason.");
+        }
+      }
+
+      if (workspaceDirAccessMode != WorkspaceDirAccessMode.PEEK) {
+        if (readCount != null) {
+          this.mapWorkspaceDirAccessMode.put(workspaceDir, readCount + 1);
+        } else {
+          if (workspaceDirAccessMode == WorkspaceDirAccessMode.READ){
+            this.mapWorkspaceDirAccessMode.put(workspaceDir, 1);
+          } else {
+            this.mapWorkspaceDirAccessMode.put(workspaceDir, 0);
+          }
         }
       }
 
@@ -348,7 +369,6 @@ public class DefaultWorkspacePluginFactory implements ExecContextPluginFactory<W
         } catch (IOException ioe) {
           throw new RuntimeException("IOException raised while trying to delete the workspace directory " + path + ": " + ioe);
         }
-
       }
 
       return path;

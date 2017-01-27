@@ -825,50 +825,59 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-      versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
+      try {
+        versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
 
-      // If a temporary dynamic Version is in effect in the module workspace directory,
-      // we return immediately that directory, provided the requested Version
-      // corresponds to the base Version of the temporary dynamic Version.
-      // We expect the caller to not need to be aware of temporary dynamic Version
-      // fact and not need use methods that are not allowed in which context, or
-      // be aware of that fact and behave accordingly.
-      if (versionTempDynamicBase != null) {
-        if ((version != null) && !versionTempDynamicBase.equals(version)) {
-          throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
+        // If a temporary dynamic Version is in effect in the module workspace directory,
+        // we return immediately that directory, provided the requested Version
+        // corresponds to the base Version of the temporary dynamic Version.
+        // We expect the caller to not need to be aware of temporary dynamic Version
+        // fact and not need use methods that are not allowed in which context, or
+        // be aware of that fact and behave accordingly.
+        if (versionTempDynamicBase != null) {
+          if ((version != null) && !versionTempDynamicBase.equals(version)) {
+            throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
+          }
+
+          return pathModuleWorkspace;
         }
 
-        return pathModuleWorkspace;
-      }
+        this.fetch(pathModuleWorkspace);
 
-      this.fetch(pathModuleWorkspace);
+        if (version != null) {
+          git.checkout(pathModuleWorkspace, version);
 
-      if (version != null) {
-        git.checkout(pathModuleWorkspace, version);
+          // If the version is dynamic (a branch), we might have actually checked out the
+          // local version of it and it may not be up to date.
+          if (version.getVersionType() == VersionType.DYNAMIC) {
+          pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
-        // If the version is dynamic (a branch), we might have actually checked out the
-        // local version of it and it may not be up to date.
-        if (version.getVersionType() == VersionType.DYNAMIC) {
-        pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+            if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
+              // We add "--" as a last argument since when a ref does no exist, Git complains
+              // about the fact that the command is ambiguous.
+              if (git.executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
+                // If the Workspace directory is not the main one, we fetch the same branch from
+                // the main Workspace directory into the current Workspace directory.
+                // This is the special handling of the synchronization between a workspace
+                // directory and the main one mentioned in the isSync method.
+                this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+              }
+            }
 
-          if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
-            // We add "--" as a last argument since when a ref does no exist, Git complains
-            // about the fact that the command is ambiguous.
-            if (git.executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
-              // If the Workspace directory is not the main one, we fetch the same branch from
-              // the main Workspace directory into the current Workspace directory.
-              // This is the special handling of the synchronization between a workspace
-              // directory and the main one mentioned in the isSync method.
-              this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+            // And in all cases, we pull changes from the corresponding remote tracking
+            // branch.
+            if (this.gitPull(pathModuleWorkspace)) {
+              throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
             }
           }
-
-          // And in all cases, we pull changes from the corresponding remote tracking
-          // branch.
-          if (this.gitPull(pathModuleWorkspace)) {
-            throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
-          }
         }
+      } catch (Exception e) {
+        // If an exception is thrown, we must not leave the workspace directory locked.
+        if (pathModuleWorkspace != null) {
+          workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+        }
+
+        throw e;
       }
 
       return pathModuleWorkspace;
@@ -906,8 +915,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       if (pathModuleWorkspace != null) {
         workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModule);
 
-        // We hope the newly created folder by git clone is still empty.
-        pathModuleWorkspace.toFile().delete();
+        FileUtils.deleteQuietly(pathModuleWorkspace.toFile());
       }
 
       throw e;

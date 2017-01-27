@@ -762,7 +762,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 
     pluginDefConfig = this.getPluginDefConfig(classNodePlugin, pluginId);
 
-    // The fact that PluginDefConfig exists does not garanty that instantiating the
+    // The fact that PluginDefConfig exists does not guaranty that instantiating the
     // NodePlugin from it will succeed. But it not succeeding is considered exception
     // so we do not bother validating this here. It will fail later when instantiating
     // the NodePlugin.

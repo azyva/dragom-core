@@ -248,12 +248,14 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
       if (specificPluginId != null) {
         RuntimeSelectionPluginFactory.logger.info("Plugin ID " + specificPluginId + " specified for plugin " + stringClassNodePlugin + " of node " + node + " is used as is.");
 
-        // An empty string means to do as if the plugin was not supported.
-        if (specificPluginId.length() == 0) {
-          return null;
-        } else {
-          return node.getNodePlugin(classNodePlugin, specificPluginId);
-        }
+        // At some point in the past, we though about interpreting an empty plugin ID as
+        // meaning the plugin is not supported (allowing the user to not select any
+        // plugin). But this is contradictory to the design requirement that
+        // Node.getNodePlugin, which can eventually can this method, must not return null.
+        // And for now we do not want to make SimpleNode.isNodePluginExists more complex.
+        // So we do not support optional plugins.
+
+        return node.getNodePlugin(classNodePlugin, specificPluginId);
       }
 
       pluginId = null;
@@ -300,12 +302,7 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
             MessageFormat.format(RuntimeSelectionPluginFactory.resourceBundle.getString(RuntimeSelectionPluginFactory.MSG_PATTERN_KEY_AUTOMATICALLY_REUSE_PLUGIN_ID), stringClassNodePlugin, pluginId));
       }
 
-      // An empty string means to do as if the plugin was not supported.
-      if (pluginId.length() == 0) {
-        return null;
-      } else {
-        return node.getNodePlugin(classNodePlugin, pluginId);
-      }
+      return node.getNodePlugin(classNodePlugin, pluginId);
     } finally {
       setCurrentPluginRequest.remove(currentPluginRequest);
     }

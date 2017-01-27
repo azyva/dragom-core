@@ -20,7 +20,6 @@
 package org.azyva.dragom.job;
 
 import java.util.List;
-import java.util.ResourceBundle;
 
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
@@ -79,11 +78,6 @@ public abstract class RootModuleVersionJobSimpleAbstractImpl implements RootModu
    */
   // TODO: Eventually this may be handled with generic expression-language-based matchers.
   protected static final String RUNTIME_PROPERTY_PROJECT_CODE = "PROJECT_CODE";
-
-  /**
-   * ResourceBundle specific to this class.
-   */
-  protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobSimpleAbstractImpl.class.getName() + "ResourceBundle");
 
   /**
    * List root ModuleVersion's on which to initiate the traversal of the reference

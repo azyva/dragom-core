@@ -570,7 +570,6 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
             }
 
             if ((enumSetMatchFlag == null) || enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.MATCH)) {
-              indentHandle = userInteractionCallbackPlugin.startIndent();
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
 
               // We are about to delegate to visitMatchedModuleVersion for the rest of the
@@ -657,17 +656,10 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-            // This is not required since indentHandle can only be null here, but the
-            // compiler does not know. This avoids a warning.
-            if (indentHandle != null) {
-              indentHandle.close();
-            }
-
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
               return false;
             } else {
-              indentHandle = userInteractionCallbackPlugin.startIndent();
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
 
               if (moduleVersionMatcherPlugin != null) {
