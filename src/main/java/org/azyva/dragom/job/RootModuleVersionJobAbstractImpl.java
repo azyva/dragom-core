@@ -626,7 +626,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
 
         for (Reference referenceChild: listReference) {
           if (referenceChild.getModuleVersion() == null) {
-            RootModuleVersionJobAbstractImpl.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+            // Appropriate message already written by ReferenceManagerPlugin.getListReference.
             continue;
           }
 

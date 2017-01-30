@@ -184,7 +184,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
       Version versionNew;
 
       if (referenceChild.getModuleVersion() == null) {
-        ChangeReferenceToModuleVersion.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It cannot be processed.");
+        // Appropriate message already written by ReferenceManagerPlugin.getListReference.
         continue;
       }
 

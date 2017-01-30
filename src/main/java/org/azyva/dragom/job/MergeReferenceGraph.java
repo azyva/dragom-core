@@ -817,7 +817,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
           ByReference<Boolean> byReferenceBooleanDestDiverges;
 
           if (referenceChildDest.getModuleVersion() == null) {
-            MergeReferenceGraph.logger.info("Reference " + referenceChildDest + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
+            // Appropriate message already written by ReferenceManagerPlugin.getListReference.
             continue;
           }
 
@@ -1126,7 +1126,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
             referenceChildSrc = null;
 
             if (referenceChildDest.getModuleVersion() == null) {
-              MergeReferenceGraph.logger.info("Reference " + referenceChildDest + " does not include a source reference known to Dragom. It is not processed.");
+              // Appropriate message already written by ReferenceManagerPlugin.getListReference.
               continue;
             }
 

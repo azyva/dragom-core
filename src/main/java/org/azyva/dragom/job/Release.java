@@ -461,8 +461,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
               throw new RuntimeExceptionUserError(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_REFERENCE_DYNAMIC_VERSION_EXTERNAL_MODULE), this.referencePath, referenceChild));
             }
 
-            Release.logger.info("Reference " + referenceChild + " within ReferencePath " + this.referencePath + " does not include a source reference known to Dragom. It is not processed.");
-
+            // Appropriate message already written by ReferenceManagerPlugin.getListReference.
             continue;
           }
 

@@ -28,6 +28,8 @@ import java.util.ResourceBundle;
 import java.util.Set;
 
 import org.azyva.dragom.apiutil.ByReference;
+import org.azyva.dragom.execcontext.ExecContext;
+import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.maven.Pom;
@@ -41,6 +43,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +71,31 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
 
   /**
+   * Model property which specifies the base groupId that a referenced artifact
+   * must have to be identified as a {@link Module}. If a referenced artifact has a
+   * groupId which starts with the value of this property, but no Module can be
+   * found corresponding to this referenced artifact, an error message is written to
+   * the log'.
+   *
+   * <p>See {@link #RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND}.
+   *
+   * <p>If this property is not specified, finding a corresponding Module is always
+   * attempted.
+   */
+  private static final String MODEL_PROPERTY_BASE_GROUP_ID_MODULE = "BASE_GROUP_ID_MODULE";
+
+  /**
+   * Runtime property that specifies how to handle the situations where a
+   * {@link Module} cannot be found corresponding to a referenced artifact. See
+   * {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
+   *
+   * <p>If true, an exception is raised and processing stops. If false the process
+   * recovers by treating the artifact as not being known to Dragom by setting the
+   * ModuleVersion to null.
+   */
+  private static final String RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND = "IND_EXCEPTION_WHEN_MODULE_NOT_FOUND";
+
+  /**
    * See description in ResourceBundle.
    */
   protected static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
@@ -76,6 +104,13 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * ResourceBundle specific to this class.
    */
   protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
+
+
+  /**
+   * Base groupId that a referenced artifact must have to be identified as a
+   * {@link Module}. See {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
+   */
+  private String baseGroupIdModule;
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -202,6 +237,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    */
   public MavenReferenceManagerPluginImpl(Module module) {
     super(module);
+
+    this.baseGroupIdModule = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID_MODULE);
   }
 
   @Override
@@ -210,7 +247,10 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     PomAggregation pomAggregation;
     String aggregationVersion;
     Set<ArtifactGroupId> setArtifactGroupIdAggregation;
+    ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    boolean indExceptionWhenModuleNotFound;
     ArrayList<Reference> listReference;
     Model model;
     Pom.PomResolver pomResolver;
@@ -221,7 +261,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
     setArtifactGroupIdAggregation = pomAggregation.getSetArtifactGroupId();
 
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    execContext = ExecContextHolder.get();
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+    indExceptionWhenModuleNotFound = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), MavenReferenceManagerPluginImpl.RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND));
 
     listReference = new ArrayList<Reference>();
 
@@ -265,21 +309,29 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           continue;
         }
 
-        module = model.findModuleByArtifactGroupId(artifactGroupId);
+        if ((this.baseGroupIdModule == null) || artifactGroupId.getGroupId().startsWith(this.baseGroupIdModule)) {
+          module = model.findModuleByArtifactGroupId(artifactGroupId);
 
-        if (module != null) {
-          ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
+          if (module != null) {
+            ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
 
-          artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
+            artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
 
-          moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
+            moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
 
-          // We probably could simply perform an object equality here since Module's are
-          // singletons. But just in case, we compare their NodePath.
-          if (module.getNodePath().equals(this.getNode().getNodePath())) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
-
-            continue;
+            // We probably could simply perform an object equality here since Module's are
+            // singletons. But just in case, we compare their NodePath.
+            if (module.getNodePath().equals(this.getNode().getNodePath())) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+              continue;
+            }
+          } else {
+            if (indExceptionWhenModuleNotFound) {
+              throw new RuntimeException("A Module could not be found corresponding to ReferencedArtifact " + referencedArtifact + " ");
+            } else {
+              MavenReferenceManagerPluginImpl.logger.error("A Module could not be found corresponding to ReferencedArtifact " + referencedArtifact + "  Treating as an external artifact.");
+              moduleVersion = null;
+            }
           }
         } else {
           moduleVersion = null;
