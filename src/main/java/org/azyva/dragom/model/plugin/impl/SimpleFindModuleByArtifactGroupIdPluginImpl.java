@@ -117,6 +117,15 @@ public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationN
 
     artifactId = artifactGroupId.getArtifactId();
 
+    // Not all artifactIds are valid Node names. We fix the artifactId to
+    // comply with the Node name restrictions.
+
+    if (artifactId.startsWith("-")) {
+      artifactId = artifactId.substring(1);
+    }
+
+    artifactId = artifactGroupId.getArtifactId().replaceAll("\\.", "");
+
     do {
       listNodePath.add(new NodePath(this.getNode().getNodePath(), artifactId));
       lastDashPos = artifactId.lastIndexOf('-');
