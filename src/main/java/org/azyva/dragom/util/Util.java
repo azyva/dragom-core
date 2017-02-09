@@ -44,6 +44,7 @@ import org.azyva.dragom.job.MergeReferenceGraph;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
+import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -201,6 +202,26 @@ public final class Util {
   public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
 
   /**
+   * Transient data for the current {@link ToolResult}.
+   */
+  private static final String TRANSIENT_DATA_TOOL_RESULT = Util.class.getName() + ".ToolResult";
+
+  /**
+   * Prefix for exceptional conditions.
+   */
+  public static final String PREFIX_EXCEPTIONAL_COND = "EXCEPTIONAL_COND_";
+
+  /**
+   * Suffix for the ToolStatus associated with an exceptional condition.
+   */
+  public static final String SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS = ".TOOL_STATUS";
+
+  /**
+   * Suffix for the continuation indicator associated with an exceptional condition.
+   */
+  public static final String SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE = ".IND_CONTINUE";
+
+  /**
    * See description in ResourceBundle.
    */
   public static final String MSG_PATTERN_KEY_YES_RESPONSE = "YES_RESPONSE";
@@ -322,6 +343,60 @@ public final class Util {
    * resources which can be used by other classes.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.class.getName() + "ResourceBundle");
+
+  /**
+   * Possible tool results.
+   *
+   * <p>An int result code is associated with each constant to allow easily
+   * converting from the Java type to a process result code.
+   *
+   * @author David Raymond
+   */
+  public static enum ToolResult {
+    /**
+     * Success.
+     */
+    SUCCESS(0),
+
+    /**
+     * Error.
+     */
+    ERROR(1),
+
+    /**
+     * Warning.
+     *
+     * <p>In some contexts, this result is represented by the "unstable" state.
+     */
+    WARNING(2);
+
+    private int resultCode;
+
+    private ToolResult(int resultCode) {
+      this.resultCode = resultCode;
+    }
+
+    public int getResultCode() {
+      return this.resultCode;
+    }
+
+    /**
+     * @param toolResultNew New ToolResult.
+     * @return Indicates if a new ToolResult is more severe than the current one.
+     */
+    public boolean isMoreSevere(ToolResult toolResultNew) {
+      switch (this) {
+      case SUCCESS:
+        return (toolResultNew != SUCCESS);
+      case ERROR:
+        return false;
+      case WARNING:
+        return (toolResultNew == ERROR);
+      default:
+        throw new RuntimeException("Must not get here.");
+      }
+    }
+  }
 
   /**
    * Indicates that the Dragom properties have been loaded.
@@ -1427,6 +1502,8 @@ public final class Util {
       return true;
     }
 
+    Util.logger.info("Interacting with the user for handling \"Do you want to continue?\" for context " + context + ". You can set the runtime property " + Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context + " to true to continue without user interaction.");
+
     switch (Util.getInfoYesAlwaysNoUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
     case NO:
       Util.setAbort();
@@ -1445,7 +1522,7 @@ public final class Util {
    * "Do you want to continue?".
    * <p>
    * Its behavior is similar to that of {@link #handleDoYouWantToContinue} except
-   * that it handle the "no" response to mean "no for this iteration" (and simply
+   * that it handles the "no" response to mean "no for this iteration" (and simply
    * return false), and provides a separate "abort" response to mean "no and abort"
    * (and return false and set the IND_ABORT runtime property to true).
    *
@@ -1470,6 +1547,8 @@ public final class Util {
     } else if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context))) {
       return true;
     }
+
+    Util.logger.info("Interacting with the user for handling \"Do you want to continue?\" for context " + context + ". You can set the runtime property " + Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context + " to true to continue without user interaction.");
 
     switch (Util.getInfoYesAlwaysNoAbortUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
     case NO_ABORT:
@@ -1581,5 +1660,106 @@ public final class Util {
     }
 
     return Util.indPosix.booleanValue();
+  }
+
+  /**
+   * Records the current tool result in {@link ExecContext} transient data.
+   *
+   * <p>The default tool result is {@link ToolResult#SUCCESS} if this method is never
+   * called.
+   *
+   * <p>ToolResult escalation is performed, meaning that the ToolResult is set only
+   * if more severe than the current one.
+   *
+   * @param toolResult ToolResult.
+   */
+  public static void setToolResult(ToolResult toolResult) {
+    ExecContext execContext;
+    ToolResult toolResultCurrent;
+
+    execContext = ExecContextHolder.get();
+
+    toolResultCurrent = (ToolResult)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_RESULT);
+
+    if (toolResultCurrent == null) {
+      toolResultCurrent = ToolResult.SUCCESS;
+    }
+
+    if (toolResultCurrent.isMoreSevere(toolResult)) {
+      execContext.setTransientData(Util.TRANSIENT_DATA_TOOL_RESULT, toolResult);
+    }
+  }
+
+  /**
+   * @return Current tool result from {@link ExecContext} transient data.
+   */
+  public static ToolResult getToolResult() {
+    ExecContext execContext;
+    ToolResult toolResult;
+
+    execContext = ExecContextHolder.get();
+
+    // Depending on the state of the tool which calls this method, it can happen that
+    // the ExecContext is not initialized.
+    if (execContext == null) {
+      return ToolResult.SUCCESS;
+    }
+
+    toolResult = (ToolResult)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_RESULT);
+
+    if (toolResult == null) {
+      return ToolResult.SUCCESS;
+    } else {
+      return toolResult;
+    }
+  }
+
+  /**
+   * Following an exceptional condition that occurred, combines the following
+   * functionalities:
+   * <ul>
+   * <li>Update the current {@link ToolResult} in {@link ExecContext} transient data;
+   * <li>Indicate to the caller if processing should continue or not.
+   * </ul>
+   * The ToolResult is by default {@link ToolResult#WARNING}, unless the runtime
+   * property named after the specified exceptional condition with the suffix
+   * ".TOOL_RESULT" indicates otherwise.
+   *
+   * <p>By default the return value indicates to continue processing if an only if
+   * the ToolResult is not ERROR, unless the runtime property named after the
+   * exceptional condition with the suffix ".IND_CONTINUE" indicates otherwise.
+   *
+   * @param node Current Node in the context of which the exceptional condition is
+   *   met. Used to access the runtime properties. Can be null.
+   * @param exceptionalCond Exceptional condition (e.g.:
+   *   EXCEPTIONAL_COND_MODULE_NOT_FOUND_FOR_ARTIFACT)
+   * @return Whether to continue.
+   */
+  public static boolean handleToolResultAndContinueForExceptionalCond(Node node, String exceptionalCond) {
+    ExecContext execContext;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    ToolResult toolResult;
+    String runtimeProperty;
+
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS);
+
+    if (runtimeProperty == null) {
+      toolResult = ToolResult.WARNING;
+    } else {
+      toolResult = ToolResult.valueOf(runtimeProperty);
+    }
+
+    Util.setToolResult(toolResult);
+
+    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE);
+
+    if (runtimeProperty == null) {
+      return toolResult != ToolResult.ERROR;
+    } else {
+      return Util.isNotNullAndTrue(runtimeProperty);
+    }
   }
 }

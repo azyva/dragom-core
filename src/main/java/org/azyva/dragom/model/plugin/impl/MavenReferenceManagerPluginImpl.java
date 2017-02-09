@@ -43,6 +43,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +95,13 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * ModuleVersion to null.
    */
   private static final String RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND = "IND_EXCEPTION_WHEN_MODULE_NOT_FOUND";
+
+  /**
+   * Exceptional condition representing an artifact that was found to be produced by
+   * a Module, but the POM(s) of the ModuleVersion Module that could not be found
+   * corresponding to an artifact specified by the user.
+   */
+  private static final String EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM = "ARTIFACT_IN_MODULE_BUT_NOT_IN_POM";
 
   /**
    * See description in ResourceBundle.
@@ -322,8 +330,12 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
             // We probably could simply perform an object equality here since Module's are
             // singletons. But just in case, we compare their NodePath.
             if (module.getNodePath().equals(this.getNode().getNodePath())) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
-              continue;
+              if (Util.handleToolResultAndContinueForExceptionalCond(this.getNode(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM)) {
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+                continue;
+              } else {
+                throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+              }
             }
           } else {
             if (indExceptionWhenModuleNotFound) {
