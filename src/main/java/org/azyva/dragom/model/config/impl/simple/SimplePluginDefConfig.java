@@ -82,7 +82,7 @@ public class SimplePluginDefConfig implements PluginDefConfig {
    *   child NodeConfig when interpreted by the {@link Model}.
    */
   public SimplePluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId, String pluginClass, boolean indOnlyThisNode) {
-    if ((this.pluginClass == null) || this.pluginClass.isEmpty()){
+    if ((pluginClass == null) || pluginClass.isEmpty()){
       throw new RuntimeException("PluginDef cannot specify a null or empty plugin class.");
     }
 
@@ -103,6 +103,8 @@ public class SimplePluginDefConfig implements PluginDefConfig {
     }
 
     this.pluginClass = pluginClass;
+
+    this.indOnlyThisNode = indOnlyThisNode;
 
     // TODO: Should we handle default pluginId?
   }

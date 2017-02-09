@@ -44,7 +44,6 @@ import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.config.PluginKey;
 import org.azyva.dragom.model.config.PropertyDefConfig;
 import org.azyva.dragom.model.config.impl.simple.SimpleClassificationNodeConfig;
-import org.azyva.dragom.model.config.impl.simple.SimpleConfig;
 import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfig;
 import org.azyva.dragom.model.config.impl.simple.SimpleNodeConfigTransferObject;
 import org.azyva.dragom.model.plugin.NodePlugin;
@@ -60,7 +59,7 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
   /**
    * Indicates that the {@link SimpleNodeConfig} is new and has not been finalized
    * yet. This is the state in which it is after having been created using the
-   * create methods of {@link SimpleConfig} or
+   * create methods of {@link XmlConfig} or
    * {@link SimpleClassificationNodeConfig}.
    */
   protected boolean indNew;

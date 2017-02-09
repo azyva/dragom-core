@@ -126,7 +126,7 @@ public class SimpleNodeConfigTransferObject implements NodeConfigTransferObject 
 
   @Override
   public void removePlugingDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
-    this.mapPropertyDefConfig.remove(new PluginKey(classNodePlugin, pluginId));
+    this.mapPluginDefConfig.remove(new PluginKey(classNodePlugin, pluginId));
   }
 
   @Override

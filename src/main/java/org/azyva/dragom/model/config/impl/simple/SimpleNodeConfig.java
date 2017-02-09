@@ -272,9 +272,7 @@ public abstract class SimpleNodeConfig implements NodeConfig, MutableNodeConfig 
       this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
     }
 
-    if (!this.indNew) {
-      this.revision++;
-    }
+    this.revision++;
 
     if (optimisticLockHandle != null) {
       ((SimpleOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
