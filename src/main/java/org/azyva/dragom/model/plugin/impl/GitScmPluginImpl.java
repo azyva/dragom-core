@@ -59,6 +59,7 @@ import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.event.DynamicVersionCreatedEvent;
 import org.azyva.dragom.model.event.StaticVersionCreatedEvent;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.ServiceLocator;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -720,51 +721,57 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     Path pathMainUserWorkspaceDir;
     Path pathModuleWorkspaceRemote;
 
-    // pathModuleWorkspace should be empty here, so this is not really useful.
-    this.validateTempDynamicVersion(pathModuleWorkspace, false);
-
-    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-    nodePathModule = this.getModule().getNodePath();
-
-    if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
-      throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
-    }
-
-    // If there is a main user workspace directory for the Module (whatever the
-    // Version) we want to clone from this directory instead of from the remote
-    // repository to avoid network access.
-
-    // We expect pathMainUserWorkspaceDir to not be equal to pathModuleWorkspace since
-    // when the caller calls this method, the pathModuleWorkspace must not exist yet
-    // as it is meant to be created by this method.
-    pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
-
-    if (pathMainUserWorkspaceDir != null) {
-      this.gitClone(version,  pathMainUserWorkspaceDir, pathModuleWorkspace);
-      return;
-    }
-
-    // If not, we check if a system workspace directory exists for the module, in
-    // which case we simply clone from it instead of from the remote repository.
-    // Furthermore, we make the new user workspace directory the main one.
-
-    workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
-
-    if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
-      pathModuleWorkspaceRemote = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ);
-    } else {
-      pathModuleWorkspaceRemote = null;
-    }
-
     try {
-      this.gitClone(version, pathModuleWorkspaceRemote, pathModuleWorkspace);
-    } finally {
-      if (pathModuleWorkspaceRemote != null) {
-        workspacePlugin.releaseWorkspaceDir(pathModuleWorkspaceRemote);
-      }
-    }
+      // pathModuleWorkspace should be empty here, so this is not really useful.
+      this.validateTempDynamicVersion(pathModuleWorkspace, false);
 
-    this.setPathMainUserWorkspaceDir(nodePathModule, pathModuleWorkspace);
+      workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+      nodePathModule = this.getModule().getNodePath();
+
+      if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
+        throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
+      }
+
+      // If there is a main user workspace directory for the Module (whatever the
+      // Version) we want to clone from this directory instead of from the remote
+      // repository to avoid network access.
+
+      // We expect pathMainUserWorkspaceDir to not be equal to pathModuleWorkspace since
+      // when the caller calls this method, the pathModuleWorkspace must not exist yet
+      // as it is meant to be created by this method.
+      pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+
+      if (pathMainUserWorkspaceDir != null) {
+        this.gitClone(version,  pathMainUserWorkspaceDir, pathModuleWorkspace);
+        return;
+      }
+
+      // If not, we check if a system workspace directory exists for the module, in
+      // which case we simply clone from it instead of from the remote repository.
+      // Furthermore, we make the new user workspace directory the main one.
+
+      workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
+
+      if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
+        pathModuleWorkspaceRemote = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ);
+      } else {
+        pathModuleWorkspaceRemote = null;
+      }
+
+      try {
+        this.gitClone(version, pathModuleWorkspaceRemote, pathModuleWorkspace);
+      } finally {
+        if (pathModuleWorkspaceRemote != null) {
+          workspacePlugin.releaseWorkspaceDir(pathModuleWorkspaceRemote);
+        }
+      }
+
+      this.setPathMainUserWorkspaceDir(nodePathModule, pathModuleWorkspace);
+    } catch (RuntimeExceptionUserError reue) {
+      throw reue;
+    } catch (RuntimeException re) {
+      throw new RuntimeException("Could not checkout Version " + version + " of Module " + this.getModule() + '.');
+    }
   }
 
   //TODO: The path must come from the workspace so that caller can check what kind it is.
@@ -783,145 +790,151 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     WorkspaceDirSystemModule workspaceDirSystemModuleConflict;
     Path pathMainUserWorkspaceDir;
 
-    git = this.getGit();
+    try {
+      git = this.getGit();
 
-    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
-    nodePathModule = this.getModule().getNodePath();
+      workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+      nodePathModule = this.getModule().getNodePath();
 
-    if (version != null) {
-      // We first check if a user workspace directory exists for the ModuleVersion.
+      if (version != null) {
+        // We first check if a user workspace directory exists for the ModuleVersion.
 
-      workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, version));
+        workspaceDirUserModuleVersion = new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule, version));
 
-      if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
-        // If the module is already checked out for the user, the path is reused as is,
-        // without caring to make sure it is up to date. It belongs to the user who is
-        // responsible for this, or the caller acting on behalf of the user.
-        return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+        if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
+          // If the module is already checked out for the user, the path is reused as is,
+          // without caring to make sure it is up to date. It belongs to the user who is
+          // responsible for this, or the caller acting on behalf of the user.
+          return workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+        }
+      } else {
+        Set<WorkspaceDir> setWorkspaceDir;
+
+        // If version is null, any user workspace directory for the Module will do.
+        // Generally there will be only one, but some WorkspacePlugin implementations
+        // could support multiple.
+        setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule)));
+
+        if (setWorkspaceDir.size() >= 1) {
+          return workspacePlugin.getWorkspaceDir(setWorkspaceDir.iterator().next(), WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+        }
       }
-    } else {
-      Set<WorkspaceDir> setWorkspaceDir;
 
-      // If version is null, any user workspace directory for the Module will do.
-      // Generally there will be only one, but some WorkspacePlugin implementations
-      // could support multiple.
-      setWorkspaceDir = workspacePlugin.getSetWorkspaceDir(new WorkspaceDirUserModuleVersion(new ModuleVersion(nodePathModule)));
+      // If not, we check if a system workspace directory exists for the module.
 
-      if (setWorkspaceDir.size() >= 1) {
-        return workspacePlugin.getWorkspaceDir(setWorkspaceDir.iterator().next(), WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
-      }
-    }
+      workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
 
-    // If not, we check if a system workspace directory exists for the module.
+      if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
+        Version versionTempDynamicBase;
 
-    workspaceDirSystemModule = new WorkspaceDirSystemModule(nodePathModule);
+        // If a system workspace directory already exists for the module, we reuse it.
+        // But it may not be up-to-date and may not have the requested version checked
+        // out.
 
-    if (workspacePlugin.isWorkspaceDirExist(workspaceDirSystemModule)) {
-      Version versionTempDynamicBase;
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-      // If a system workspace directory already exists for the module, we reuse it.
-      // But it may not be up-to-date and may not have the requested version checked
-      // out.
+        try {
+          versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
 
-      pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+          // If a temporary dynamic Version is in effect in the module workspace directory,
+          // we return immediately that directory, provided the requested Version
+          // corresponds to the base Version of the temporary dynamic Version.
+          // We expect the caller to not need to be aware of temporary dynamic Version
+          // fact and not need use methods that are not allowed in which context, or
+          // be aware of that fact and behave accordingly.
+          if (versionTempDynamicBase != null) {
+            if ((version != null) && !versionTempDynamicBase.equals(version)) {
+              throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
+            }
 
-      try {
-        versionTempDynamicBase = this.getVersionTempDynamicBase(pathModuleWorkspace);
-
-        // If a temporary dynamic Version is in effect in the module workspace directory,
-        // we return immediately that directory, provided the requested Version
-        // corresponds to the base Version of the temporary dynamic Version.
-        // We expect the caller to not need to be aware of temporary dynamic Version
-        // fact and not need use methods that are not allowed in which context, or
-        // be aware of that fact and behave accordingly.
-        if (versionTempDynamicBase != null) {
-          if ((version != null) && !versionTempDynamicBase.equals(version)) {
-            throw new RuntimeException("A temporary dynamic Version " + versionTempDynamicBase + " is in effect in " + pathModuleWorkspace + " but is not the same as the requested Version " + version + '.');
+            return pathModuleWorkspace;
           }
 
-          return pathModuleWorkspace;
-        }
+          this.fetch(pathModuleWorkspace);
 
-        this.fetch(pathModuleWorkspace);
+          if (version != null) {
+            git.checkout(pathModuleWorkspace, version);
 
-        if (version != null) {
-          git.checkout(pathModuleWorkspace, version);
+            // If the version is dynamic (a branch), we might have actually checked out the
+            // local version of it and it may not be up to date.
+            if (version.getVersionType() == VersionType.DYNAMIC) {
+            pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
 
-          // If the version is dynamic (a branch), we might have actually checked out the
-          // local version of it and it may not be up to date.
-          if (version.getVersionType() == VersionType.DYNAMIC) {
-          pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+              if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
+                // We add "--" as a last argument since when a ref does no exist, Git complains
+                // about the fact that the command is ambiguous.
+                if (git.executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
+                  // If the Workspace directory is not the main one, we fetch the same branch from
+                  // the main Workspace directory into the current Workspace directory.
+                  // This is the special handling of the synchronization between a workspace
+                  // directory and the main one mentioned in the isSync method.
+                  this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+                }
+              }
 
-            if ((pathMainUserWorkspaceDir != null) && !pathMainUserWorkspaceDir.equals(pathModuleWorkspace)) {
-              // We add "--" as a last argument since when a ref does no exist, Git complains
-              // about the fact that the command is ambiguous.
-              if (git.executeGitCommand(new String[] {"rev-parse", "refs/heads/" + version.getVersion(), "--"}, false, AllowExitCode.ALL, pathMainUserWorkspaceDir, null, false) == 0) {
-                // If the Workspace directory is not the main one, we fetch the same branch from
-                // the main Workspace directory into the current Workspace directory.
-                // This is the special handling of the synchronization between a workspace
-                // directory and the main one mentioned in the isSync method.
-                this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+              // And in all cases, we pull changes from the corresponding remote tracking
+              // branch.
+              if (this.gitPull(pathModuleWorkspace)) {
+                throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
               }
             }
-
-            // And in all cases, we pull changes from the corresponding remote tracking
-            // branch.
-            if (this.gitPull(pathModuleWorkspace)) {
-              throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
-            }
           }
+        } catch (Exception e) {
+          // If an exception is thrown, we must not leave the workspace directory locked.
+          if (pathModuleWorkspace != null) {
+            workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+          }
+
+          throw e;
         }
+
+        return pathModuleWorkspace;
+      }
+
+      // If not we know we will create a new system workspace directory.
+
+      pathModuleWorkspace = null;
+
+      try {
+        // If there is already another Module which maps to the same workspace directory
+        // we replace the Module. Note that this is not possible for user workspace
+        // directories.
+
+        workspaceDirSystemModuleConflict = (WorkspaceDirSystemModule)workspacePlugin.getWorkspaceDirConflict(workspaceDirSystemModule);
+
+        if (workspaceDirSystemModuleConflict != null) {
+          pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModuleConflict,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+
+          workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModuleConflict);
+        }
+
+        // Here we are sure the workspace directory does not exist and can be created.
+
+        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
+
+        // But if there is a main user workspace directory for the Module (whatever the
+        // Version) we want to clone from this directory instead of from the remote
+        // repository to avoid network access.
+
+        pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
+
+        this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
       } catch (Exception e) {
-        // If an exception is thrown, we must not leave the workspace directory locked.
         if (pathModuleWorkspace != null) {
-          workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+          workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModule);
+
+          FileUtils.deleteQuietly(pathModuleWorkspace.toFile());
         }
 
         throw e;
       }
 
       return pathModuleWorkspace;
+    } catch (RuntimeExceptionUserError reue) {
+      throw reue;
+    } catch (RuntimeException re) {
+      throw new RuntimeException("Could not checkout (system directory) Version " + version + " of Module " + this.getModule() + '.');
     }
-
-    // If not we know we will create a new system workspace directory.
-
-    pathModuleWorkspace = null;
-
-    try {
-      // If there is already another Module which maps to the same workspace directory
-      // we replace the Module. Note that this is not possible for user workspace
-      // directories.
-
-      workspaceDirSystemModuleConflict = (WorkspaceDirSystemModule)workspacePlugin.getWorkspaceDirConflict(workspaceDirSystemModule);
-
-      if (workspaceDirSystemModuleConflict != null) {
-        pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModuleConflict,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
-
-        workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModuleConflict);
-      }
-
-      // Here we are sure the workspace directory does not exist and can be created.
-
-      pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
-
-      // But if there is a main user workspace directory for the Module (whatever the
-      // Version) we want to clone from this directory instead of from the remote
-      // repository to avoid network access.
-
-      pathMainUserWorkspaceDir = this.getPathMainUserWorkspaceDir(nodePathModule);
-
-      this.gitClone(version, pathMainUserWorkspaceDir, pathModuleWorkspace);
-    } catch (Exception e) {
-      if (pathModuleWorkspace != null) {
-        workspacePlugin.deleteWorkspaceDir(workspaceDirSystemModule);
-
-        FileUtils.deleteQuietly(pathModuleWorkspace.toFile());
-      }
-
-      throw e;
-    }
-
-    return pathModuleWorkspace;
   }
 
   /**

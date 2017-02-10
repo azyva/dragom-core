@@ -46,6 +46,7 @@ import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.model.plugin.SelectDynamicVersionPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -388,19 +389,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
       indReferenceProcessed = false;
 
-      try {
-        // Here we need to have access to the sources of the module so that we can obtain
-        // the list of references and iterate over them. If the user already has the
-        // correct version of the module checked out, we need to use it. If not, we need
-        // an internal working directory which we will not modify (for now).
-        // ScmPlugin.checkoutSystem does that.
-        pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
-      } catch (RuntimeExceptionUserError reue) {
-        throw reue;
-      } catch (RuntimeException re) {
-        throw new RuntimeException("Could not checkout Version " + referenceParent.getModuleVersion().getVersion() + " of Module " + module + '.', re);
-      }
-
+      // Here we need to have access to the sources of the module so that we can obtain
+      // the list of references and iterate over them. If the user already has the
+      // correct version of the module checked out, we need to use it. If not, we need
+      // an internal working directory which we will not modify (for now).
+      // ScmPlugin.checkoutSystem does that.
+      pathModuleWorkspace = scmPlugin.checkoutSystem(referenceParent.getModuleVersion().getVersion());
 
       // We want to ensure the workspace directory is synchronized. But it is not always
       // necessary or permitted to do so. The path returned by ScmPlugin.checkoutSystem
@@ -444,12 +438,17 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
           try {
             visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
-          } catch (RuntimeExceptionUserError reue) {
-            throw reue;
+          } catch (RuntimeExceptionAbort rea) {
+            throw rea;
           } catch (RuntimeException re) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
             SwitchToDynamicVersion.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
-            continue;
+
+            if (Util.handleToolResultAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+              continue;
+            } else {
+              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+            }
           }
 
           if (Util.isAbort()) {

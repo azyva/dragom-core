@@ -197,9 +197,10 @@ public final class Util {
   private static final String DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE = "/META-INF/dragom-init.properties";
 
   /**
-   * See description in ResourceBundle.
+   * Exceptional condition representing the fact that an exception is thrown during
+   * the visit of a matched ModuleVersion.
    */
-  public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
+  public static final String EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
 
   /**
    * Transient data for the current {@link ToolResult}.
@@ -220,6 +221,11 @@ public final class Util {
    * Suffix for the continuation indicator associated with an exceptional condition.
    */
   public static final String SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE = ".IND_CONTINUE";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  public static final String MSG_PATTERN_KEY_ALWAYS_NEVER_ASK_RESPONSE_CHOICES = "ALWAYS_NEVER_ASK_RESPONSE_CHOICES";
 
   /**
    * See description in ResourceBundle.
@@ -1672,8 +1678,10 @@ public final class Util {
    * if more severe than the current one.
    *
    * @param toolResult ToolResult.
+   * @return Indicates if the new ToolResult is more severe than the current one
+   *   which has been updated.
    */
-  public static void setToolResult(ToolResult toolResult) {
+  public static boolean setToolResult(ToolResult toolResult) {
     ExecContext execContext;
     ToolResult toolResultCurrent;
 
@@ -1687,6 +1695,9 @@ public final class Util {
 
     if (toolResultCurrent.isMoreSevere(toolResult)) {
       execContext.setTransientData(Util.TRANSIENT_DATA_TOOL_RESULT, toolResult);
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -1738,28 +1749,58 @@ public final class Util {
   public static boolean handleToolResultAndContinueForExceptionalCond(Node node, String exceptionalCond) {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
-    ToolResult toolResult;
+    StringBuilder stringBuilder;
     String runtimeProperty;
+    ToolResult toolResult;
+    boolean indContinue;
 
     execContext = ExecContextHolder.get();
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
+    stringBuilder = new StringBuilder();
+
+    stringBuilder.append("Exceptional condition ").append(exceptionalCond).append(" met. ");
+
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS);
 
     if (runtimeProperty == null) {
+      stringBuilder.append("Default ToolResult.WARNING used. ");
+
       toolResult = ToolResult.WARNING;
     } else {
       toolResult = ToolResult.valueOf(runtimeProperty);
+
+      stringBuilder.append("ToolResult.").append(toolResult).append(" specified for Node ").append(node.toString()).append(" used. ");
     }
 
-    Util.setToolResult(toolResult);
+    if (Util.setToolResult(toolResult)) {
+      stringBuilder.append("Current ToolResult updated since less severe. ");
+    } else {
+      stringBuilder.append("Current ToolResult not updated since equal or more severe. ");
+    }
 
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE);
 
     if (runtimeProperty == null) {
-      return toolResult != ToolResult.ERROR;
+      indContinue = (toolResult != ToolResult.ERROR);
+
+      if (indContinue) {
+        stringBuilder.append("Continuing the process by default since not ToolResult.ERROR. ");
+      } else {
+        stringBuilder.append("Not continuing the process by default since ToolResult.ERROR. ");
+      }
     } else {
-      return Util.isNotNullAndTrue(runtimeProperty);
+      indContinue = Util.isNotNullAndTrue(runtimeProperty);
+
+      if (indContinue) {
+        stringBuilder.append("Continuing as specified for Node ").append(node.toString()).append('.');
+      } else {
+        stringBuilder.append("Aborting as specified for Node ").append(node.toString()).append('.');
+      }
+
+      Util.logger.info(stringBuilder.toString());
     }
+
+    return indContinue;
   }
 }

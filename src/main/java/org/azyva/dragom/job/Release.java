@@ -52,6 +52,7 @@ import org.azyva.dragom.model.plugin.impl.ContinuousReleaseSelectStaticVersionPl
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -414,18 +415,12 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         boolean indAbort;
         ByReference<Reference> byReferenceReference;
 
-        try {
-          // Here we need to have access to the sources of the module so that we can obtain
-          // the list of references and iterate over them. If the user already has the
-          // correct version of the module checked out, we need to use it. If not, we need
-          // an internal working directory which we will not modify (for now).
-          // ScmPlugin.checkoutSystem does that.
-          pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
-        } catch (RuntimeExceptionUserError reue) {
-          throw reue;
-        } catch (RuntimeException re) {
-          throw new RuntimeException("Could not checkout Version " + reference.getModuleVersion().getVersion() + " of Module " + module + '.', re);
-        }
+        // Here we need to have access to the sources of the module so that we can obtain
+        // the list of references and iterate over them. If the user already has the
+        // correct version of the module checked out, we need to use it. If not, we need
+        // an internal working directory which we will not modify (for now).
+        // ScmPlugin.checkoutSystem does that.
+        pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
           throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
@@ -475,8 +470,8 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
           try {
             indVersionChanged = this.visitModuleVersionInternal(referenceChild, byReferenceVersionChild, indRelease);
-          } catch (RuntimeExceptionUserError reue) {
-            throw reue;
+          } catch (RuntimeExceptionAbort rea) {
+            throw rea;
           } catch (RuntimeException re) {
             if (indRelease) {
               Release.logger.error("Exception thrown while visiting " + referenceChild + " during the release process. Winding back the call stack to abort the release of the initial matching ModuleVersion.");
@@ -485,9 +480,14 @@ public class Release extends RootModuleVersionJobAbstractImpl {
               // release so that the matched ModuleVersion can be safely skipped.
               throw re;
             } else {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
               Release.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
-              continue;
+
+              if (Util.handleToolResultAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING)) {
+                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+                continue;
+              } else {
+                throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+              }
             }
           }
 

@@ -45,6 +45,7 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -335,12 +336,17 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
 
       try {
         indVersionChanged = this.visitModuleVersion(new Reference(moduleVersion), byReferenceVersion);
-      } catch (RuntimeExceptionUserError reue) {
-        throw reue;
+      } catch (RuntimeExceptionAbort rea) {
+        throw rea;
       } catch (RuntimeException re) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), moduleVersion));
         RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + moduleVersion + '.', re);
-        continue;
+
+        if (Util.handleToolResultAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING)) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), moduleVersion));
+          continue;
+        } else {
+          throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), moduleVersion));
+        }
       }
 
       RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at ModuleVersion " + moduleVersion + " is completed.");
@@ -463,22 +469,16 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         return false;
       }
 
-      try {
-        // We need to have access to the sources of the Module at different places below:
-        // - For verifying for unsynchronized local or remote changes
-        // - To obtain the list of references and iterate over them
-        // There are a few combinations of cases where accessing the sources is not
-        // required at all, but they are few and we prefer simplicity here and to always
-        // obtain the path to the workspace directory.
-        // If the user already has the correct version of the module checked out, we need
-        // to use it. If not, we need an internal working directory.
-        // ScmPlugin.checkoutSystem does just that.
-        pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
-      } catch (RuntimeExceptionUserError reue) {
-        throw reue;
-      } catch (RuntimeException re) {
-        throw new RuntimeException("Could not checkout Version " + moduleVersion.getVersion() + " of Module " + module + '.', re);
-      }
+      // We need to have access to the sources of the Module at different places below:
+      // - For verifying for unsynchronized local or remote changes
+      // - To obtain the list of references and iterate over them
+      // There are a few combinations of cases where accessing the sources is not
+      // required at all, but they are few and we prefer simplicity here and to always
+      // obtain the path to the workspace directory.
+      // If the user already has the correct version of the module checked out, we need
+      // to use it. If not, we need an internal working directory.
+      // ScmPlugin.checkoutSystem does just that.
+      pathModuleWorkspace = scmPlugin.checkoutSystem(moduleVersion.getVersion());
 
       // We need to know if the workspace directory belongs to the user since system
       // workspace directories are always kept synchronized.
@@ -637,12 +637,17 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
             // recursively invoking the same non-overridden method and we know this parameter
             // is actually not used.
             this.visitModuleVersion(referenceChild, null);
-          } catch (RuntimeExceptionUserError reue) {
-            throw reue;
+          } catch (RuntimeExceptionAbort rea) {
+            throw rea;
           } catch (RuntimeException re) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
             RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
-            continue;
+
+            if (Util.handleToolResultAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+              continue;
+            } else {
+              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), referenceChild));
+            }
           }
 
           if (Util.isAbort()) {

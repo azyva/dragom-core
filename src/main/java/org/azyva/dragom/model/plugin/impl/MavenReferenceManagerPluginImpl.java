@@ -43,6 +43,7 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -78,7 +79,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * found corresponding to this referenced artifact, an error message is written to
    * the log'.
    *
-   * <p>See {@link #RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND}.
+   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
    * <p>If this property is not specified, finding a corresponding Module is always
    * attempted.
@@ -86,15 +87,10 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final String MODEL_PROPERTY_BASE_GROUP_ID_MODULE = "BASE_GROUP_ID_MODULE";
 
   /**
-   * Runtime property that specifies how to handle the situations where a
-   * {@link Module} cannot be found corresponding to a referenced artifact. See
-   * {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
-   *
-   * <p>If true, an exception is raised and processing stops. If false the process
-   * recovers by treating the artifact as not being known to Dragom by setting the
-   * ModuleVersion to null.
+   * Exceptional condition representing the fact that a referenced artifact within a
+   * POM could not be resolved (properties).
    */
-  private static final String RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND = "IND_EXCEPTION_WHEN_MODULE_NOT_FOUND";
+  private static final String EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
 
   /**
    * Exceptional condition representing an artifact that was found to be produced by
@@ -104,14 +100,35 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final String EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM = "ARTIFACT_IN_MODULE_BUT_NOT_IN_POM";
 
   /**
+   * Exceptional condition representing a {@link Module} that cannot be found
+   * corresponding to a referenced artifact. See
+   * {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
+   *
+   * <p>If the configuration of the exceptional condition is such that processing
+   * continues, the process recovers by treating the artifact as not being known to
+   * Dragom by setting the ModuleVersion to null.
+   */
+  private static final String EXCEPTIONAL_COND_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
+
+  /**
    * See description in ResourceBundle.
    */
-  protected static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
+  private static final String MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
 
   /**
    * ResourceBundle specific to this class.
    */
-  protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
 
 
   /**
@@ -258,7 +275,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
-    boolean indExceptionWhenModuleNotFound;
     ArrayList<Reference> listReference;
     Model model;
     Pom.PomResolver pomResolver;
@@ -272,8 +288,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     execContext = ExecContextHolder.get();
     userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-
-    indExceptionWhenModuleNotFound = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), MavenReferenceManagerPluginImpl.RUNTIME_PROPERTY_IND_EXCEPTION_WHEN_MODULE_NOT_FOUND));
 
     listReference = new ArrayList<Reference>();
 
@@ -308,8 +322,14 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
           artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
         } catch (RuntimeException re) {
-          MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved and is ignored. Reason:", re);
-          continue;
+          MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved. Reason:", re);
+
+          if (Util.handleToolResultAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT)) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), referencedArtifact));
+            continue;
+          } else {
+            throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), referencedArtifact));
+          }
         }
 
         // We are not interested in references internal to the module.
@@ -330,7 +350,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
             // We probably could simply perform an object equality here since Module's are
             // singletons. But just in case, we compare their NodePath.
             if (module.getNodePath().equals(this.getNode().getNodePath())) {
-              if (Util.handleToolResultAndContinueForExceptionalCond(this.getNode(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM)) {
+              if (Util.handleToolResultAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM)) {
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
                 continue;
               } else {
@@ -338,11 +358,12 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
               }
             }
           } else {
-            if (indExceptionWhenModuleNotFound) {
-              throw new RuntimeException("A Module could not be found corresponding to ReferencedArtifact " + referencedArtifact + " ");
-            } else {
-              MavenReferenceManagerPluginImpl.logger.error("A Module could not be found corresponding to ReferencedArtifact " + referencedArtifact + "  Treating as an external artifact.");
+            if (Util.handleToolResultAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
               moduleVersion = null;
+              continue;
+            } else {
+              throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
             }
           }
         } else {

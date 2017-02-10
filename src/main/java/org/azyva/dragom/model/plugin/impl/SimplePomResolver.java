@@ -37,7 +37,6 @@ import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ArtifactVersionMapperPlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.util.RuntimeExceptionUserError;
 
 /**
  * Simple implementation of {@link org.azyva.dragom.maven.Pom.PomResolver}.
@@ -190,13 +189,7 @@ public class SimplePomResolver implements Pom.PomResolver {
 
     version = artifactVersionMapperPlugin.mapArtifactVersionToVersion(new ArtifactVersion(stringVersion));
 
-    try {
-      pathModuleWorkspace = scmPlugin.checkoutSystem(version);
-    } catch (RuntimeExceptionUserError reue) {
-      throw reue;
-    } catch (RuntimeException re) {
-      throw new RuntimeException("Could not checkout Version " + version + " of Module " + module + '.', re);
-    }
+    pathModuleWorkspace = scmPlugin.checkoutSystem(version);
 
     try {
       pomAggregation = new PomAggregation(pathModuleWorkspace.resolve("pom.xml"));

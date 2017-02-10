@@ -168,7 +168,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
     pathModuleWorkspace = scmPlugin.checkoutSystem(version);
 
     if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
-      throw new RuntimeExceptionUserError("The directory " + pathModuleWorkspace + " is not synchronized with the SCM. Please synchronize all directories before using this task.");
+      throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
     }
 
     if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
