@@ -195,36 +195,64 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
     return this.indNew;
   }
 
+  private enum OptimisticLockCheckContext {
+    /**
+     * Getting a {@link NodeConfigTransferObject} on an existing XmlNodeConfig.
+     */
+    GET,
+
+    /**
+     * Getting or setting a {@link NodeConfigTransferObject} on a new
+     * XmlNodeConfig.
+     */
+    NEW,
+
+    /**
+     * Updating an existing XmlNodeConfig by setting a
+     * {@link NodeConfigTransferObject}.
+     */
+    UPDATE
+  }
+
   /**
-   * Check whether the {@link OptimisticLockHandle} corresponds to the current state
-   * of the data it represents.
+   * Check whether the {@link XmlOptimisticLockHandle} corresponds to the current
+   * state of the data it represents.
    * <p>
-   * If optimisticLockHandle is null, nothing is done.
+   * If xmlOptimisticLockHandle is null, nothing is done.
    * <p>
-   * If optimisticLockHandle is not null and is locked
-   * ({@link OptimisticLockHandle#isLocked}), its state must correspond to the state
-   * of the data it represents, otherwise {@link OptimisticLockException} is thrown.
+   * If optimisticLockCheckContext is NEW, xmlOptimisticLockHandle must not be
+   * locked.
    * <p>
-   * If optimisticLockHandle is not null and is not locked, it is simply locked to
-   * the current state of the data, unless indRequireLock, in which case an
-   * exception is thrown.
+   * If optimisticLockCheckContext is UPDATE, xmlOptimisticLockHandle must be
+   * locked.
+   * <p>
+   * If xmlOptimisticLockHandle is not null and is locked
+   * ({@link XmlOptimisticLockHandle#isLocked}), its state must correspond to the
+   * state of the data it represents, otherwise {@link OptimisticLockException} is
+   * thrown.
+   * <p>
+   * If xmlOptimisticLockHandle is not null and is not locked, it is simply locked
+   * to the current state of the data.
    *
-   * @param optimisticLockHandle OptimisticLockHandle. Can be null.
-   * @param indRequireLock Indicates if it is required that the OptimisticLockHandle
-   *   be locked.
+   * @param xmlOptimisticLockHandle XmlOptimisticLockHandle. Can be null.
+   * @param optimisticLockCheckContext OptimisticLockCheckContext.
    */
-  protected void checkOptimisticLock(OptimisticLockHandle optimisticLockHandle, boolean indRequireLock) {
-    if (optimisticLockHandle != null) {
-      if (optimisticLockHandle.isLocked()) {
-        if (((XmlOptimisticLockHandle)optimisticLockHandle).getRevision() != this.revision) {
+  protected void checkOptimisticLock(XmlOptimisticLockHandle xmlOptimisticLockHandle, OptimisticLockCheckContext optimisticLockCheckContext) {
+    if (xmlOptimisticLockHandle != null) {
+      if (xmlOptimisticLockHandle.isLocked()) {
+        if (optimisticLockCheckContext == OptimisticLockCheckContext.NEW) {
+          throw new RuntimeException("OptimisticLockHandle must not be locked for a new XmlNodeConfig.");
+        }
+
+        if (xmlOptimisticLockHandle.getRevision() != this.revision) {
           throw new OptimisticLockException();
         }
       } else {
-        if (indRequireLock) {
-          throw new RuntimeException("Lock required.");
+        if (optimisticLockCheckContext == OptimisticLockCheckContext.UPDATE) {
+          throw new RuntimeException("OptimisticLockHandle must be locked for an existing XmlNodeConfig.");
         }
 
-        ((XmlOptimisticLockHandle)optimisticLockHandle).setRevision(this.revision);
+        xmlOptimisticLockHandle.setRevision(this.revision);
       }
     }
   }
@@ -244,7 +272,7 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
       throws OptimisticLockException {
     NodeConfigTransferObject nodeConfigTransferObject;
 
-    this.checkOptimisticLock(optimisticLockHandle, false);
+    this.checkOptimisticLock((XmlOptimisticLockHandle)optimisticLockHandle, this.indNew ? OptimisticLockCheckContext.NEW : OptimisticLockCheckContext.GET);
 
     nodeConfigTransferObject = new SimpleNodeConfigTransferObject();
 
@@ -293,7 +321,7 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
       throws DuplicateNodeException {
     String previousName;
 
-    this.checkOptimisticLock(optimisticLockHandle, !this.indNew);
+    this.checkOptimisticLock((XmlOptimisticLockHandle)optimisticLockHandle, this.indNew ? OptimisticLockCheckContext.NEW : OptimisticLockCheckContext.UPDATE);
 
     if ((nodeConfigTransferObject.getName() == null) && (this.xmlClassificationNodeConfigParent != null)) {
       throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root XmlClassificationNodeConfig.");
