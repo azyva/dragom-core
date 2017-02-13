@@ -84,7 +84,33 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * <p>If this property is not specified, finding a corresponding Module is always
    * attempted.
    */
-  private static final String MODEL_PROPERTY_BASE_GROUP_ID_MODULE = "BASE_GROUP_ID_MODULE";
+  /**
+   * Model property which specifies a regular expression matching the groupId of the
+   * artifacts for which to find a corresponding Module when obtaining the
+   * references.
+   *
+   * <p>Inclusions are processed before exclusions defined by
+   * {@link MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   *
+   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
+   *
+   * <p>If this property is not specified, all groupIds are considered as matching.
+   */
+  private static final String MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX = "INCLUDE_GROUP_ID_REGEX";
+
+  /**
+   * Model property which specifies a regular expression matching the groupId of the
+   * artifacts for which to not attempt to find a corresponding Module when
+   * obtaining the references.
+   *
+   * <p>Exclusions are processed after inclusions defined by
+   * {@link MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   *
+   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
+   *
+   * <p>If this property is not specified, no exclusion is performed.
+   */
+  private static final String MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX = "EXCLUDE_GROUP_ID_REGEX";
 
   /**
    * Exceptional condition representing the fact that a referenced artifact within a
