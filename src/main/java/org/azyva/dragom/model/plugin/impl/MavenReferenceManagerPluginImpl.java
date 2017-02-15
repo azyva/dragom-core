@@ -26,10 +26,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
-import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.maven.Pom;
@@ -90,7 +90,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * references.
    *
    * <p>Inclusions are processed before exclusions defined by
-   * {@link MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   * {@link MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
    *
    * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
@@ -156,12 +156,18 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
 
+  /**
+   * Pattern that the groupId of a referenced artifact must match to be identified
+   * as a {@link Module}. See {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   */
+  private Pattern patternIncludeGroupId;
 
   /**
-   * Base groupId that a referenced artifact must have to be identified as a
-   * {@link Module}. See {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
+   * Pattern that the groupId of a referenced artifact already matched by
+   * {@link #patternIncludeGroupId} must not match to still be identified as a
+   * {@link Module}. See {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
    */
-  private String baseGroupIdModule;
+  private Pattern patternExcludeGroupId;
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -289,7 +295,19 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   public MavenReferenceManagerPluginImpl(Module module) {
     super(module);
 
-    this.baseGroupIdModule = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID_MODULE);
+    String modelProperty;
+
+    modelProperty = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX);
+
+    if (modelProperty != null) {
+      this.patternIncludeGroupId = Pattern.compile(modelProperty);
+    }
+
+    modelProperty = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX);
+
+    if (modelProperty != null) {
+      this.patternExcludeGroupId = Pattern.compile(modelProperty);
+    }
   }
 
   @Override
@@ -300,7 +318,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
     Set<ArtifactGroupId> setArtifactGroupIdAggregation;
     ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    RuntimePropertiesPlugin runtimePropertiesPlugin;
     ArrayList<Reference> listReference;
     Model model;
     Pom.PomResolver pomResolver;
@@ -313,7 +330,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
 
     execContext = ExecContextHolder.get();
     userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
-    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
     listReference = new ArrayList<Reference>();
 
@@ -338,6 +354,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
 
       for(Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
+        String groupId;
         ArtifactGroupId artifactGroupId;
         ArtifactVersion artifactVersion;
         Module module;
@@ -345,12 +362,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
         Reference reference;
 
         try {
-          artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
-          artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+          groupId = pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver);
         } catch (RuntimeException re) {
           MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved. Reason:", re);
 
-          if (Util.handleToolResultAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT)) {
+          if (Util.handleToolExitStatusAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT)) {
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), referencedArtifact));
             continue;
           } else {
@@ -358,12 +374,26 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           }
         }
 
-        // We are not interested in references internal to the module.
-        if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
-          continue;
-        }
+        if (this.isGroupIdIncluded(groupId)) {
+          try {
+            artifactGroupId = new ArtifactGroupId(groupId, pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
+            artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+          } catch (RuntimeException re) {
+            MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved. Reason:", re);
 
-        if ((this.baseGroupIdModule == null) || artifactGroupId.getGroupId().startsWith(this.baseGroupIdModule)) {
+            if (Util.handleToolExitStatusAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), referencedArtifact));
+              continue;
+            } else {
+              throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), referencedArtifact));
+            }
+          }
+
+          // We are not interested in references internal to the module.
+          if (setArtifactGroupIdAggregation.contains(artifactGroupId)) {
+            continue;
+          }
+
           module = model.findModuleByArtifactGroupId(artifactGroupId);
 
           if (module != null) {
@@ -376,33 +406,58 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
             // We probably could simply perform an object equality here since Module's are
             // singletons. But just in case, we compare their NodePath.
             if (module.getNodePath().equals(this.getNode().getNodePath())) {
-              if (Util.handleToolResultAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM)) {
+              if (Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM)) {
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
                 continue;
               } else {
                 throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
               }
             }
+
+            reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
+
+            listReference.add(reference);
           } else {
-            if (Util.handleToolResultAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
+            if (Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
-              moduleVersion = null;
               continue;
             } else {
               throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
             }
           }
-        } else {
-          moduleVersion = null;
         }
-
-        reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
-
-        listReference.add(reference);
       }
     }
 
     return listReference;
+  }
+
+  /**
+   * Verifies if a groupId is included, meaning that a Module must be found for
+   * artifacts having this groupId.
+   *
+   * <p>To be included, either {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} is not
+   * defined or it matches the groupId, and either
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX} is not defined or it does not
+   * match the groupId.
+   *
+   * @param groupId GroupId.
+   * @return See description.
+   */
+  private boolean isGroupIdIncluded(String groupId) {
+    if (this.patternIncludeGroupId != null) {
+      if (!this.patternIncludeGroupId.matcher(groupId).matches()) {
+        return false;
+      }
+    }
+
+    if (this.patternExcludeGroupId != null) {
+      if (this.patternExcludeGroupId.matcher(groupId).matches()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override
@@ -455,6 +510,5 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   public boolean updateReferenceArtifactVersion(Path pathModuleWorkspace, Reference reference, ArtifactVersion artifactVersion, ByReference<Reference> byReferenceReference) {
     // TODO To be implemented
     throw new RuntimeException("Not implemented yet.");
-
   }
 }

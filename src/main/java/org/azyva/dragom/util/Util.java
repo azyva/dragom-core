@@ -203,9 +203,9 @@ public final class Util {
   public static final String EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
 
   /**
-   * Transient data for the current {@link ToolResult}.
+   * Transient data for the current {@link ToolExitStatus}.
    */
-  private static final String TRANSIENT_DATA_TOOL_RESULT = Util.class.getName() + ".ToolResult";
+  private static final String TRANSIENT_DATA_TOOL_EXIT_STATUS = Util.class.getName() + ".ToolExitStatus";
 
   /**
    * Prefix for exceptional conditions.
@@ -343,6 +343,11 @@ public final class Util {
   public static final String MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
 
   /**
+   * See description in ResourceBundle.
+   */
+  public static final String MSG_PATTERN_KEY_SETTING_TOOL_EXIT_STATUS = "SETTING_TOOL_EXIT_STATUS";
+
+  /**
    * ResourceBundle specific to this class.
    * <p>
    * Being a utility class, this ResourceBundle also contains global locale-specific
@@ -351,14 +356,14 @@ public final class Util {
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(Util.class.getName() + "ResourceBundle");
 
   /**
-   * Possible tool results.
+   * Possible tool exit status'.
    *
    * <p>An int result code is associated with each constant to allow easily
    * converting from the Java type to a process result code.
    *
    * @author David Raymond
    */
-  public static enum ToolResult {
+  public static enum ToolExitStatus {
     /**
      * Success.
      */
@@ -376,28 +381,28 @@ public final class Util {
      */
     WARNING(2);
 
-    private int resultCode;
+    private int exitStatus;
 
-    private ToolResult(int resultCode) {
-      this.resultCode = resultCode;
+    private ToolExitStatus(int exitStatus) {
+      this.exitStatus = exitStatus;
     }
 
-    public int getResultCode() {
-      return this.resultCode;
+    public int getExitStatus() {
+      return this.exitStatus;
     }
 
     /**
-     * @param toolResultNew New ToolResult.
-     * @return Indicates if a new ToolResult is more severe than the current one.
+     * @param toolExitStatusNew New ToolExitStatus.
+     * @return Indicates if a new ToolExitStatus is more severe than the current one.
      */
-    public boolean isMoreSevere(ToolResult toolResultNew) {
+    public boolean isMoreSevere(ToolExitStatus toolExitStatusNew) {
       switch (this) {
       case SUCCESS:
-        return (toolResultNew != SUCCESS);
+        return (toolExitStatusNew != SUCCESS);
       case ERROR:
         return false;
       case WARNING:
-        return (toolResultNew == ERROR);
+        return (toolExitStatusNew == ERROR);
       default:
         throw new RuntimeException("Must not get here.");
       }
@@ -1669,32 +1674,32 @@ public final class Util {
   }
 
   /**
-   * Records the current tool result in {@link ExecContext} transient data.
+   * Records the current tool exit status in {@link ExecContext} transient data.
    *
-   * <p>The default tool result is {@link ToolResult#SUCCESS} if this method is never
-   * called.
+   * <p>The default tool exit status is {@link ToolExitStatus#SUCCESS} if this
+   * method is never called.
    *
-   * <p>ToolResult escalation is performed, meaning that the ToolResult is set only
-   * if more severe than the current one.
+   * <p>ToolExitStatus escalation is performed, meaning that the ToolExitStatus is
+   * set only if more severe than the current one.
    *
-   * @param toolResult ToolResult.
-   * @return Indicates if the new ToolResult is more severe than the current one
+   * @param toolExitStatus ToolExitStatus.
+   * @return Indicates if the new ToolExitStatus is more severe than the current one
    *   which has been updated.
    */
-  public static boolean setToolResult(ToolResult toolResult) {
+  public static boolean setExitStatus(ToolExitStatus toolExitStatus) {
     ExecContext execContext;
-    ToolResult toolResultCurrent;
+    ToolExitStatus toolExitStatusCurrent;
 
     execContext = ExecContextHolder.get();
 
-    toolResultCurrent = (ToolResult)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_RESULT);
+    toolExitStatusCurrent = (ToolExitStatus)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_EXIT_STATUS);
 
-    if (toolResultCurrent == null) {
-      toolResultCurrent = ToolResult.SUCCESS;
+    if (toolExitStatusCurrent == null) {
+      toolExitStatusCurrent = ToolExitStatus.SUCCESS;
     }
 
-    if (toolResultCurrent.isMoreSevere(toolResult)) {
-      execContext.setTransientData(Util.TRANSIENT_DATA_TOOL_RESULT, toolResult);
+    if (toolExitStatusCurrent.isMoreSevere(toolExitStatus)) {
+      execContext.setTransientData(Util.TRANSIENT_DATA_TOOL_EXIT_STATUS, toolExitStatus);
       return true;
     } else {
       return false;
@@ -1702,42 +1707,65 @@ public final class Util {
   }
 
   /**
-   * @return Current tool result from {@link ExecContext} transient data.
+   * @return Current {@link ToolExitStatus} from {@link ExecContext} transient data.
    */
-  public static ToolResult getToolResult() {
+  public static ToolExitStatus getToolExitStatus() {
     ExecContext execContext;
-    ToolResult toolResult;
+    ToolExitStatus toolExitStatus;
 
     execContext = ExecContextHolder.get();
 
     // Depending on the state of the tool which calls this method, it can happen that
     // the ExecContext is not initialized.
     if (execContext == null) {
-      return ToolResult.SUCCESS;
+      return ToolExitStatus.SUCCESS;
     }
 
-    toolResult = (ToolResult)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_RESULT);
+    toolExitStatus = (ToolExitStatus)execContext.getTransientData(Util.TRANSIENT_DATA_TOOL_EXIT_STATUS);
 
-    if (toolResult == null) {
-      return ToolResult.SUCCESS;
+    if (toolExitStatus == null) {
+      return ToolExitStatus.SUCCESS;
     } else {
-      return toolResult;
+      return toolExitStatus;
     }
+  }
+
+  /**
+   * Returns the current tool exit status code and if not 0 emits the reason to the
+   * log.
+   *
+   * @return See description.
+   */
+  public static int getExitStatusAndShowReason() {
+    ToolExitStatus toolExitStatus;
+
+    toolExitStatus = Util.getToolExitStatus();
+
+    if (toolExitStatus != ToolExitStatus.SUCCESS) {
+      UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+      userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.resourceBundle.getString(Util.MSG_PATTERN_KEY_SETTING_TOOL_EXIT_STATUS), toolExitStatus));
+    }
+
+    return toolExitStatus.getExitStatus();
   }
 
   /**
    * Following an exceptional condition that occurred, combines the following
    * functionalities:
    * <ul>
-   * <li>Update the current {@link ToolResult} in {@link ExecContext} transient data;
+   * <li>Update the current {@link ToolExitStatus} in {@link ExecContext} transient
+   * data;
    * <li>Indicate to the caller if processing should continue or not.
    * </ul>
-   * The ToolResult is by default {@link ToolResult#WARNING}, unless the runtime
-   * property named after the specified exceptional condition with the suffix
-   * ".TOOL_RESULT" indicates otherwise.
+   * The ToolExitStatus is by default {@link ToolExitStatus#WARNING}, unless the
+   * runtime property named after the specified exceptional condition with the
+   * suffix ".TOOL_EXIT_STATUS" indicates otherwise.
    *
    * <p>By default the return value indicates to continue processing if an only if
-   * the ToolResult is not ERROR, unless the runtime property named after the
+   * the ToolExitStatus is not ERROR, unless the runtime property named after the
    * exceptional condition with the suffix ".IND_CONTINUE" indicates otherwise.
    *
    * @param node Current Node in the context of which the exceptional condition is
@@ -1746,12 +1774,12 @@ public final class Util {
    *   EXCEPTIONAL_COND_MODULE_NOT_FOUND_FOR_ARTIFACT)
    * @return Whether to continue.
    */
-  public static boolean handleToolResultAndContinueForExceptionalCond(Node node, String exceptionalCond) {
+  public static boolean handleToolExitStatusAndContinueForExceptionalCond(Node node, String exceptionalCond) {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     StringBuilder stringBuilder;
     String runtimeProperty;
-    ToolResult toolResult;
+    ToolExitStatus toolExitStatus;
     boolean indContinue;
 
     execContext = ExecContextHolder.get();
@@ -1764,30 +1792,30 @@ public final class Util {
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS);
 
     if (runtimeProperty == null) {
-      stringBuilder.append("Default ToolResult.WARNING used. ");
+      stringBuilder.append("Default ToolExitStatus.WARNING used. ");
 
-      toolResult = ToolResult.WARNING;
+      toolExitStatus = ToolExitStatus.WARNING;
     } else {
-      toolResult = ToolResult.valueOf(runtimeProperty);
+      toolExitStatus = ToolExitStatus.valueOf(runtimeProperty);
 
-      stringBuilder.append("ToolResult.").append(toolResult).append(" specified for Node ").append(node.toString()).append(" used. ");
+      stringBuilder.append("ToolExitStatus.").append(toolExitStatus).append(" specified for Node ").append(node.toString()).append(" used. ");
     }
 
-    if (Util.setToolResult(toolResult)) {
-      stringBuilder.append("Current ToolResult updated since less severe. ");
+    if (Util.setExitStatus(toolExitStatus)) {
+      stringBuilder.append("Current ToolExitStatus updated since less severe. ");
     } else {
-      stringBuilder.append("Current ToolResult not updated since equal or more severe. ");
+      stringBuilder.append("Current ToolExitStatus not updated since equal or more severe. ");
     }
 
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE);
 
     if (runtimeProperty == null) {
-      indContinue = (toolResult != ToolResult.ERROR);
+      indContinue = (toolExitStatus != ToolExitStatus.ERROR);
 
       if (indContinue) {
-        stringBuilder.append("Continuing the process by default since not ToolResult.ERROR. ");
+        stringBuilder.append("Continuing the process by default since not ToolExitStatus.ERROR. ");
       } else {
-        stringBuilder.append("Not continuing the process by default since ToolResult.ERROR. ");
+        stringBuilder.append("Not continuing the process by default since TtoolExitStatus.ERROR. ");
       }
     } else {
       indContinue = Util.isNotNullAndTrue(runtimeProperty);
@@ -1797,9 +1825,9 @@ public final class Util {
       } else {
         stringBuilder.append("Aborting as specified for Node ").append(node.toString()).append('.');
       }
-
-      Util.logger.info(stringBuilder.toString());
     }
+
+    Util.logger.info(stringBuilder.toString());
 
     return indContinue;
   }
