@@ -18,13 +18,18 @@
 
 package org.azyva.dragom.model.impl.simple;
 
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ResourceBundle;
+import java.util.regex.Pattern;
 
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
+import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.ClassificationNodeBuilder;
@@ -43,6 +48,7 @@ import org.azyva.dragom.model.config.NodeType;
 import org.azyva.dragom.model.plugin.ArtifactInfoPlugin;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.Util;
 
 /**
@@ -85,6 +91,63 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   private static final String MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING = "OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING";
 
   /**
+   * Model property which specifies a regular expression matching the groupId of the
+   * artifacts for which to find a corresponding Module when obtaining the
+   * references.
+   *
+   * <p>Inclusions are processed before exclusions defined by
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   *
+   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
+   *
+   * <p>If this property is not specified, all groupIds are considered as matching.
+   *
+   * <p>This model property is always evaluated on the root ClassificationNode.
+   */
+  private static final String MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX = "INCLUDE_GROUP_ID_REGEX";
+
+  /**
+   * Model property which specifies a regular expression matching the groupId of the
+   * artifacts for which to not attempt to find a corresponding Module when
+   * obtaining the references.
+   *
+   * <p>Exclusions are processed after inclusions defined by
+   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   *
+   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
+   *
+   * <p>If this property is not specified, no exclusion is performed.
+   *
+   * <p>This model property is always evaluated on the root ClassificationNode.
+   */
+  private static final String MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX = "EXCLUDE_GROUP_ID_REGEX";
+
+  /**
+   * Exceptional condition representing a {@link Module} that cannot be found but
+   * should, corresponding to an {@link ArtifactGroupId}. See
+   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} and
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   *
+   * <p>If the configuration of the exceptional condition is such that processing
+   * continues, the process recovers by treating the artifact as not being known to
+   * Dragom by making {@link #findByArtifactGroupId} return null.
+   *
+   * <p>The runtime properties related to this exceptional condition are evaluated
+   * on the root Node (null).
+   */
+  private static final String EXCEPTIONAL_COND_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
+
+  /**
+   * ResourceBundle specific to this class.
+   */
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SimpleModel.class.getName() + "ResourceBundle");
+
+  /**
    * Indicates if the SimpleModel is mutable, based on whether the {@link Config}
    * provided is mutable.
    */
@@ -113,6 +176,19 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    * called.
    */
   private Map<ArtifactGroupId, SimpleModule> mapArtifactGroupIdModule;
+
+  /**
+   * Pattern that the groupId of a referenced artifact must match to be identified
+   * as a {@link Module}. See {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   */
+  private Pattern patternIncludeGroupId;
+
+  /**
+   * Pattern that the groupId of a referenced artifact already matched by
+   * {@link #patternIncludeGroupId} must not match to still be identified as a
+   * {@link Module}. See {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   */
+  private Pattern patternExcludeGroupId;
 
   /**
    * {@link NodeVisitor} for finding the {@link Module} whose build produces a given
@@ -311,6 +387,8 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    * @param propertiesInit Initialization properties.
    */
   public SimpleModel(Config config, Properties propertiesInit) {
+    String modelProperty;
+
     this.propertiesInit = propertiesInit;
     this.config = config;
     this.indMutable = (this.config instanceof MutableConfig);
@@ -327,8 +405,19 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
       this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
     }
 
-
     this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, SimpleModule>();
+
+    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX);
+
+    if (modelProperty != null) {
+      this.patternIncludeGroupId = Pattern.compile(modelProperty);
+    }
+
+    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX);
+
+    if (modelProperty != null) {
+      this.patternExcludeGroupId = Pattern.compile(modelProperty);
+    }
   }
 
   /**
@@ -478,9 +567,40 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
       return moduleFound;
     }
 
-    this.mapArtifactGroupIdModule.put(artifactGroupId, null);
+    if (Util.handleToolExitStatusAndContinueForExceptionalCond(null, SimpleModel.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), artifactGroupId));
 
-    return null;
+      this.mapArtifactGroupIdModule.put(artifactGroupId, null);
+      return null;
+    } else {
+      throw new RuntimeExceptionAbort(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), artifactGroupId));
+    }
+  }
+
+  /**
+   * <p>To be included, either {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} is not
+   * defined or it matches the groupId, and either
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX} is not defined or it does not
+   * match the groupId.
+   *
+   * @param groupId GroupId.
+   * @return See description.
+   */
+  @Override
+  public boolean isGroupIdIncluded(String groupId) {
+    if (this.patternIncludeGroupId != null) {
+      if (!this.patternIncludeGroupId.matcher(groupId).matches()) {
+        return false;
+      }
+    }
+
+    if (this.patternExcludeGroupId != null) {
+      if (this.patternExcludeGroupId.matcher(groupId).matches()) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override

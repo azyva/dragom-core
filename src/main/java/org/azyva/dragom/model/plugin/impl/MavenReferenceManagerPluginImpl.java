@@ -26,7 +26,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.ExecContext;
@@ -73,46 +72,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
 
   /**
-   * Model property which specifies the base groupId that a referenced artifact
-   * must have to be identified as a {@link Module}. If a referenced artifact has a
-   * groupId which starts with the value of this property, but no Module can be
-   * found corresponding to this referenced artifact, an error message is written to
-   * the log'.
-   *
-   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
-   *
-   * <p>If this property is not specified, finding a corresponding Module is always
-   * attempted.
-   */
-  /**
-   * Model property which specifies a regular expression matching the groupId of the
-   * artifacts for which to find a corresponding Module when obtaining the
-   * references.
-   *
-   * <p>Inclusions are processed before exclusions defined by
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
-   *
-   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
-   *
-   * <p>If this property is not specified, all groupIds are considered as matching.
-   */
-  private static final String MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX = "INCLUDE_GROUP_ID_REGEX";
-
-  /**
-   * Model property which specifies a regular expression matching the groupId of the
-   * artifacts for which to not attempt to find a corresponding Module when
-   * obtaining the references.
-   *
-   * <p>Exclusions are processed after inclusions defined by
-   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
-   *
-   * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
-   *
-   * <p>If this property is not specified, no exclusion is performed.
-   */
-  private static final String MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX = "EXCLUDE_GROUP_ID_REGEX";
-
-  /**
    * Exceptional condition representing the fact that a referenced artifact within a
    * POM could not be resolved (properties).
    */
@@ -126,18 +85,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final String EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM = "ARTIFACT_IN_MODULE_BUT_NOT_IN_POM";
 
   /**
-   * Exceptional condition representing a {@link Module} that cannot be found
-   * corresponding to a referenced artifact. See
-   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} and
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
-   *
-   * <p>If the configuration of the exceptional condition is such that processing
-   * continues, the process recovers by treating the artifact as not being known to
-   * Dragom by setting the ModuleVersion to null.
-   */
-  private static final String EXCEPTIONAL_COND_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
-
-  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
@@ -148,27 +95,9 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
 
   /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_MODULE_NOT_FOUND = "MODULE_NOT_FOUND";
-
-  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MavenReferenceManagerPluginImpl.class.getName() + "ResourceBundle");
-
-  /**
-   * Pattern that the groupId of a referenced artifact must match to be identified
-   * as a {@link Module}. See {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
-   */
-  private Pattern patternIncludeGroupId;
-
-  /**
-   * Pattern that the groupId of a referenced artifact already matched by
-   * {@link #patternIncludeGroupId} must not match to still be identified as a
-   * {@link Module}. See {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
-   */
-  private Pattern patternExcludeGroupId;
 
   /**
    * Extra implementation data to be attached to {@link Reference}'s.
@@ -295,20 +224,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    */
   public MavenReferenceManagerPluginImpl(Module module) {
     super(module);
-
-    String modelProperty;
-
-    modelProperty = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX);
-
-    if (modelProperty != null) {
-      this.patternIncludeGroupId = Pattern.compile(modelProperty);
-    }
-
-    modelProperty = module.getProperty(MavenReferenceManagerPluginImpl.MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX);
-
-    if (modelProperty != null) {
-      this.patternExcludeGroupId = Pattern.compile(modelProperty);
-    }
   }
 
   @Override
@@ -375,7 +290,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           }
         }
 
-        if (this.isGroupIdIncluded(groupId)) {
+        if (model.isGroupIdIncluded(groupId)) {
           try {
             artifactGroupId = new ArtifactGroupId(groupId, pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
             artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
@@ -418,47 +333,16 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
             reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
 
             listReference.add(reference);
-          } else {
-            if (Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
-              continue;
-            } else {
-              throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND), referencedArtifact));
-            }
           }
+
+          // We expect the handling of the tool exit status to be done by
+          // model.findModuleByArtifactGroupId called above. If we get here with a null
+          // module, it means we are expected to silently continue and ignore the reference.
         }
       }
     }
 
     return listReference;
-  }
-
-  /**
-   * Verifies if a groupId is included, meaning that a Module must be found for
-   * artifacts having this groupId.
-   *
-   * <p>To be included, either {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} is not
-   * defined or it matches the groupId, and either
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX} is not defined or it does not
-   * match the groupId.
-   *
-   * @param groupId GroupId.
-   * @return See description.
-   */
-  private boolean isGroupIdIncluded(String groupId) {
-    if (this.patternIncludeGroupId != null) {
-      if (!this.patternIncludeGroupId.matcher(groupId).matches()) {
-        return false;
-      }
-    }
-
-    if (this.patternExcludeGroupId != null) {
-      if (this.patternExcludeGroupId.matcher(groupId).matches()) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   @Override
