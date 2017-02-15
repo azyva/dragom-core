@@ -90,7 +90,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * references.
    *
    * <p>Inclusions are processed before exclusions defined by
-   * {@link MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
    *
    * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
@@ -104,7 +104,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
    * obtaining the references.
    *
    * <p>Exclusions are processed after inclusions defined by
-   * {@link MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
    *
    * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
@@ -128,7 +128,8 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   /**
    * Exceptional condition representing a {@link Module} that cannot be found
    * corresponding to a referenced artifact. See
-   * {@link #MODEL_PROPERTY_BASE_GROUP_ID_MODULE}.
+   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} and
+   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
    *
    * <p>If the configuration of the exceptional condition is such that processing
    * continues, the process recovers by treating the artifact as not being known to
