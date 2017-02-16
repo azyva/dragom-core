@@ -195,12 +195,6 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
   private static final String RUNTIME_PROPERTY_REUSE_SRC_VERSION = "REUSE_SRC_VERSION";
 
   /**
-   * Runtime property of type {@link AlwaysNeverAskUserResponse} that specifies if
-   * processing should continue if merge conflicts are encountered.
-   */
-  private static final String RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS = "CONTINUE_ON_MERGE_CONFLICTS";
-
-  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION = "INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION";
@@ -264,21 +258,6 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION = "AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION = "AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION";
 
   /**
    * See description in ResourceBundle.
@@ -695,6 +674,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     Iterator<ScmPlugin.Commit> iteratorCommit;
     Path pathModuleWorkspaceSrc;
     ScmPlugin.MergeResult mergeResult;
+    String message;
 
     this.referencePath.add(referenceDest);
 
@@ -782,12 +762,12 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
 
       if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
-        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+        message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
 
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_MERGE_CONFLICTS_WHILE_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+        this.listActionsPerformed.add(message);
 
-        // Will have call Util.setAbort in case we must not continue.
-        MergeReferenceGraph.handleContinueOnMergeConflicts();
+        // Will have called Util.setAbort in case we must not continue.
+        Util.handleContinueOnMergeConflicts(message);
 
         return true;
       }
@@ -854,14 +834,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
             if (byReferenceBooleanSrcDiverges.object.booleanValue()) {
               if (byReferenceBooleanDestDiverges.object.booleanValue()) {
-                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
-
-                // Will have call Util.setAbort in case we must not continue.
-                MergeReferenceGraph.handleContinueOnMergeConflicts();
+                // Will have called Util.setAbort in case we must not continue.
+                Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
                 return true;
               } else {
-                String message;
                 Map<String, String> mapCommitAttr;
 
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_STATIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
@@ -890,7 +867,6 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
                      && (referenceChildDest.getModuleVersion().getVersion().getVersionType() == VersionType.STATIC)) {
 
             ByReference<Reference> byReferenceReference;
-            String message;
             Map<String, String> mapCommitAttr;
 
             //********************************************************************************
@@ -921,10 +897,8 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               switchToDynamicVersion.performJob();
 
               if (!switchToDynamicVersion.isListModuleVersionRootChanged()) {
-                userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), this.referencePath, referenceChildDest));
-
-                // Will have call Util.setAbort in case we must not continue.
-                MergeReferenceGraph.handleContinueOnMergeConflicts();
+                // Will have called Util.setAbort in case we must not continue.
+                Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), this.referencePath, referenceChildDest));
 
                 return true;
               }
@@ -1171,40 +1145,6 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       if (pathModuleWorkspaceDest != null) {
         workspacePlugin.releaseWorkspaceDir(pathModuleWorkspaceDest);
       }
-    }
-  }
-
-  /**
-   * Handles the case where merge conflicts have occurred and we need to know if we
-   * must continue with the next matching {@link ModuleVersion}.
-   * <p>
-   * If we must not continue, {@link Util#setAbort} will have been called.
-   */
-  private static void handleContinueOnMergeConflicts() {
-    ExecContext execContext;
-    RuntimePropertiesPlugin runtimePropertiesPlugin;
-    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseContinueOnMergeConflicts;
-
-    execContext = ExecContextHolder.get();
-    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
-    alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-        runtimePropertiesPlugin,
-        MergeReferenceGraph.RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS,
-        userInteractionCallbackPlugin,
-        MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_DEST_MODULE_VERSION));
-
-    switch (alwaysNeverAskUserResponseContinueOnMergeConflicts) {
-    case ALWAYS:
-      userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_DEST_MODULE_VERSION));
-      break;
-    case NEVER:
-      Util.setAbort();
-      break;
-    case YES_ASK:
-      break;
     }
   }
 }

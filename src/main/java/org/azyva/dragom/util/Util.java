@@ -40,6 +40,7 @@ import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
+import org.azyva.dragom.job.MergeMain;
 import org.azyva.dragom.job.MergeReferenceGraph;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Module;
@@ -186,6 +187,12 @@ public final class Util {
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT = "COMMIT_REFERENCE_CHANGE_AFTER_ABORT";
 
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+   * that conflicts occurred during a merge operation, or that diverging commits
+   * exist and should not. Should we continue in that case?
+   */
+  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS = "MERGE_CONFLICTS";
+  /**
    * Path to the static Dragom properties resource within the classpath.
    */
   private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
@@ -203,6 +210,12 @@ public final class Util {
   public static final String EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
 
   /**
+   * Exceptional condition representing the fact that conflicts occurred during a
+   * merge operation, or that diverging commits exist and should not.
+   */
+  private static final String EXCEPTIONAL_COND_MERGE_CONFLICTS = "MERGE_CONFLICTS";
+
+  /**
    * Transient data for the current {@link ToolExitStatus}.
    */
   private static final String TRANSIENT_DATA_TOOL_EXIT_STATUS = Util.class.getName() + ".ToolExitStatus";
@@ -215,7 +228,7 @@ public final class Util {
   /**
    * Suffix for the ToolStatus associated with an exceptional condition.
    */
-  public static final String SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS = ".TOOL_STATUS";
+  public static final String SUFFIX_EXCEPTIONAL_COND_EXIT_STATUS = ".EXIT_STATUS";
 
   /**
    * Suffix for the continuation indicator associated with an exceptional condition.
@@ -1481,9 +1494,15 @@ public final class Util {
    * "Do you want to continue?".
    * <p>
    * The context of the action having just been performed and for which we ask the
-   * user if he wants to continue is taken into consideration. If the IND_NO_CONFIRM
-   * runtime property is true, true is returned regardless of the context. Otherwise
-   * the context-specific {@code IND_NO_CONFIRM.<context>} is used.
+   * user if he wants to continue is taken into consideration. If the
+   * context-specific {@code IND_NO_CONFIRM.<context>} runtime property is defined
+   * and true, true is returned. If it is defined and false, interaction with the
+   * user occurs. If it is not defined, the {@code IND_NO_CONFIRM} runtime property
+   * is used. If it is true, true is returned. Otherwise interaction with the user
+   * occurs.
+   * <p>
+   * This allows either specifying to continue only for specific contexts, or
+   * globally specifying to continue, except for specific contexts.
    * <p>
    * If the user responds to always continue, it is understood to be for the
    * specified context.
@@ -1498,6 +1517,7 @@ public final class Util {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    String runtimeProperty;
 
     if (context == null) {
       throw new RuntimeException("context must not be null.");
@@ -1507,9 +1527,11 @@ public final class Util {
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
     userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-    if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM))) {
+    runtimeProperty = runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context);
+
+    if ((runtimeProperty != null) && Boolean.valueOf(runtimeProperty)) {
       return true;
-    } else if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context))) {
+    } else if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM))) {
       return true;
     }
 
@@ -1520,7 +1542,7 @@ public final class Util {
       Util.setAbort();
       return false;
     case YES_ALWAYS:
-      runtimePropertiesPlugin.setProperty(null,  Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context, "true");
+      runtimePropertiesPlugin.setProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context, "true");
     case YES:
       return true;
     default:
@@ -1778,6 +1800,7 @@ public final class Util {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     StringBuilder stringBuilder;
+    String nodeName;
     String runtimeProperty;
     ToolExitStatus toolExitStatus;
     boolean indContinue;
@@ -1787,9 +1810,15 @@ public final class Util {
 
     stringBuilder = new StringBuilder();
 
+    if (node == null) {
+      nodeName = "null";
+    } else {
+      nodeName = node.toString();
+    }
+
     stringBuilder.append("Exceptional condition ").append(exceptionalCond).append(" met. ");
 
-    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_TOOL_STATUS);
+    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_EXIT_STATUS);
 
     if (runtimeProperty == null) {
       stringBuilder.append("Default ToolExitStatus.WARNING used. ");
@@ -1798,7 +1827,7 @@ public final class Util {
     } else {
       toolExitStatus = ToolExitStatus.valueOf(runtimeProperty);
 
-      stringBuilder.append("ToolExitStatus.").append(toolExitStatus).append(" specified for Node ").append(node.toString()).append(" used. ");
+      stringBuilder.append("ToolExitStatus.").append(toolExitStatus).append(" specified for Node ").append(nodeName).append(" used. ");
     }
 
     if (Util.setExitStatus(toolExitStatus)) {
@@ -1821,14 +1850,43 @@ public final class Util {
       indContinue = Util.isNotNullAndTrue(runtimeProperty);
 
       if (indContinue) {
-        stringBuilder.append("Continuing as specified for Node ").append(node.toString()).append('.');
+        stringBuilder.append("Continuing as specified for Node ").append(nodeName).append('.');
       } else {
-        stringBuilder.append("Aborting as specified for Node ").append(node.toString()).append('.');
+        stringBuilder.append("Aborting as specified for Node ").append(nodeName).append('.');
       }
     }
 
     Util.logger.info(stringBuilder.toString());
 
     return indContinue;
+  }
+
+  /**
+   * Handles the case where merge conflicts have occurred and we need to know if we
+   * must continue with the next matching {@link ModuleVersion}.
+   * <p>
+   * If we must not continue, {@link Util#setAbort} will have been called.
+   * <p>
+   * The exceptional condition {@link #EXCEPTIONAL_COND_MERGE_CONFLICTS} is also
+   * handled.
+   * <p>
+   * Used by {@link MergeMain} and {@link MergeReferenceGraph}.
+   *
+   * @param message Message.
+   */
+  public static void handleContinueOnMergeConflicts(String message) {
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+    if (!Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS)) {
+      throw new RuntimeExceptionAbort(message);
+    }
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    userInteractionCallbackPlugin.provideInfo(message);
+
+    // We do not need to check the return value. The fact that Util.setAbort is
+    // called is sufficient.
+    Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
   }
 }

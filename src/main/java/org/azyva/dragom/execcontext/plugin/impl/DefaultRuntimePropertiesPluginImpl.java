@@ -88,6 +88,8 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
       arrayNodeName = nodePath.getArrayNodeName();
     }
 
+    // Look in transient data.
+
     stringBuilder = new StringBuilder();
 
     foundPropertyValue = (String)execContext.getTransientData(name);
@@ -105,6 +107,8 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
     if (foundPropertyValue != null) {
       return foundPropertyValue;
     }
+
+    // Look in tool properties.
 
     if (execContext instanceof ToolLifeCycleExecContext) {
       ToolLifeCycleExecContext toolLifeCycleExecContext;
@@ -130,7 +134,7 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
       }
     }
 
-    execContext = ExecContextHolder.get();
+    // Look in ExecContext properties.
 
     foundPropertyValue = execContext.getProperty(name);
 
@@ -150,6 +154,8 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
       return foundPropertyValue;
     }
 
+    // Look in initialization properties.
+
     foundPropertyValue = execContext.getInitProperty(name);
 
     stringBuilder.setLength(0);
@@ -167,6 +173,8 @@ public class DefaultRuntimePropertiesPluginImpl implements RuntimePropertiesPlug
     if (foundPropertyValue != null) {
       return foundPropertyValue;
     }
+
+    // Look in Model properties.
 
     if (node != null) {
       return node.getProperty(name);

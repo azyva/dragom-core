@@ -150,12 +150,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   private static final String RUNTIME_PROPERTY_MERGE_MODE = "MERGE_MAIN_MODE";
 
   /**
-   * Runtime property of type {@link AlwaysNeverAskUserResponse} that specifies if
-   * processing should continue if merge conflicts are encountered.
-   */
-  private static final String RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS = "CONTINUE_ON_MERGE_CONFLICTS";
-
-  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_DEST_VERSION_SPECIFIED = "DEST_VERSION_SPECIFIED";
@@ -204,16 +198,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION = "AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION";
 
   /**
    * ResourceBundle specific to this class.
@@ -433,10 +417,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
           this.listActionsPerformed.add(message);
 
-          userInteractionCallbackPlugin.provideInfo(message);
-
-          // Will have call Util.setAbort in case we must not continue.
-          MergeMain.handleContinueOnMergeConflicts();
+          // Will have called Util.setAbort in case we must not continue.
+          Util.handleContinueOnMergeConflicts(message);
 
           // The return value is not important since the caller is expected to check for
           // Util.isAbort.
@@ -451,10 +433,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
         if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace));
-
-          // Will have call Util.setAbort in case we must not continue.
-          MergeMain.handleContinueOnMergeConflicts();
+          // Will have called Util.setAbort in case we must not continue.
+          Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace));
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
@@ -490,10 +470,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
           this.listActionsPerformed.add(message);
 
-          userInteractionCallbackPlugin.provideInfo(message);
-
-          // Will have call Util.setAbort in case we must not continue.
-          MergeMain.handleContinueOnMergeConflicts();
+          // Will have called Util.setAbort in case we must not continue.
+          Util.handleContinueOnMergeConflicts(message);
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
@@ -508,10 +486,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
         if (!scmPlugin.getListCommitDiverge(moduleVersionDest.getVersion(), moduleVersionSrc.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
-
-          // Will have call Util.setAbort in case we must not continue.
-          MergeMain.handleContinueOnMergeConflicts();
+          // Will have called Util.setAbort in case we must not continue.
+          Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
@@ -539,39 +515,5 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     }
 
     return true;
-  }
-
-  /**
-   * Handles the case where merge conflicts have occurred and we need to know if we
-   * must continue with the next matching {@link ModuleVersion}.
-   * <p>
-   * If we must not continue, {@link Util#setAbort} will have been called.
-   */
-  private static void handleContinueOnMergeConflicts() {
-    ExecContext execContext;
-    RuntimePropertiesPlugin runtimePropertiesPlugin;
-    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-    AlwaysNeverAskUserResponse alwaysNeverAskUserResponseContinueOnMergeConflicts;
-
-    execContext = ExecContextHolder.get();
-    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
-    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
-    alwaysNeverAskUserResponseContinueOnMergeConflicts = Util.getInfoAlwaysNeverAskUserResponseAndHandleAsk(
-        runtimePropertiesPlugin,
-        MergeMain.RUNTIME_PROPERTY_CONTINUE_ON_MERGE_CONFLICTS,
-        userInteractionCallbackPlugin,
-        MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUE_NEXT_MATCHING_SRC_MODULE_VERSION));
-
-    switch (alwaysNeverAskUserResponseContinueOnMergeConflicts) {
-    case ALWAYS:
-      userInteractionCallbackPlugin.provideInfo(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_AUTOMATICALLY_CONTINUING_NEXT_MATCHING_SRC_MODULE_VERSION));
-      break;
-    case NEVER:
-      Util.setAbort();
-      break;
-    case YES_ASK:
-      break;
-    }
   }
 }

@@ -91,28 +91,30 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   private static final String MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING = "OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING";
 
   /**
-   * Model property which specifies a regular expression matching the groupId of the
-   * artifacts for which to find a corresponding Module when obtaining the
-   * references.
+   * Model property which specifies a regular expression matching the
+   * ArtifactGroupId that are in the scope of the Model and thus have a
+   * corresponding {@link Module}.
    *
    * <p>Inclusions are processed before exclusions defined by
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   * {@link #MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX}.
    *
    * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
-   * <p>If this property is not specified, all groupIds are considered as matching.
+   * <p>If this property is not specified, all ArtifactGroupId's are considered as
+   * matching.
    *
-   * <p>This model property is always evaluated on the root ClassificationNode.
+   * <p>This model property is always evaluated on the root
+   * {@link ClassificationNode}.
    */
-  private static final String MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX = "INCLUDE_GROUP_ID_REGEX";
+  private static final String MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX = "INCLUDE_ARTIFACT_GROUP_ID_REGEX";
 
   /**
-   * Model property which specifies a regular expression matching the groupId of the
-   * artifacts for which to not attempt to find a corresponding Module when
-   * obtaining the references.
+   * Model property which specifies a regular expression matching the
+   * ArtifactGroupId that are not in the scope of the Model and thus do not have a
+   * corresponding {@link Module}.
    *
    * <p>Exclusions are processed after inclusions defined by
-   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   * {@link #MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX}.
    *
    * <p>See {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
    *
@@ -120,13 +122,13 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    *
    * <p>This model property is always evaluated on the root ClassificationNode.
    */
-  private static final String MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX = "EXCLUDE_GROUP_ID_REGEX";
+  private static final String MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX = "EXCLUDE_ARTIFACT_GROUP_ID_REGEX";
 
   /**
    * Exceptional condition representing a {@link Module} that cannot be found but
    * should, corresponding to an {@link ArtifactGroupId}. See
-   * {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} and
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   * {@link #MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX} and
+   * {@link #MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX}.
    *
    * <p>If the configuration of the exceptional condition is such that processing
    * continues, the process recovers by treating the artifact as not being known to
@@ -178,17 +180,19 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   private Map<ArtifactGroupId, SimpleModule> mapArtifactGroupIdModule;
 
   /**
-   * Pattern that the groupId of a referenced artifact must match to be identified
-   * as a {@link Module}. See {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX}.
+   * Pattern that an ArtifactGroupId literal must match to be considered in the
+   * scope of the Model and thus have corresponding {@link Module}. See
+   * {@link #MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX}.
    */
-  private Pattern patternIncludeGroupId;
+  private Pattern patternIncludeArtifactGroupId;
 
   /**
-   * Pattern that the groupId of a referenced artifact already matched by
-   * {@link #patternIncludeGroupId} must not match to still be identified as a
-   * {@link Module}. See {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX}.
+   * Pattern that an ArtifactGroupId literal already matched by
+   * {@link #patternIncludeArtifactGroupId} must not match to still be considered in
+   * the scope of the Model. See
+   * {@link #MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX}.
    */
-  private Pattern patternExcludeGroupId;
+  private Pattern patternExcludeArtifactGroupId;
 
   /**
    * {@link NodeVisitor} for finding the {@link Module} whose build produces a given
@@ -407,16 +411,16 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
     this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, SimpleModule>();
 
-    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX);
+    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX);
 
     if (modelProperty != null) {
-      this.patternIncludeGroupId = Pattern.compile(modelProperty);
+      this.patternIncludeArtifactGroupId = Pattern.compile(modelProperty);
     }
 
-    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX);
+    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX);
 
     if (modelProperty != null) {
-      this.patternExcludeGroupId = Pattern.compile(modelProperty);
+      this.patternExcludeArtifactGroupId = Pattern.compile(modelProperty);
     }
   }
 
@@ -502,18 +506,28 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   }
 
   /**
-   * Finds and returns the {@link Module} whose build produces an
-   * {@link ArtifactGroupId}.
-   * <p>
    * First, {@link FindModuleByArtifactGroupIdModuleNodeVisitor} is used to find a
    * Module among those that are already created.
-   * <p>
-   * If an existing Module could not be found,
+   *
+   * <p>If an existing Module could not be found,
    * {@link FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor}
    * is used to ask the exising {@link ClassificationNode}'s about such a Module.
-   * <p>
-   * In all cases the mapping between the ArtifactGroupId and the found Module is
+   *
+   * <p>In all cases the mapping between the ArtifactGroupId and the found Module is
    * cached and used to speed up subsequent requests for the same ArtifactGroupId.
+   *
+   * <p>It is possible that no Module corresponding to the ArtifactGroupId is found.
+   *
+   * <p>This can happen if the ArtifactGroupId is not within the scope of the Model,
+   * meaning that the ArtifactGroupId should be treated as being external to Dragom.
+   * This is not considered unexpected and null is returned in that case.
+   *
+   * <p>This can also happen unexpectedly if no Module can be mapped to the
+   * ArtifactGroupId, indicating a bad or incomplete configuration. This corresponds
+   * to {@link #EXCEPTIONAL_COND_MODULE_NOT_FOUND}.
+   *
+   * {@link #isArtifactGroupIdIncluded} is used to know if an ArtifactGroupId is
+   * within the scope of the Model.
    *
    * @param artifactGroupId ArtifactGroupId for which to find a {@link Module}.
    * @return Module. null if no Module found.
@@ -533,6 +547,11 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
     if (this.mapArtifactGroupIdModule.containsKey(artifactGroupId)) {
       return this.mapArtifactGroupIdModule.get(artifactGroupId);
+    }
+
+    if (!this.isArtifactGroupIdIncluded(artifactGroupId)) {
+      this.mapArtifactGroupIdModule.put(artifactGroupId, null);
+      return null;
     }
 
     // If not, traverse the hierarchy of known Module's in an attempt to find one
@@ -578,24 +597,28 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   }
 
   /**
-   * <p>To be included, either {@link #MODEL_PROPERTY_INCLUDE_GROUP_ID_REGEX} is not
-   * defined or it matches the groupId, and either
-   * {@link #MODEL_PROPERTY_EXCLUDE_GROUP_ID_REGEX} is not defined or it does not
-   * match the groupId.
+   * Used by {@link #findModuleByArtifactGroupId(ArtifactGroupId)} to verify if an
+   * {@link ArtifactGroupId} is within the scope of this Model, meaning that a
+   * corresponding {@link Module} should be found.
    *
-   * @param groupId GroupId.
+   * <p>To be included, either
+   * {@link #MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX} is not defined or it
+   * matches the ArtifactGroupId in literal form, and either
+   * {@link #MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX} is not defined or it
+   * does not match the ArtifactGroupId in literal form.
+   *
+   * @param artifactGroupId artifactGroupId.
    * @return See description.
    */
-  @Override
-  public boolean isGroupIdIncluded(String groupId) {
-    if (this.patternIncludeGroupId != null) {
-      if (!this.patternIncludeGroupId.matcher(groupId).matches()) {
+  public boolean isArtifactGroupIdIncluded(ArtifactGroupId artifactGroupId) {
+    if (this.patternIncludeArtifactGroupId != null) {
+      if (!this.patternIncludeArtifactGroupId.matcher(artifactGroupId.toString()).matches()) {
         return false;
       }
     }
 
-    if (this.patternExcludeGroupId != null) {
-      if (this.patternExcludeGroupId.matcher(groupId).matches()) {
+    if (this.patternExcludeArtifactGroupId != null) {
+      if (this.patternExcludeArtifactGroupId.matcher(artifactGroupId.toString()).matches()) {
         return false;
       }
     }

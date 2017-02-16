@@ -278,17 +278,22 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   /**
    * See description in ResourceBundle.
    */
-  private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
-
-  /**
-   * See description in ResourceBundle.
-   */
   private static final String MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS = "PUSHING_UNPUSHED_COMMITS";
 
   /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS = "WARNING_UNPUSHED_COMMITS";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS = "WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
 
   /**
    * See description in ResourceBundle.
@@ -1870,6 +1875,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     List<ScmPlugin.Commit> listCommit;
     String mergeMessage;
+    StringBuilder stringBuilderConflictMessages;
 
     git = this.getGit();
 
@@ -1918,7 +1924,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mergeMessage = message + '\n' + mergeMessage;
     }
 
-    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
+    stringBuilderConflictMessages = new StringBuilder();
+
+    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderConflictMessages, false) == 1) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderConflictMessages));
       return MergeResult.CONFLICTS;
     }
 
@@ -1938,6 +1947,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     String commitIdRangeStart;
     Iterator<Commit> iteratorCommit;
     int patchCount;
+    StringBuilder stringBuilderConflictMessages;
 
     git = this.getGit();
 
@@ -2122,12 +2132,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           throw new RuntimeException(ioe);
         }
 
+        stringBuilderConflictMessages = new StringBuilder();
+
         if (git.executeGitCommand(new String[] {"apply", "--3way", "--whitespace=nowarn", patchFileNameCurrent}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
           // It is not clear if it is OK for this plugin to use
           // UserInteractionCallbackPlugin as it would seem this plugin should operate at a
           // low level. But for now this seems to be the only way to properly inform the
           // user about what to do with the merge conflicts.
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderConflictMessages));
 
           return MergeResult.CONFLICTS;
         }
