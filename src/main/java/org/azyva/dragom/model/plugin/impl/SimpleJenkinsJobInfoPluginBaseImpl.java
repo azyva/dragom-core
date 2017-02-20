@@ -57,6 +57,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
    * <p>
    * Can be defined to the empty string to avoid introducing a module-specific
    * subfolder.
+   * <p>
    * Accessed on the {@link Module} for which a job is to be created.
    */
   private static final String RUNTIME_PROPERTY_MODULE_SUBFOLDER = "JENKINS_MODULE_SUBFOLDER";
@@ -134,6 +135,15 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
       }
 
       stringBuilder.append(moduleSubfolder);
+    } else {
+      if (stringBuilder.length() != 0) {
+        stringBuilder.append('/');
+      }
+
+      // The NodePath literal ends with "/". We remove it since what follows assumes
+      // no trailing "/".
+      stringBuilder.append(this.getModule().getNodePath().getNodePathParent());
+      stringBuilder.setLength(stringBuilder.length() - 1);
     }
 
     // In all cases, we have a subfolder separation here.

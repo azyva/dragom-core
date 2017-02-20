@@ -739,7 +739,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
   private void setBasicAuthBase64(HttpURLConnection httpUrlConnection) {
     if (this.basicAuthBase64 == null && this.user != null) {
       try {
-        this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes("US_ASCII"));
+        this.basicAuthBase64 = DatatypeConverter.printBase64Binary((this.user + ':' + this.password).getBytes("US-ASCII"));
       } catch (UnsupportedEncodingException usee) {
         throw new RuntimeException(usee);
       }

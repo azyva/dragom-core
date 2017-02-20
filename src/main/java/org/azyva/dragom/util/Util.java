@@ -192,6 +192,31 @@ public final class Util {
    * exist and should not. Should we continue in that case?
    */
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS = "MERGE_CONFLICTS";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
+   * Jenkins folder.
+   */
+  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_JENKINS_FOLDER = "CREATE_JENKINS_FOLDER";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating or
+   * updating a Jenkins job.
+   */
+  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB = "CREATE_UPDATE_JENKINS_JOB";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
+   * Jenkins folder.
+   */
+  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER = "DELETE_JENKINS_FOLDER";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
+   * Jenkins job.
+   */
+  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB = "DELETE_JENKINS_JOB";
+
   /**
    * Path to the static Dragom properties resource within the classpath.
    */
