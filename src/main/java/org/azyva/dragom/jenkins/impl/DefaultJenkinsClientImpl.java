@@ -414,6 +414,76 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
 
   @Override
   public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
+    int indexJobName;
+    String folderName;
+    String jobName;
+    URL url;
+    StringBuilder stringBuilderConfig;
+    HttpURLConnection httpUrlConnection;
+    OutputStream outputStream;
+    int responseCode;
+
+    try {
+      indexJobName = job.lastIndexOf('/');
+
+      if (indexJobName == -1) {
+        folderName = "";
+        jobName = job;
+      } else {
+        folderName = job.substring(0, indexJobName);
+        jobName = job.substring(indexJobName + 1);
+      }
+
+      url = new URL(this.baseUrl + DefaultJenkinsClientImpl.convertItemToPath(folderName) + "/createItem?name=" + URLEncoder.encode(jobName, "UTF-8"));
+
+      stringBuilderConfig = new StringBuilder();
+
+      stringBuilderConfig.append("<project><properties><com.cloudbees.hudson.plugins.modeling.impl.jobTemplate.JobPropertyImpl plugin=\"cloudbees-template@4.17\"><instance><model>");
+      stringBuilderConfig.append(template);
+      stringBuilderConfig.append("</model><values class=\"tree-map\">");
+
+      for (Map.Entry<String, String> mapEntry: mapTemplateParam.entrySet()) {
+        stringBuilderConfig.append("<entry><string>");
+        stringBuilderConfig.append(mapEntry.getKey());
+        stringBuilderConfig.append("</string><string>");
+        stringBuilderConfig.append(mapEntry.getValue());
+        stringBuilderConfig.append("</string></entry>");
+      }
+
+      stringBuilderConfig.append("</values></instance></com.cloudbees.hudson.plugins.modeling.impl.jobTemplate.JobPropertyImpl></properties></project>");
+
+      httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+      this.setBasicAuthBase64(httpUrlConnection);
+
+      httpUrlConnection.setRequestMethod("POST");
+      httpUrlConnection.setInstanceFollowRedirects(false);
+      httpUrlConnection.setDoOutput(true);
+      httpUrlConnection.setRequestProperty("Content-Type", "application/xml");
+
+      httpUrlConnection.connect();
+
+      outputStream = httpUrlConnection.getOutputStream();
+
+      outputStream.write(stringBuilderConfig.toString().getBytes("US-ASCII"));
+
+      outputStream.close();
+
+      responseCode = httpUrlConnection.getResponseCode();
+
+      DefaultJenkinsClientImpl.flushInputErrorStreams(httpUrlConnection);
+
+      if (responseCode != 200) {
+        throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
+      }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+
+/*
+  @Override
+  public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
     URL url;
     HttpURLConnection httpUrlConnection;
     OutputStream outputStream;
@@ -464,6 +534,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
       throw new RuntimeException(ioe);
     }
   }
+*/
 
   @Override
   public void createJob(String job, Reader readerConfig) {

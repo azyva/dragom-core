@@ -166,20 +166,19 @@ public class DefaultModelFactory implements ModelFactory {
           try {
             urlConnection = urlXmlConfig.openConnection();
             urlConnection.setUseCaches(false);
-            urlConnection.setDoInput(false);
+
+            // Must be true even if we do not actually read the XmlConfig resource here,
+            // otherwise it seems the last modification timestamp is not read.
+            urlConnection.setDoInput(true);
+
             urlConnection.setDoOutput(false);
             lastModificationTimestampXmlConfig = urlConnection.getLastModified();
 
             // This seems to be the only way to properly release the resource. In particular
             // if the resource is a file (rather rare since in that case using a cache file is
-            // not really usefull), the file remains open unless the InputStream is obtained
-            // and closed. But since we call setDoInput(false) avoid actually opening the
-            // resource InputStream if possible, calling getInputStream may not be valid. So
-            // we ignore all exceptions that may be thrown.
-            try {
-              urlConnection.getInputStream().close();
-            } catch (Exception e) {
-            }
+            // not really useful), the file remains open unless the InputStream is obtained
+            // and closed.
+            urlConnection.getInputStream().close();
           } catch (IOException ioe) {
             throw new RuntimeException(ioe);
           }
@@ -187,12 +186,12 @@ public class DefaultModelFactory implements ModelFactory {
           indRefreshXmlConfigCacheFile = lastModificationTimestampXmlConfig > lastModificationTimestampXmlConfigCacheFile;
 
           if (indRefreshXmlConfigCacheFile) {
-            DefaultModelFactory.logger.info("XmlConfig cache file " + xmlConfigCacheFile + " stale and will be refreshed.");
+            DefaultModelFactory.logger.info("XmlConfig cache file " + xmlConfigCacheFile + " is stale and is refreshed.");
           }
         } else {
           indRefreshXmlConfigCacheFile = true;
 
-          DefaultModelFactory.logger.info("XmlConfig cache file " + xmlConfigCacheFile + " does not exist and will be creted.");
+          DefaultModelFactory.logger.info("XmlConfig cache file " + xmlConfigCacheFile + " does not exist and is created.");
         }
       } else {
         DefaultModelFactory.logger.info("Refreshing of the XmlConfig cache file " + xmlConfigCacheFile + " is forced.");
@@ -242,6 +241,8 @@ public class DefaultModelFactory implements ModelFactory {
 
       try {
         urlXmlConfig = Paths.get(xmlConfigCacheFile).toUri().toURL();
+
+        DefaultModelFactory.logger.info("XmlConfig is loaded from cache file " + xmlConfigCacheFile + '.');
       } catch (MalformedURLException mue) {
         throw new RuntimeException(mue);
       }

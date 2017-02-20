@@ -51,6 +51,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.azyva.dragom.execcontext.plugin.impl.DefaultCredentialStorePluginImpl;
 import org.azyva.dragom.util.SortedProperties;
+import org.azyva.dragom.util.Util;
 import org.azyva.dragom.util.WormFile;
 import org.azyva.dragom.util.WormFile.WormFileCache;
 
@@ -269,6 +270,7 @@ public class CredentialStore {
    */
   public CredentialStore(Path pathCredentialFile, Path pathMasterKeyFile, List<ResourcePatternRealmUser> listResourcePatternRealmUser) {
     byte[] arrayByteMasterKey;
+    String userCode;
 
     this.pathMasterKeyFile = pathMasterKeyFile;
     this.pathCredentialFile = pathCredentialFile;
@@ -307,9 +309,20 @@ public class CredentialStore {
       }
     }
 
+    userCode = System.getProperty("user.name");
+
+    // Under Windows, user codes are generally case insensitive, implying that a user
+    // can use any case for his user code when logging on, and Windows does not
+    // canonicalize. So we convert it to lower case to have a consistent key
+    // material. Otherwise, decryption could fail just because the user has not
+    // logged on with the same case as when encryption was performed.
+    if (Util.isWindows()) {
+      userCode = userCode.toLowerCase();
+    }
+
     try {
       this.secretKeyPasswordEncryption = SecretKeyFactory.getInstance("PBEWithMD5AndDES").generateSecret(
-          new PBEKeySpec((new String(arrayByteMasterKey) + System.getProperty("user.name") + CredentialStore.HARDCODED_PASSWORD).toCharArray()));
+          new PBEKeySpec((new String(arrayByteMasterKey) + userCode + CredentialStore.HARDCODED_PASSWORD).toCharArray()));
     } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }

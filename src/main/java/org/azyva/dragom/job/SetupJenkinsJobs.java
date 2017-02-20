@@ -53,6 +53,7 @@ import org.azyva.dragom.reference.ReferenceGraph;
 import org.azyva.dragom.reference.ReferenceGraph.VisitControl;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
+import org.azyva.dragom.util.RuntimeExceptionUserError;
 import org.azyva.dragom.util.ServiceLocator;
 import org.azyva.dragom.util.Util;
 
@@ -107,6 +108,11 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_VISITING_MODULE_VERSION = "VISITING_MODULE_VERSION";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_JOB_ALREADY_EXISTS = "JOB_ALREADY_EXISTS";
 
   /**
    * See description in ResourceBundle.
@@ -346,6 +352,16 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     }
 
     /**
+     * Indicates if a job has been created.
+     *
+     * @param job
+     * @return See description.
+     */
+    public boolean isJobCreated(String job) {
+      return this.setJobCreated.contains(job);
+    }
+
+    /**
      * Returns the Set of jobs which were not referenced during this job execution
      * since the existing items created file was loaded.
      *
@@ -554,6 +570,10 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
       jenkinsJobInfoPlugin = module.getNodePlugin(JenkinsJobInfoPlugin.class, null);
       job = jenkinsJobInfoPlugin.getJobFullName(version);
+
+      if ((SetupJenkinsJobs.this.jenkinsClient.getItemType(job) != null) && !SetupJenkinsJobs.this.itemsCreatedFileManager.isJobCreated(job)) {
+        throw new RuntimeExceptionUserError(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_ALREADY_EXISTS), referencePath.getLeafModuleVersion(), job));
+      }
 
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_NEEDS_CREATING_OR_UPDATING), referencePath.getLeafModuleVersion(), job));
 
