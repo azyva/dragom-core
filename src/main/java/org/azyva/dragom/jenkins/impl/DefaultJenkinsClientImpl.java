@@ -414,6 +414,65 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
 
   @Override
   public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
+    URL url;
+    HttpURLConnection httpUrlConnection;
+    OutputStream outputStream;
+    int responseCode;
+
+    try {
+      url = new URL(this.baseUrl + DefaultJenkinsClientImpl.convertItemToPath(template) + "/instantiate?job=" + URLEncoder.encode(job, "UTF-8"));
+      httpUrlConnection = (HttpURLConnection)url.openConnection();
+
+      this.setBasicAuthBase64(httpUrlConnection);
+
+      httpUrlConnection.setRequestMethod("POST");
+      httpUrlConnection.setInstanceFollowRedirects(false);
+      httpUrlConnection.setDoOutput(true);
+      httpUrlConnection.setRequestProperty("Content-Type", "text/xml");
+
+      httpUrlConnection.connect();
+
+      outputStream = httpUrlConnection.getOutputStream();
+
+      outputStream.write("<values>".getBytes("US-ASCII"));
+
+      for (Map.Entry<String, String> mapEntry: mapTemplateParam.entrySet()) {
+        byte[] arrayByteKey;
+
+        arrayByteKey = mapEntry.getKey().getBytes("US-ASCII");
+        outputStream.write('<');
+        outputStream.write(arrayByteKey);
+        outputStream.write('>');
+        outputStream.write(mapEntry.getValue().getBytes("US-ASCII"));
+        outputStream.write("</".getBytes("US-ASCII"));
+        outputStream.write(arrayByteKey);
+        outputStream.write('>');
+      }
+
+      outputStream.write("</values>".getBytes("US-ASCII"));
+
+      outputStream.close();
+
+      responseCode = httpUrlConnection.getResponseCode();
+
+      DefaultJenkinsClientImpl.flushInputErrorStreams(httpUrlConnection);
+
+      if (responseCode != 200) {
+        throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
+      }
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+  }
+
+  /*
+  This is a version which instead of instantiating a template, creates a job by
+  posting a config.xml file which contains the required data for representing a
+  template instantiation.Both methods work, but the template instantiation seems
+  cleaner. We keep this code around in case.
+
+  @Override
+  public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
     int indexJobName;
     String folderName;
     String jobName;
@@ -480,61 +539,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
       throw new RuntimeException(ioe);
     }
   }
-
-/*
-  @Override
-  public void createUpdateJobFromTemplate(String template, String job, Map<String, String> mapTemplateParam) {
-    URL url;
-    HttpURLConnection httpUrlConnection;
-    OutputStream outputStream;
-    int responseCode;
-
-    try {
-      url = new URL(this.baseUrl + DefaultJenkinsClientImpl.convertItemToPath(template) + "/instantiate?job=" + URLEncoder.encode(job, "UTF-8"));
-      httpUrlConnection = (HttpURLConnection)url.openConnection();
-
-      this.setBasicAuthBase64(httpUrlConnection);
-
-      httpUrlConnection.setRequestMethod("POST");
-      httpUrlConnection.setInstanceFollowRedirects(false);
-      httpUrlConnection.setDoOutput(true);
-      httpUrlConnection.setRequestProperty("Content-Type", "text/xml");
-
-      httpUrlConnection.connect();
-
-      outputStream = httpUrlConnection.getOutputStream();
-
-      outputStream.write("<values>".getBytes("US-ASCII"));
-
-      for (Map.Entry<String, String> mapEntry: mapTemplateParam.entrySet()) {
-        byte[] arrayByteKey;
-
-        arrayByteKey = mapEntry.getKey().getBytes("US-ASCII");
-        outputStream.write('<');
-        outputStream.write(arrayByteKey);
-        outputStream.write('>');
-        outputStream.write(mapEntry.getValue().getBytes("US-ASCII"));
-        outputStream.write("</".getBytes("US-ASCII"));
-        outputStream.write(arrayByteKey);
-        outputStream.write('>');
-      }
-
-      outputStream.write("</values>".getBytes("US-ASCII"));
-
-      outputStream.close();
-
-      responseCode = httpUrlConnection.getResponseCode();
-
-      DefaultJenkinsClientImpl.flushInputErrorStreams(httpUrlConnection);
-
-      if (responseCode != 200) {
-        throw new HttpStatusException("POST " + url.toString() + " returned " + responseCode + " - " + httpUrlConnection.getResponseMessage() + '.', responseCode);
-      }
-    } catch (IOException ioe) {
-      throw new RuntimeException(ioe);
-    }
-  }
-*/
+  */
 
   @Override
   public void createJob(String job, Reader readerConfig) {
