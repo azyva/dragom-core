@@ -354,7 +354,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     /**
      * Indicates if a job has been created.
      *
-     * @param job
+     * @param job Job.
      * @return See description.
      */
     public boolean isJobCreated(String job) {

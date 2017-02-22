@@ -132,7 +132,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    *
    * <p>If the configuration of the exceptional condition is such that processing
    * continues, the process recovers by treating the artifact as not being known to
-   * Dragom by making {@link #findByArtifactGroupId} return null.
+   * Dragom by making {@link #findModuleByArtifactGroupId} return null.
    *
    * <p>The runtime properties related to this exceptional condition are evaluated
    * on the root Node (null).
