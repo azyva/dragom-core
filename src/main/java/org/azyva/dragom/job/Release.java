@@ -115,6 +115,12 @@ public class Release extends RootModuleVersionJobAbstractImpl {
   private static final String RUNTIME_PROPERTY_REVERT_ARTIFACT_VERSION = "REVERT_ARTIFACT_VERSION";
 
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
+   * new static Version.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_STATIC_VERSION = "CREATE_STATIC_VERSION";
+
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_REUSING_ALREADY_SELECTED_STATIC_VERSION = "REUSING_ALREADY_SELECTED_STATIC_VERSION";
@@ -711,7 +717,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
       indentHandle = userInteractionCallbackPlugin.startIndent();
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_CREATING_NEW_STATIC_VERSION), moduleVersion, versionStaticSelected));
 
-      if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_STATIC_VERSION)) {
+      if (!Util.handleDoYouWantToContinue(Release.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_STATIC_VERSION)) {
         return false;
       }
 

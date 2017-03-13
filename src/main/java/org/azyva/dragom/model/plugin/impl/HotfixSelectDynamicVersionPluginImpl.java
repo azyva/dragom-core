@@ -47,6 +47,22 @@ import org.azyva.dragom.util.Util;
  */
 public class HotfixSelectDynamicVersionPluginImpl extends SelectDynamicVersionPluginBaseImpl implements SelectDynamicVersionPlugin {
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+   * that during the switch to a hotfix dynamic {@link Version}, the
+   * {@link ReferencePath} contains non-static Versions. which may be OK if they
+   * were created in the context of the hotfix.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH = "NON_STATIC_VERSIONS_REFERENCE_PATH";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+   * that during the switch to a hotfix dynamic {@link Version}, the
+   * {@link ReferencePath} contains non-static Versions. which may be OK if they
+   * were created in the context of the hotfix.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION = "USE_CURRENT_HOTFIX_VERSION";
+
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_VERSIONS_REFERENCE_PATH_STATIC = "VERSIONS_REFERENCE_PATH_STATIC";
@@ -102,7 +118,7 @@ public class HotfixSelectDynamicVersionPluginImpl extends SelectDynamicVersionPl
     if ((referencePath.size() > 1) && (referencePath.get(0).getModuleVersion().getVersion().getVersionType() != VersionType.STATIC)) {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_VERSIONS_REFERENCE_PATH_STATIC), new ModuleVersion(module.getNodePath(), version), referencePath));
 
-      if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH)) {
+      if (!Util.handleDoYouWantToContinue(HotfixSelectDynamicVersionPluginImpl.DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH)) {
         return null;
       }
     }
@@ -118,7 +134,7 @@ public class HotfixSelectDynamicVersionPluginImpl extends SelectDynamicVersionPl
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(HotfixSelectDynamicVersionPluginImpl.resourceBundle.getString(HotfixSelectDynamicVersionPluginImpl.MSG_PATTERN_KEY_USE_CURRENT_HOTFIX_VERSION_FOR_BASE), new ModuleVersion(module.getNodePath(), version), baseVersion.versionBase));
       }
 
-      if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION)) {
+      if (!Util.handleDoYouWantToContinue(HotfixSelectDynamicVersionPluginImpl.DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION)) {
         return null;
       }
 

@@ -47,7 +47,7 @@ import org.azyva.dragom.util.WormFile;
  *
  * @author David Raymond
  */
-public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends ClassificationNodePluginAbstractImpl implements UndefinedDescendantNodeManagerPlugin {
+public class SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl extends ClassificationNodePluginAbstractImpl implements UndefinedDescendantNodeManagerPlugin {
   /**
    * Initialization property specifying to cache module existence in a file.
    *
@@ -68,7 +68,7 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
   /**
    * Transient data for storing the module existence cache. It is a Properties.
    */
-  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCache";
+  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE = SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.class.getName() + ".ModuleExistenceCache";
 
   /**
    * Transient data for storing the module existence cache file name. This is to
@@ -76,14 +76,14 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
    *
    * <p>This is a {@link org.azyva.dragom.util.WormFile.WormFileCache}.
    */
-  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE = UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.class.getName() + ".ModuleExistenceCacheFile";
+  private static final String TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE = SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.class.getName() + ".ModuleExistenceCacheFile";
 
   /**
    * Constructor.
    *
    * @param classificationNode ClassificationNode.
    */
-  public UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl(ClassificationNode classificationNode) {
+  public SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl(ClassificationNode classificationNode) {
     super(classificationNode);
   }
 
@@ -153,26 +153,26 @@ public class UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl extends
 
     execContext = ExecContextHolder.get();
 
-    if (Util.isNotNullAndTrue(execContext.getInitProperty(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE))) {
-      propertiesModuleExist = (Properties)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE);
+    if (Util.isNotNullAndTrue(execContext.getInitProperty(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.INIT_PROPERTY_IND_CACHE_MODULE_EXISTENCE))) {
+      propertiesModuleExist = (Properties)execContext.getTransientData(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE);
 
       if (propertiesModuleExist == null) {
-        moduleExistenceCacheFile = execContext.getInitProperty(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE);
+        moduleExistenceCacheFile = execContext.getInitProperty(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE);
 
         if (moduleExistenceCacheFile == null) {
-          throw new RuntimeException("Initialization property " + UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE + " is not defined.");
+          throw new RuntimeException("Initialization property " + SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE + " is not defined.");
         } else {
           moduleExistenceCacheFile = moduleExistenceCacheFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
         }
 
         wormFileCacheModuleExistanceCache = WormFile.getCache(Paths.get(moduleExistenceCacheFile));
-        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE, wormFileCacheModuleExistanceCache);
+        execContext.setTransientData(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE, wormFileCacheModuleExistanceCache);
 
         propertiesModuleExist = new Properties();
 
-        execContext.setTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE, propertiesModuleExist);
+        execContext.setTransientData(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE, propertiesModuleExist);
       } else {
-        wormFileCacheModuleExistanceCache = (WormFile.WormFileCache)execContext.getTransientData(UndefinedDescendantNodeManagerSimpleDynamicModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE);
+        wormFileCacheModuleExistanceCache = (WormFile.WormFileCache)execContext.getTransientData(SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.TRANSIENT_DATA_MODULE_EXISTENCE_CACHE_FILE);
       }
 
       if (wormFileCacheModuleExistanceCache.isModified() && wormFileCacheModuleExistanceCache.isExists()) {

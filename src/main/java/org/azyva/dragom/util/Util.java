@@ -54,7 +54,6 @@ import org.azyva.dragom.model.impl.simple.SimpleNode;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.reference.ReferencePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,94 +94,26 @@ public final class Util {
   /**
    * Context for {@link Util#handleDoYouWantToContinue} that represents updating a
    * reference.
+   *
+   * <p>Used by multiple classes.
    */
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE = "UPDATE_REFERENCE";
 
   /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
-   * new static Version.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_STATIC_VERSION = "CREATE_STATIC_VERSION";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
-   * new dynamic Version.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_DYNAMIC_VERSION = "CREATE_DYNAMIC_VERSION";
-
-  /**
    * Context for {@link Util#handleDoYouWantToContinue} that represents merging a
    * Version into another.
+   *
+   * <p>Used by multiple classes.
    */
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE = "MERGE";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents reference
-   * change after switching to a dynamic Version.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING = "REFERENCE_CHANGE_AFTER_SWITCHING";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents committing local
-   * unsynchronized changes.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT = "COMMIT";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents having
-   * unsynchronized remote changes while committing.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_UNSYNC_REMOTE_CHANGES_WHILE_COMMIT = "UNSYNC_REMOTE_CHANGES_WHILE_COMMIT";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
-   * a workspace directory containing un synchronized changes.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES = "DELETE_WORKSPACE_DIRECTORY_WITH_UNSYNC_LOCAL_CHANGES";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting
-   * a workspace directory (not containing any unsynchronized local changes).
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_WORKSPACE_DIRECTORY = "DELETE_WORKSPACE_DIRECTORY";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
-   * that following the selection of a new dynamic Version during a merge
-   * ({@link MergeReferenceGraph}) diverging commits in the destination are not
-   * present in the new selected dynamic Version and may be lost.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS = "MAY_LOOSE_COMMITS";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
-   * that local changes exist in a workspace directory and switching to a new
-   * {@link Version} is not possible. Continuing here means to continue with the
-   * other {@link ModuleVersion}.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES = "SWITCH_WITH_UNSYNC_LOCAL_CHANGES";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
-   * that during the switch to a hotfix dynamic {@link Version}, the
-   * {@link ReferencePath} contains non-static Versions. which may be OK if they
-   * were created in the context of the hotfix.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_NON_STATIC_VERSIONS_REFERENCE_PATH = "NON_STATIC_VERSIONS_REFERENCE_PATH";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
-   * that during the switch to a hotfix dynamic {@link Version}, the
-   * {@link ReferencePath} contains non-static Versions. which may be OK if they
-   * were created in the context of the hotfix.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_USE_CURRENT_HOTFIX_VERSION = "USE_CURRENT_HOTFIX_VERSION";
 
   /**
    * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
    * that during the creation of a static Version or the switch to a dynamic Version
    * one or more references were changed but not committed and the user requested to
    * abort. Should the commit be performed in that case?
+   *
+   * <p>Used by multiple classes.
    */
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_COMMIT_REFERENCE_CHANGE_AFTER_ABORT = "COMMIT_REFERENCE_CHANGE_AFTER_ABORT";
 
@@ -192,30 +123,6 @@ public final class Util {
    * exist and should not. Should we continue in that case?
    */
   public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS = "MERGE_CONFLICTS";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
-   * Jenkins folder.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_JENKINS_FOLDER = "CREATE_JENKINS_FOLDER";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents creating or
-   * updating a Jenkins job.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB = "CREATE_UPDATE_JENKINS_JOB";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
-   * Jenkins folder.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER = "DELETE_JENKINS_FOLDER";
-
-  /**
-   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
-   * Jenkins job.
-   */
-  public static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB = "DELETE_JENKINS_JOB";
 
   /**
    * Path to the static Dragom properties resource within the classpath.

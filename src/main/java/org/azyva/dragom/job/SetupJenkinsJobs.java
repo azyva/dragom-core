@@ -83,6 +83,30 @@ import org.azyva.dragom.util.Util;
  */
 public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
+   * Jenkins folder.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_JENKINS_FOLDER = "CREATE_JENKINS_FOLDER";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating or
+   * updating a Jenkins job.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB = "CREATE_UPDATE_JENKINS_JOB";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
+   * Jenkins folder.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER = "DELETE_JENKINS_FOLDER";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents deleting a
+   * Jenkins job.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB = "DELETE_JENKINS_JOB";
+
+  /**
    * Runtime property specifying the Jenkins base URL (e.g.:
    * https://acme.com/jenkins). Accessed on the root {@link ClassificationNode}.
    */
@@ -577,7 +601,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_NEEDS_CREATING_OR_UPDATING), referencePath.getLeafModuleVersion(), job));
 
-      if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB)) {
+      if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB)) {
         return Util.isAbort() ? VisitControl.ABORT : VisitControl.CONTINUE;
       }
 
@@ -601,7 +625,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
           if (itemType == null) {
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_FOLDER_NEEDS_CREATING), referencePath.getLeafModuleVersion(), folder));
 
-            if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_JENKINS_FOLDER)) {
+            if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_JENKINS_FOLDER)) {
               return Util.isAbort() ? VisitControl.ABORT : VisitControl.CONTINUE;
             }
 
@@ -678,7 +702,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         for (String folder: this.itemsCreatedFileManager.getSetFolderNotReferencedSinceLoaded()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_FOLDER), folder));
 
-          if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
+          if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
             if (Util.isAbort()) {
               return;
             } else {
@@ -697,7 +721,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_JOB), job));
 
-          if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB)) {
+          if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB)) {
             if (Util.isAbort()) {
               return;
             } else {
@@ -714,7 +738,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_JOB), job));
 
-          if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB)) {
+          if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_JOB)) {
             if (Util.isAbort()) {
               return;
             } else {
@@ -730,7 +754,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
           if (this.jenkinsClient.isFolderEmpty(folder)) {
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_FOLDER), folder));
 
-            if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
+            if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
               if (Util.isAbort()) {
                 return;
               } else {
@@ -747,7 +771,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_JOB), job));
 
-          if (!Util.handleDoYouWantToContinueWithIndividualNo(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
+          if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_DELETE_JENKINS_FOLDER)) {
             if (Util.isAbort()) {
               return;
             } else {

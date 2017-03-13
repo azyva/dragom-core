@@ -65,6 +65,18 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
   private static final Logger logger = LoggerFactory.getLogger(SwitchToDynamicVersion.class);
 
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents creating a
+   * new dynamic Version.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_DYNAMIC_VERSION = "CREATE_DYNAMIC_VERSION";
+
+  /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents reference
+   * change after switching to a dynamic Version.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING = "REFERENCE_CHANGE_AFTER_SWITCHING";
+
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_PROCESS_PARENT_BECAUSE_REFERENCE_PROCESSED = "PROCESS_PARENT_BECAUSE_REFERENCE_PROCESSED";
@@ -608,7 +620,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           }
 
           if (indDifferencesInReferences) {
-            if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING)) {
+            if (!Util.handleDoYouWantToContinue(SwitchToDynamicVersion.DO_YOU_WANT_TO_CONTINUE_CONTEXT_REFERENCE_CHANGE_AFTER_SWITCHING)) {
               return visitModuleActionPerformed;
             }
           }
@@ -964,7 +976,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_SELECTED_DYNAMIC_VERSION_DOES_NOT_EXIST), moduleVersion, versionDynamicSelected, byReferenceVersionBase.object));
       }
 
-      if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_DYNAMIC_VERSION)) {
+      if (!Util.handleDoYouWantToContinue(SwitchToDynamicVersion.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_DYNAMIC_VERSION)) {
         return false;
       }
 

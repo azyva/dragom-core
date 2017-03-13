@@ -83,6 +83,14 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
   protected static final String RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR = "SYNC_WORKSPACE_DIR";
 
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+   * that local changes exist in a workspace directory and switching to a new
+   * {@link Version} is not possible. Continuing here means to continue with the
+   * other {@link ModuleVersion}.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES = "SWITCH_WITH_UNSYNC_LOCAL_CHANGES";
+
+  /**
    * See description in ResourceBundle.
    */
   protected static final String MSG_PATTERN_KEY_ROOT_MODULE_VERSION_NOT_KNOWN = "ROOT_MODULE_VERSION_NOT_KNOWN";
@@ -493,7 +501,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           case INTERACT:
             userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, moduleVersion));
 
-            if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES)) {
+            if (!Util.handleDoYouWantToContinue(RootModuleVersionJobAbstractImpl.DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES)) {
               return false;
             }
             break;

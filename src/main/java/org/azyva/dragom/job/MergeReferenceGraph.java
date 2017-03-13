@@ -195,6 +195,13 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
   private static final String RUNTIME_PROPERTY_REUSE_SRC_VERSION = "REUSE_SRC_VERSION";
 
   /**
+   * Context for {@link Util#handleDoYouWantToContinue} that represents the fact
+   * that following the selection of a new dynamic Version during a merge
+   * ({@link MergeReferenceGraph}) diverging commits in the destination are not
+   * present in the new selected dynamic Version and may be lost.
+   */
+  private static final String DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS = "MAY_LOOSE_COMMITS";
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION = "INITIATING_MERGE_FOR_DEST_TOP_LEVEL_MODULE_VERSION";
@@ -912,7 +919,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NEW_DEST_DYNAMIC_VERSION_DOES_NOT_INCLUDE_ORIGINALLY_DIVERGING_COMMITS), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest, versionDynamicNew));
               }
 
-              if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS)) {
+              if (!Util.handleDoYouWantToContinue(MergeReferenceGraph.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MAY_LOOSE_COMMITS)) {
                 return true;
               }
 
