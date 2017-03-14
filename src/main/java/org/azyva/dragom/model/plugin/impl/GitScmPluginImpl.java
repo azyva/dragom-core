@@ -182,6 +182,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * Runtime property specifying the path to the git executable.
    */
   private static final String RUNTIME_PROPERTY_GIT_PATH_EXECUTABLE = "GIT_PATH_EXECUTABLE";
+
   /**
    * Runtime property indicating the fetch and push behavior. The possible values
    * are defined by {@link FetchPushBehavior}.
@@ -374,6 +375,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
      * Indicates to fetch and push. This is the typical way of working with the
      * current state of the remote repository and immediately sharing changes made to
      * it.
+     *
+     * <p>This is the default behavior.
      */
     FETCH_PUSH;
 

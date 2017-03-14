@@ -53,7 +53,9 @@ import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.Util;
+import org.azyva.dragom.util.Util.ToolExitStatusAndContinue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -681,6 +683,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
     Iterator<ScmPlugin.Commit> iteratorCommit;
     Path pathModuleWorkspaceSrc;
     ScmPlugin.MergeResult mergeResult;
+    ToolExitStatusAndContinue toolExitStatusAndContinue;
     String message;
 
     this.referencePath.add(referenceDest);
@@ -769,12 +772,21 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
 
       if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
-        message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
+        toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+        message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
 
         this.listActionsPerformed.add(message);
 
-        // Will have called Util.setAbort in case we must not continue.
-        Util.handleContinueOnMergeConflicts(message);
+        if (!toolExitStatusAndContinue.indContinue) {
+          throw new RuntimeExceptionAbort(message);
+        }
+
+        userInteractionCallbackPlugin.provideInfo(message);
+
+        // We do not need to check the return value. The fact that Util.setAbort is
+        // called is sufficient.
+        Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
         return true;
       }
@@ -841,8 +853,19 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
 
             if (byReferenceBooleanSrcDiverges.object.booleanValue()) {
               if (byReferenceBooleanDestDiverges.object.booleanValue()) {
-                // Will have called Util.setAbort in case we must not continue.
-                Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
+                toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+                message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_BOTH_SRC_AND_DEST_STATIC_REFERENCE_DIVERGE), toolExitStatusAndContinue.toolExitStatus, referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest);
+
+                if (!toolExitStatusAndContinue.indContinue) {
+                  throw new RuntimeExceptionAbort(message);
+                }
+
+                userInteractionCallbackPlugin.provideInfo(message);
+
+                // We do not need to check the return value. The fact that Util.setAbort is
+                // called is sufficient.
+                Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
                 return true;
               } else {
@@ -894,6 +917,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_DYNAMIC_REFERENCE_DIVERGES_FROM_DEST_STATIC_REFERENCE), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest));
 
               if (byReferenceBooleanDestDiverges.object.booleanValue()) {
+                //TODO: Message used to be prefixed with "ERROR: ", but it does not sound like it is treated as an error.
                 userInteractionCallbackPlugin.provideInfo(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_REFERENCE_ALSO_DIVERGES_FROM_SRC_DYNAMIC_REFERENCE));
               }
 
@@ -904,8 +928,20 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               switchToDynamicVersion.performJob();
 
               if (!switchToDynamicVersion.isListModuleVersionRootChanged()) {
-                // Will have called Util.setAbort in case we must not continue.
-                Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), this.referencePath, referenceChildDest));
+                toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+                //TODO: It does not sound like this message is appropriate, or at least that it should be a merge conflict. Not sure.
+                message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_DEST_STATIC_VERSION_NOT_SWITCHED), toolExitStatusAndContinue.toolExitStatus, this.referencePath, referenceChildDest);
+
+                if (!toolExitStatusAndContinue.indContinue) {
+                  throw new RuntimeExceptionAbort(message);
+                }
+
+                userInteractionCallbackPlugin.provideInfo(message);
+
+                // We do not need to check the return value. The fact that Util.setAbort is
+                // called is sufficient.
+                Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
                 return true;
               }
@@ -916,6 +952,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               this.verifyDivergences(referenceChildDest.getModuleVersion().getNodePath(), referenceChildDest.getModuleVersion().getVersion(), versionDynamicNew, byReferenceBooleanOldDestDiverges, null);
 
               if (byReferenceBooleanOldDestDiverges.object.booleanValue()) {
+                //TODO: Message used to be prefixed with "ERROR: ", but it does not sound like it is treated as an error.
                 userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_NEW_DEST_DYNAMIC_VERSION_DOES_NOT_INCLUDE_ORIGINALLY_DIVERGING_COMMITS), referencePathSrc, referenceChildSrc, this.referencePath, referenceChildDest, versionDynamicNew));
               }
 

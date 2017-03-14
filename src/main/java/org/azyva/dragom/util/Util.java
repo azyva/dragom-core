@@ -40,11 +40,8 @@ import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
-import org.azyva.dragom.job.MergeMain;
-import org.azyva.dragom.job.MergeReferenceGraph;
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Module;
-import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
@@ -144,8 +141,10 @@ public final class Util {
   /**
    * Exceptional condition representing the fact that conflicts occurred during a
    * merge operation, or that diverging commits exist and should not.
+   *
+   * <p>Used by more than one class.
    */
-  private static final String EXCEPTIONAL_COND_MERGE_CONFLICTS = "MERGE_CONFLICTS";
+  public static final String EXCEPTIONAL_COND_MERGE_CONFLICTS = "MERGE_CONFLICTS";
 
   /**
    * Transient data for the current {@link ToolExitStatus}.
@@ -305,8 +304,6 @@ public final class Util {
    *
    * <p>An int result code is associated with each constant to allow easily
    * converting from the Java type to a process result code.
-   *
-   * @author David Raymond
    */
   public static enum ToolExitStatus {
     /**
@@ -352,6 +349,23 @@ public final class Util {
         throw new RuntimeException("Must not get here.");
       }
     }
+  }
+
+  /**
+   * Combines the {@link ToolExitStatus} and the continue indicator.
+   *
+   * <p>Returned by {@link Util#handleToolExitStatusAndContinueForExceptionalCond}.
+   */
+  public static class ToolExitStatusAndContinue {
+    /**
+     * ToolExitStatus.
+     */
+    public ToolExitStatus toolExitStatus;
+
+    /**
+     * Continue indicator.
+     */
+    public boolean indContinue;
   }
 
   /**
@@ -1712,13 +1726,14 @@ public final class Util {
    * <ul>
    * <li>Update the current {@link ToolExitStatus} in {@link ExecContext} transient
    * data;
-   * <li>Indicate to the caller if processing should continue or not.
+   * <li>Returns to the caller whether processing should continue or not, and the
+   * ToolExitStatus contributed for this exceptional condition.
    * </ul>
    * The ToolExitStatus is by default {@link ToolExitStatus#WARNING}, unless the
    * runtime property named after the specified exceptional condition with the
    * suffix ".TOOL_EXIT_STATUS" indicates otherwise.
    *
-   * <p>By default the return value indicates to continue processing if an only if
+   * <p>By default the return value indicates to continue processing if and only if
    * the ToolExitStatus is not ERROR, unless the runtime property named after the
    * exceptional condition with the suffix ".IND_CONTINUE" indicates otherwise.
    *
@@ -1726,16 +1741,15 @@ public final class Util {
    *   met. Used to access the runtime properties. Can be null.
    * @param exceptionalCond Exceptional condition (e.g.:
    *   EXCEPTIONAL_COND_MODULE_NOT_FOUND_FOR_ARTIFACT)
-   * @return Whether to continue.
+   * @return ToolExitStatusAndContinue.
    */
-  public static boolean handleToolExitStatusAndContinueForExceptionalCond(Node node, String exceptionalCond) {
+  public static ToolExitStatusAndContinue handleToolExitStatusAndContinueForExceptionalCond(Node node, String exceptionalCond) {
     ExecContext execContext;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
+    ToolExitStatusAndContinue toolExitStatusAndContinue;
     StringBuilder stringBuilder;
     String nodeName;
     String runtimeProperty;
-    ToolExitStatus toolExitStatus;
-    boolean indContinue;
 
     execContext = ExecContextHolder.get();
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
@@ -1748,6 +1762,8 @@ public final class Util {
       nodeName = node.toString();
     }
 
+    toolExitStatusAndContinue = new ToolExitStatusAndContinue();
+
     stringBuilder.append("Exceptional condition ").append(exceptionalCond).append(" met. ");
 
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_EXIT_STATUS);
@@ -1755,14 +1771,14 @@ public final class Util {
     if (runtimeProperty == null) {
       stringBuilder.append("Default ToolExitStatus.WARNING used. ");
 
-      toolExitStatus = ToolExitStatus.WARNING;
+      toolExitStatusAndContinue.toolExitStatus = ToolExitStatus.WARNING;
     } else {
-      toolExitStatus = ToolExitStatus.valueOf(runtimeProperty);
+      toolExitStatusAndContinue.toolExitStatus = ToolExitStatus.valueOf(runtimeProperty);
 
-      stringBuilder.append("ToolExitStatus.").append(toolExitStatus).append(" specified for Node ").append(nodeName).append(" used. ");
+      stringBuilder.append("ToolExitStatus.").append(toolExitStatusAndContinue.toolExitStatus).append(" specified for Node ").append(nodeName).append(" used. ");
     }
 
-    if (Util.setExitStatus(toolExitStatus)) {
+    if (Util.setExitStatus(toolExitStatusAndContinue.toolExitStatus)) {
       stringBuilder.append("Current ToolExitStatus updated since less severe. ");
     } else {
       stringBuilder.append("Current ToolExitStatus not updated since equal or more severe. ");
@@ -1771,17 +1787,17 @@ public final class Util {
     runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE);
 
     if (runtimeProperty == null) {
-      indContinue = (toolExitStatus != ToolExitStatus.ERROR);
+      toolExitStatusAndContinue.indContinue = (toolExitStatusAndContinue.toolExitStatus != ToolExitStatus.ERROR);
 
-      if (indContinue) {
+      if (toolExitStatusAndContinue.indContinue) {
         stringBuilder.append("Continuing the process by default since not ToolExitStatus.ERROR. ");
       } else {
         stringBuilder.append("Not continuing the process by default since TtoolExitStatus.ERROR. ");
       }
     } else {
-      indContinue = Util.isNotNullAndTrue(runtimeProperty);
+      toolExitStatusAndContinue.indContinue = Util.isNotNullAndTrue(runtimeProperty);
 
-      if (indContinue) {
+      if (toolExitStatusAndContinue.indContinue) {
         stringBuilder.append("Continuing as specified for Node ").append(nodeName).append('.');
       } else {
         stringBuilder.append("Aborting as specified for Node ").append(nodeName).append('.');
@@ -1790,35 +1806,7 @@ public final class Util {
 
     Util.logger.info(stringBuilder.toString());
 
-    return indContinue;
-  }
 
-  /**
-   * Handles the case where merge conflicts have occurred and we need to know if we
-   * must continue with the next matching {@link ModuleVersion}.
-   * <p>
-   * If we must not continue, {@link Util#setAbort} will have been called.
-   * <p>
-   * The exceptional condition {@link #EXCEPTIONAL_COND_MERGE_CONFLICTS} is also
-   * handled.
-   * <p>
-   * Used by {@link MergeMain} and {@link MergeReferenceGraph}.
-   *
-   * @param message Message.
-   */
-  public static void handleContinueOnMergeConflicts(String message) {
-    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
-
-    if (!Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS)) {
-      throw new RuntimeExceptionAbort(message);
-    }
-
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
-    userInteractionCallbackPlugin.provideInfo(message);
-
-    // We do not need to check the return value. The fact that Util.setAbort is
-    // called is sufficient.
-    Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
+    return toolExitStatusAndContinue;
   }
 }

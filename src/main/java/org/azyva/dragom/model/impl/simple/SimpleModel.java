@@ -537,6 +537,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
     FindModuleByArtifactGroupIdModuleNodeVisitor findModuleByArtifactGroupIdModuleNodeVisitor;
     SimpleModule moduleFound;
     FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor;
+    Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
     // First check if the Module whose build produces the specified ArtifactGroupId
     // would not already be known.
@@ -586,13 +587,15 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
       return moduleFound;
     }
 
-    if (Util.handleToolExitStatusAndContinueForExceptionalCond(null, SimpleModel.EXCEPTIONAL_COND_MODULE_NOT_FOUND)) {
-      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), artifactGroupId));
+    toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, SimpleModel.EXCEPTIONAL_COND_MODULE_NOT_FOUND);
+
+    if (toolExitStatusAndContinue.indContinue) {
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
 
       this.mapArtifactGroupIdModule.put(artifactGroupId, null);
       return null;
     } else {
-      throw new RuntimeExceptionAbort(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), artifactGroupId));
+      throw new RuntimeExceptionAbort(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
     }
   }
 

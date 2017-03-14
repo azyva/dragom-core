@@ -43,6 +43,7 @@ import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
+import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,6 +256,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
     this.setupReferencePathMatcherForProjectCode();
     this.setIndHandleDynamicVersion(false);
+    this.setIndDepthFirst(true);
   }
 
   /**
@@ -298,6 +300,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     moduleVersionSrc = reference.getModuleVersion();
     module = model.getModule(moduleVersionSrc.getNodePath());
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+    Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
     pathModuleWorkspace = null;
 
@@ -413,12 +416,21 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
 
           this.listActionsPerformed.add(message);
 
-          // Will have called Util.setAbort in case we must not continue.
-          Util.handleContinueOnMergeConflicts(message);
+          if (!toolExitStatusAndContinue.indContinue) {
+            throw new RuntimeExceptionAbort(message);
+          }
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // We do not need to check the return value. The fact that Util.setAbort is
+          // called is sufficient.
+          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
           // The return value is not important since the caller is expected to check for
           // Util.isAbort.
@@ -433,8 +445,19 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
         if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          // Will have called Util.setAbort in case we must not continue.
-          Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace));
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace);
+
+          if (!toolExitStatusAndContinue.indContinue) {
+            throw new RuntimeExceptionAbort(message);
+          }
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // We do not need to check the return value. The fact that Util.setAbort is
+          // called is sufficient.
+          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
@@ -466,12 +489,21 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
 
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
 
           this.listActionsPerformed.add(message);
 
-          // Will have called Util.setAbort in case we must not continue.
-          Util.handleContinueOnMergeConflicts(message);
+          if (!toolExitStatusAndContinue.indContinue) {
+            throw new RuntimeExceptionAbort(message);
+          }
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // We do not need to check the return value. The fact that Util.setAbort is
+          // called is sufficient.
+          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
@@ -486,8 +518,19 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
         if (!scmPlugin.getListCommitDiverge(moduleVersionDest.getVersion(), moduleVersionSrc.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          // Will have called Util.setAbort in case we must not continue.
-          Util.handleContinueOnMergeConflicts(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace);
+
+          if (!toolExitStatusAndContinue.indContinue) {
+            throw new RuntimeExceptionAbort(message);
+          }
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // We do not need to check the return value. The fact that Util.setAbort is
+          // called is sufficient.
+          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
 
           // The return value not important since the caller is expected to check for
           // Util.isAbort.
