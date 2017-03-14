@@ -256,7 +256,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
     this.setupReferencePathMatcherForProjectCode();
     this.setIndHandleDynamicVersion(false);
-    this.setIndDepthFirst(true);
+    //TODO: It may be more logical to do a depth-first traversal, but it does not work well. It seems the same ModuleVersion is checked out multiple times uselessly.
+    //this.setIndDepthFirst(true);
   }
 
   /**
