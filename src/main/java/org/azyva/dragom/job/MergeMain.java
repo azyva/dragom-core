@@ -492,7 +492,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest, pathModuleWorkspace);
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
 
           this.listActionsPerformed.add(message);
 
@@ -512,7 +512,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         }
 
         if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
         }
 
         break;
@@ -545,7 +545,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
         if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, mergeMainMode));
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
         }
 
         break;
