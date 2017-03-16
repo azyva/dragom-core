@@ -40,6 +40,7 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
+import org.azyva.dragom.model.plugin.ScmPlugin.Commit;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
@@ -289,6 +290,8 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     ScmPlugin.MergeResult mergeResult;
     List<ScmPlugin.Commit> listCommit;
     Iterator<ScmPlugin.Commit> iteratorCommit;
+    StringBuilder stringBuilderListCommits;
+    Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
     String message;
 
     this.referencePath.add(reference);
@@ -301,7 +304,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     moduleVersionSrc = reference.getModuleVersion();
     module = model.getModule(moduleVersionSrc.getNodePath());
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-    Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
     pathModuleWorkspace = null;
 
@@ -411,6 +413,48 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         return true;
       }
 
+      // This is common to both modes, so we factor it out.
+      if (   (mergeMainMode == MergeMainMode.MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS)
+          || (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS)) {
+
+        listCommit = scmPlugin.getListCommitDiverge(
+            moduleVersionDest.getVersion(),
+            moduleVersionSrc.getVersion(),
+            null,
+            EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_MESSAGE));
+
+        if (!listCommit.isEmpty()) {
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
+
+          stringBuilderListCommits = new StringBuilder();
+
+          for (Commit commit: listCommit) {
+            stringBuilderListCommits.append(commit.id).append(": ").append(commit.message).append('\n');
+          }
+
+          // Removing trailing newline.
+          stringBuilderListCommits.setLength(stringBuilderListCommits.length() - 1);
+
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace, stringBuilderListCommits.toString());
+
+          if (!toolExitStatusAndContinue.indContinue) {
+            throw new RuntimeExceptionAbort(message);
+          }
+
+          userInteractionCallbackPlugin.provideInfo(message);
+
+          // We do not need to check the return value. The fact that Util.setAbort is
+          // called is sufficient.
+          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
+
+          // The return value not important since the caller is expected to check for
+          // Util.isAbort.
+          // If we do not return here, we get into the switch below and perform the same
+          // processing as the non-NO_DIVERGING_COMMITS mode.
+          return true;
+        }
+      }
+
       switch (mergeMainMode) {
       case MERGE:
         // ScmPlugin.merge ensures that the working directory is synchronized.
@@ -445,31 +489,14 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         break;
 
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS:
-        if (!scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
-
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace);
-
-          if (!toolExitStatusAndContinue.indContinue) {
-            throw new RuntimeExceptionAbort(message);
-          }
-
-          userInteractionCallbackPlugin.provideInfo(message);
-
-          // We do not need to check the return value. The fact that Util.setAbort is
-          // called is sufficient.
-          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
-
-          // The return value not important since the caller is expected to check for
-          // Util.isAbort.
-          return true;
-        }
-
-        // Normal fall-through...
-
       case MERGE_EXCLUDE_VERSION_CHANGING_COMMITS:
         MergeMain.logger.info("Building list of version-changing commits to exclude before merging source ModuleVersion " + moduleVersionSrc + " into destination ModuleVersion " + moduleVersionDest + '.');
+
+        // Note that this call to getListCommitDiverge is similar to the one above for the
+        // -NO_DIVERGING_COMMITS modes, but the source and destination versions are
+        // swapped.
         listCommit = scmPlugin.getListCommitDiverge(moduleVersionSrc.getVersion(), moduleVersionDest.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR));
+
         iteratorCommit = listCommit.iterator();
 
         while (iteratorCommit.hasNext()) {
@@ -518,28 +545,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         break;
 
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
-        if (!scmPlugin.getListCommitDiverge(moduleVersionDest.getVersion(), moduleVersionSrc.getVersion(), null, EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR)).isEmpty()) {
-          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
-
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace);
-
-          if (!toolExitStatusAndContinue.indContinue) {
-            throw new RuntimeExceptionAbort(message);
-          }
-
-          userInteractionCallbackPlugin.provideInfo(message);
-
-          // We do not need to check the return value. The fact that Util.setAbort is
-          // called is sufficient.
-          Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE_CONFLICTS);
-
-          // The return value not important since the caller is expected to check for
-          // Util.isAbort.
-          return true;
-        }
-
-        // Normal fall-through...
-
       case SRC_UNCONDITIONAL:
         // ScmPlugin.merge ensures that the working directory is synchronized.
         mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
