@@ -202,6 +202,16 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS = "SRC_MERGED_INTO_DEST_CONFLICTS";
 
   /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN = "SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST = "NOTHING_TO_MERGE_SRC_INTO_DEST";
+
+  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeMain.class.getName() + "ResourceBundle");
@@ -223,7 +233,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
      *
      * <p>This is so that each {@link Version} maintains its own
      * {@link ArtifactVersion}. The exclusion does not apply to
-     * reference-version-chaning commits.
+     * reference-version-changing commits.
      */
     MERGE_EXCLUDE_VERSION_CHANGING_COMMITS,
 
@@ -287,10 +297,10 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     MergeMainMode mergeMainMode;
     WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
     Path pathModuleWorkspace;
-    ScmPlugin.MergeResult mergeResult;
-    List<ScmPlugin.Commit> listCommit;
+    ScmPlugin.MergeResult mergeResult = null;
+    List<ScmPlugin.Commit> listCommit = null;
     Iterator<ScmPlugin.Commit> iteratorCommit;
-    StringBuilder stringBuilderListCommits;
+    StringBuilder stringBuilderListCommits = null;
     Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
     String message;
 
@@ -413,9 +423,10 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         return true;
       }
 
-      // This is common to both modes, so we factor it out.
+      // We need the list of diverging commits on these three cases.
       if (   (mergeMainMode == MergeMainMode.MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS)
-          || (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS)) {
+          || (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS)
+          || (mergeMainMode == MergeMainMode.SRC_UNCONDITIONAL)) {
 
         listCommit = scmPlugin.getListCommitDiverge(
             moduleVersionDest.getVersion(),
@@ -424,8 +435,6 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
             EnumSet.of(ScmPlugin.GetListCommitFlag.IND_INCLUDE_MAP_ATTR, ScmPlugin.GetListCommitFlag.IND_INCLUDE_MESSAGE));
 
         if (!listCommit.isEmpty()) {
-          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
-
           stringBuilderListCommits = new StringBuilder();
 
           for (Commit commit: listCommit) {
@@ -434,6 +443,18 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
           // Removing trailing newline.
           stringBuilderListCommits.setLength(stringBuilderListCommits.length() - 1);
+        }
+      }
+
+      // For these two cases, we need to validate that the list of diverging commits
+      // (calculated above) is empty. Otherwise, abort the merge.
+      // For the SRC_UNCONDITIONAL case, we need the list of diverging commits only to
+      // include in the message provided to the user.
+      if (   (mergeMainMode == MergeMainMode.MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS)
+          || (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS)) {
+
+        if (listCommit.isEmpty()) {
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
           message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace, stringBuilderListCommits.toString());
 
@@ -457,10 +478,19 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       switch (mergeMainMode) {
       case MERGE:
+
+      // This represents a replacement. But if we get here, it means there are no
+      // diverging commits. Therefore, we are better off doing a regular merge (which
+      // is equivalent to a replacement in that case) since for most SCM it is faster.
+      case SRC_VALIDATE_NO_DIVERGING_COMMITS:
         // ScmPlugin.merge ensures that the working directory is synchronized.
         mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
+          if (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS) {
+            throw new RuntimeException("Conflicts are not expected here.");
+          }
+
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
           message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
@@ -544,16 +574,36 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
         break;
 
-      case SRC_VALIDATE_NO_DIVERGING_COMMITS:
       case SRC_UNCONDITIONAL:
-        // ScmPlugin.merge ensures that the working directory is synchronized.
-        mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+        // If there are no diverging commits, we are better off performing a regular merge
+        // This represents a replacement. But if there are no diverging commits, we are
+        // better off doing a regular merge (which is equivalent to a replacement in that
+        // case) since for most SCM it is faster.
+        if (listCommit.isEmpty()) {
+          // ScmPlugin.merge ensures that the working directory is synchronized.
+          mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
-        if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+          if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
+            throw new RuntimeException("Conflicts are not expected here.");
+          }
+
+          if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+          }
+        } else {
+          // ScmPlugin.merge ensures that the working directory is synchronized.
+          mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+
+          if (mergeResult == ScmPlugin.MergeResult.MERGED) {
+            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode, stringBuilderListCommits.toString()));
+          }
         }
 
         break;
+      }
+
+      if (mergeResult == ScmPlugin.MergeResult.NOTHING_TO_MERGE) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
       }
     } finally {
         if (pathModuleWorkspace != null) {
