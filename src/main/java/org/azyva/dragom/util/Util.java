@@ -1589,7 +1589,7 @@ public final class Util {
    * requested lengths can be obtained.
    * <p>
    * A ReadWriteLock is used to protect the non-thread-safe StringBuilder. The code
-   * used is inpired from the sample shown in
+   * used is inspired from the sample shown in
    * <a href="https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/locks/ReentrantReadWriteLock.html">ReentrantReadWriteLock</a>.
    *
    * @param length Number of spaces.

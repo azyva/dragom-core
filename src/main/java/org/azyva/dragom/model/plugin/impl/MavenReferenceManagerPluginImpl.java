@@ -327,15 +327,28 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           // We probably could simply perform an object equality here since Module's are
           // singletons. But just in case, we compare their NodePath.
           if (module.getNodePath().equals(this.getNode().getNodePath())) {
+            String stringReferencedArtifact;
             Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
             toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM);
 
+            // A ReferencedArtifact from the Pom can contain property references and we want
+            // to provide the resolved properties. But if the ReferencedArtifact does not
+            // contain property references, we want to avoid redundant information.
+            if (   !referencedArtifact.getGroupId().equals(artifactGroupId.getGroupId())
+                || !referencedArtifact.getArtifactId().equals(artifactGroupId.getArtifactId())
+                || !referencedArtifact.getVersion().equals(artifactVersion.toString())) {
+
+              stringReferencedArtifact = referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')';
+            } else {
+              stringReferencedArtifact = referencedArtifact.toString();
+            }
+
             if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
               continue;
             } else {
-              throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')', module));
+              throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
             }
           }
 
