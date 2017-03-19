@@ -18,9 +18,9 @@
  */
 
 /**
- * Simple implementations of classes in {@link org.azyva.dragom.model}.
+ * Default implementations of classes in {@link org.azyva.dragom.model}.
  * <p>
- * Despite the fact that these implementations are said to be simple, they are
- * still flexible and are expected to be applicable to most cases.
+ * These implementations are flexible and are expected to be applicable to most
+ * cases.
  */
-package org.azyva.dragom.model.impl.simple;
+package org.azyva.dragom.model.impl;

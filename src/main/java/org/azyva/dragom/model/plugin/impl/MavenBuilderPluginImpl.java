@@ -42,7 +42,7 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Module;
-import org.azyva.dragom.model.impl.simple.SimpleNode;
+import org.azyva.dragom.model.impl.DefaultNode;
 import org.azyva.dragom.model.plugin.BuilderPlugin;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
@@ -168,13 +168,13 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * When evaluating this property it is possible that multiple occurrences of the
    * same Maven property be specified, especially if the $parent$ token is used in
-   * the value of the runtime property. See {@link SimpleNode#getProperty}. In that
+   * the value of the runtime property. See {@link DefaultNode#getProperty}. In that
    * case, duplicate properties (based on the property names) are eliminated.
    * <p>
    * If a property (name) starts with "-", it is removed from the list of
    * properties. This is useful when the $parent$ token is used in the value of the
    * runtime property to cumulate properties, but a property added by a parent
-   * {@link SimpleNode} needs to be removed by a child SimpleNode.
+   * {@link DefaultNode} needs to be removed by a child DefaultNode.
    */
   private static final String RUNTIME_PROPERTY_PROPERTIES = "MAVEN_PROPERTIES";
 
@@ -199,14 +199,14 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * When evaluating this property it is possible that multiple occurrences of the
    * same profile be specified, especially if the $parent$ token is used in the value
-   * of the runtime property. See {@link SimpleNode#getProperty}. Duplicates are
+   * of the runtime property. See {@link DefaultNode#getProperty}. Duplicates are
    * simply eliminated in that case to avoid confusing Maven, although it would
    * probably itself ignore duplicates.
    * <p>
    * If a profile starts with "-", it is removed from the list of profiles. This is
    * useful when the $parent$ token is used in the value of the runtime property to
-   * cumulate profiles, but a profile added by a parent {@link SimpleNode} needs to
-   * be removed by a child SimpleNode.
+   * cumulate profiles, but a profile added by a parent {@link DefaultNode} needs to
+   * be removed by a child DefaultNode.
    * <p>
    * The profiles specified by this property are appended to the profiles inferred
    * from the build context passed to {@link #build}, and can be removed using the

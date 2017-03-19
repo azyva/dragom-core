@@ -17,7 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.impl.simple;
+package org.azyva.dragom.model.impl;
 
 import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Node;
@@ -28,46 +28,46 @@ import org.azyva.dragom.model.NodeBuilder;
  * @param <NodeSubType> {@link Node} subclass.
  * @author David Raymond
  */
-public class SimpleNodeBuilder<NodeSubType extends Node> implements NodeBuilder<NodeSubType> {
+public class DefaultNodeBuilder<NodeSubType extends Node> implements NodeBuilder<NodeSubType> {
   /**
-   * SimpleNode being built.
+   * DefaultNode being built.
    */
-  private SimpleNode simpleNode;
+  private DefaultNode defaultNode;
 
   /**
    * Constructor.
    */
-  protected SimpleNodeBuilder() {}
+  protected DefaultNodeBuilder() {}
 
 
   /**
-   * Sets the {@link SimpleNode} being built.
+   * Sets the {@link DefaultNode} being built.
    *
    * <p>To be used by the constructor of subclasses.
    *
-   * @param simpleNode SimpleNode.
+   * @param defaultNode DefaultNode.
    */
-  protected void setSimpleNode(SimpleNode simpleNode) {
-    this.simpleNode = simpleNode;
+  protected void setDefaultNode(DefaultNode defaultNode) {
+    this.defaultNode = defaultNode;
   }
 
   @Override
   public NodeBuilder<NodeSubType> setClassificationNodeParent(ClassificationNode classificationNodeParent) {
-    this.simpleNode.setSimpleClassificationNodeParent((SimpleClassificationNode)classificationNodeParent);
+    this.defaultNode.setDefaultClassificationNodeParent((DefaultClassificationNode)classificationNodeParent);
 
     return this;
   }
 
   @Override
   public NodeBuilder<NodeSubType> setName(String name) {
-    this.simpleNode.setName(name);
+    this.defaultNode.setName(name);
 
     return this;
   }
 
   @Override
   public NodeBuilder<NodeSubType> setProperty(String name, String value, boolean indOnlyThisNode) {
-    this.simpleNode.setProperty(name, value, indOnlyThisNode);
+    this.defaultNode.setProperty(name, value, indOnlyThisNode);
 
     return this;
   }
@@ -75,35 +75,35 @@ public class SimpleNodeBuilder<NodeSubType extends Node> implements NodeBuilder<
   @Override
   @SuppressWarnings("unchecked")
   public NodeSubType getPartial() {
-    if (this.simpleNode.getName() == null) {
+    if (this.defaultNode.getName() == null) {
       throw new RuntimeException("The name of the node has not been set.");
     }
 
-    if (this.simpleNode.getClassificationNodeParent() == null) {
+    if (this.defaultNode.getClassificationNodeParent() == null) {
       throw new RuntimeException("The parent classification node has not been set.");
     }
 
-    return (NodeSubType)this.simpleNode;
+    return (NodeSubType)this.defaultNode;
   }
 
 
   @Override
   @SuppressWarnings("unchecked")
   public NodeSubType create() {
-    SimpleNode simpleNode;
+    DefaultNode defaultNode;
 
     // To take advantage of the validations performed by getPartial.
     this.getPartial();
 
-    ((SimpleClassificationNode)this.simpleNode.getClassificationNodeParent()).addNodeChild(this.simpleNode);
-    this.simpleNode.init();
+    ((DefaultClassificationNode)this.defaultNode.getClassificationNodeParent()).addNodeChild(this.defaultNode);
+    this.defaultNode.init();
 
-    simpleNode = this.simpleNode;
+    defaultNode = this.defaultNode;
 
     // Once the Node is created it must not be possible to use the NodeBuilder
     // anymore.
-    this.simpleNode = null;
+    this.defaultNode = null;
 
-    return (NodeSubType)simpleNode;
+    return (NodeSubType)defaultNode;
   }
 }

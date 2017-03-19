@@ -115,10 +115,31 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * This property is intended to be specified on an intermediate ClassificationNode
    * under which all Module Git repositories share the same base URL.
    *
-   * If this property is not defined for the module, the NodePath of the parent
-   * Node of the Module is used.
+   * A "/" appended after following it, unless it is defined but empty.
+   *
+   * If this property and GIT_REPOS_DOMAIN_PREFIX are is not defined for the module,
+   * the NodePath of the parent Node of the Module is used (which includes a
+   * trailing "/").
    */
   private static final String MODEL_PROPERTY_GIT_REPOS_DOMAIN_FOLDER = "GIT_REPOS_DOMAIN_FOLDER";
+
+  /**
+   * Model property specifying the a prefix within the URL of the Git repository for
+   * the Module.
+   *
+   * This property is intended to be specified on an intermediate ClassificationNode
+   * under which all Module Git repositories share the same base URL.
+   *
+   * If this property and GIT_REPOS_DOMAIN_FOLDER are not defined for the module,
+   * the NodePath of the parent Node of the Module is used.
+   *
+   * If both this property and GIT_REPOS_DOMAIN_FOLDER are defined, "/" and the
+   * prefix are appended to the folder. If only this property is defined, the
+   * prefix is added to the base URL.
+   *
+   * In all cases where this property is defined, no "/" is appended following it.
+   */
+  private static final String MODEL_PROPERTY_GIT_REPOS_DOMAIN_PREFIX = "GIT_REPOS_DOMAIN_PREFIX";
 
   /**
    * Model property specifying the repository name within the URL of the Git
@@ -395,6 +416,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     super(module);
 
     String property;
+    String property2;
 
     property = module.getProperty(GitScmPluginImpl.MODEL_PROPERTY_GIT_REPOS_COMPLETE_URL);
 
@@ -415,12 +437,19 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       stringBuilderGitReposCompleteUrl.append('/');
 
       property = module.getProperty(GitScmPluginImpl.MODEL_PROPERTY_GIT_REPOS_DOMAIN_FOLDER);
+      property2 = module.getProperty(GitScmPluginImpl.MODEL_PROPERTY_GIT_REPOS_DOMAIN_PREFIX);
 
       if (property == null) {
-        stringBuilderGitReposCompleteUrl.append(module.getNodePath().getNodePathParent().toString());
-      } else {
+        if (property2 == null) {
+          stringBuilderGitReposCompleteUrl.append(module.getNodePath().getNodePathParent().toString());
+        }
+      } else if (property.length() != 0) {
         stringBuilderGitReposCompleteUrl.append(property);
         stringBuilderGitReposCompleteUrl.append('/');
+      }
+
+      if (property2 != null) {
+        stringBuilderGitReposCompleteUrl.append(property);
       }
 
       property = module.getProperty(GitScmPluginImpl.MODEL_PROPERTY_GIT_REPOS_NAME);

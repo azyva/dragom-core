@@ -17,7 +17,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.impl.simple;
+package org.azyva.dragom.model.impl;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -67,80 +67,80 @@ import org.azyva.dragom.model.plugin.impl.MavenBuilderPluginImpl;
 import org.azyva.dragom.util.Util;
 
 /**
- * Simple implementation of {@link Node} and {@link MutableNode}.
+ * Defai;t {@link Node} and {@link MutableNode} implementation.
  * <p>
- * Two type of SimpleNode's exist each represented by a different subclass:
+ * Two type of DefaultNode's exist each represented by a different subclass:
  * <ul>
- * <li>{@link SimpleClassificationNode}
- * <li>{@link SimpleModule}
+ * <li>{@link DefaultClassificationNode}
+ * <li>{@link DefaultModule}
  * </ul>
  *
  * @author David Raymond
  */
-public abstract class SimpleNode implements Node, MutableNode {
+public abstract class DefaultNode implements Node, MutableNode {
   private static final String PARENT_REFERENCE = "$parent";
 
   /**
-   * Indicates if the SimpleNode is mutable, based on whether the {@link NodeConfig}
+   * Indicates if the DefaultNode is mutable, based on whether the {@link NodeConfig}
    * provided is mutable.
    */
   protected boolean indMutable;
 
   /**
-   * Defines the possible states in which the SimpleNode can be in.
+   * Defines the possible states in which the DefaultNode can be in.
    */
   protected static enum State {
     /**
-     * SimpleNode has been created using
-     * {@link SimpleModel#createMutableClassificationNodeRoot},
-     * {@link SimpleClassificationNode#createChildMutableModule} or
-     * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is
+     * DefaultNode has been created using
+     * {@link DefaultModel#createMutableClassificationNodeRoot},
+     * {@link DefaultClassificationNode#createChildMutableModule} or
+     * {@link DefaultClassificationNode#createChildMutableClassificationNode} and is
      * not finalized, meaning that
-     * {@link SimpleNode#setNodeConfigTransferObject} has not been called.
+     * {@link DefaultNode#setNodeConfigTransferObject} has not been called.
      * <p>
      * In that state, only
-     * {@link SimpleNode#getNodeConfigTransferObject} or the methods mentioned above
+     * {@link DefaultNode#getNodeConfigTransferObject} or the methods mentioned above
      * can be called.
      * <p>
-     * When {@link SimpleNode#setNodeConfigTransferObject} is called, the SimpleNode
+     * When {@link DefaultNode#setNodeConfigTransferObject} is called, the DefaultNode
      * transitions to the {@link #CONFIG} state.
      * <p>
-     * When the SimpleNode is created from {@link ClassificationNodeConfig} or
+     * When the DefaultNode is created from {@link ClassificationNodeConfig} or
      * {@link ModuleConfig}, this state is not used.
      */
     CONFIG_NEW,
 
     /**
-     * SimpleNode has been created using
-     * {@link SimpleModel#createMutableClassificationNodeRoot},
-     * {@link SimpleClassificationNode#createChildMutableModule} or
-     * {@link SimpleClassificationNode#createChildMutableClassificationNode} and is finalized
+     * DefaultNode has been created using
+     * {@link DefaultModel#createMutableClassificationNodeRoot},
+     * {@link DefaultClassificationNode#createChildMutableModule} or
+     * {@link DefaultClassificationNode#createChildMutableClassificationNode} and is finalized
      * (see {@link #CONFIG_NEW}).
      * <p>
-     * This state is also used when the SimpleNode is a {@link SimpleModule} and has
+     * This state is also used when the DefaultNode is a {@link DefaultModule} and has
      * been created based on ModuleConfig.
      */
     CONFIG,
 
     /**
-     * SimpleNode has been created internally using
-     * {@link SimpleModel#createClassificationNodeBuilder} or
-     * {@link SimpleModel#createModuleBuilder} and is not yet finalized, meaning that
+     * DefaultNode has been created internally using
+     * {@link DefaultModel#createClassificationNodeBuilder} or
+     * {@link DefaultModel#createModuleBuilder} and is not yet finalized, meaning that
      * {@link ClassificationNodeBuilder#create} or {@link ModuleBuilder#create} has
-     * not been called. These methods call {@link SimpleNode#init} which performs the
+     * not been called. These methods call {@link DefaultNode#init} which performs the
      * state transition to {@link #DYNAMICALLY_CREATED}.
      */
     DYNAMICALLY_BEING_COMPLETED,
 
     /**
-     * SimpleNode has been created using {@link ClassificationNodeBuilder#create} or
+     * DefaultNode has been created using {@link ClassificationNodeBuilder#create} or
      * {@link ModuleBuilder#create}.
      */
     DYNAMICALLY_CREATED,
 
     /**
-     * SimpleNode has been deleted and cannot be used anymore. This happens only when
-     * {@link SimpleNode#delete} is called.
+     * DefaultNode has been deleted and cannot be used anymore. This happens only when
+     * {@link DefaultNode#delete} is called.
      */
     DELETED
   }
@@ -148,9 +148,9 @@ public abstract class SimpleNode implements Node, MutableNode {
   protected State state;
 
   private NodeConfig nodeConfig;
-  private SimpleClassificationNode simpleClassificationNodeParent;
+  private DefaultClassificationNode defaultClassificationNodeParent;
   private String name;
-  private SimpleModel simpleModel;
+  private DefaultModel defaultModel;
   private NodePath nodePath;
 
   // Values in mapProperty.
@@ -165,7 +165,7 @@ public abstract class SimpleNode implements Node, MutableNode {
   }
 
   /**
-   * Internal Map of properties used when the SimpleNode was dynamically created.
+   * Internal Map of properties used when the DefaultNode was dynamically created.
    * Not used when it was created from {@link Config}.
    */
   private Map<String, Property> mapProperty;
@@ -194,39 +194,39 @@ public abstract class SimpleNode implements Node, MutableNode {
    * Constructor used when dynamically completing a {@link Model}.
    * <p>
    * This constructor is expected to be called by
-   * {@link SimpleClassificationNode#SimpleClassificationNode(SimpleModel)} or
-   * {@link SimpleModule#SimpleModule(SimpleModel)}.
+   * {@link DefaultClassificationNode#DefaultClassificationNode(DefaultModel)} or
+   * {@link DefaultModule#DefaultModule(DefaultModel)}.
    *
-   * @param simpleModel SimpleModel.
+   * @param defaultModel DefaultModel.
    */
-  protected SimpleNode(SimpleModel simpleModel) {
+  protected DefaultNode(DefaultModel defaultModel) {
     this.indMutable = false;
 
     this.state = State.DYNAMICALLY_BEING_COMPLETED;
 
-    this.simpleModel = simpleModel;
+    this.defaultModel = defaultModel;
     this.mapProperty = new HashMap<String, Property>();
   }
 
   /**
-   * Constructor for the root SimpleClassificationNode when creating a {@link Model}
+   * Constructor for the root DefaultClassificationNode when creating a {@link Model}
    * from {@link Config}.
    * <p>
    * If nodeConfig is a {@link MutableNodeConfig} and nodeConfig.isNew(), it means
    * we are creating a new {@link MutableNode} in a {@link MutableModel} with an
    * initially empty {@link MutableNodeConfig}.
    * <p>
-   * Must not be used for SimpleNode's other than the root SimpleClassificationNode.
-   * Use {@link #SimpleNode(NodeConfig, SimpleModel)} for these SimpleNode's.
+   * Must not be used for DefaultNode's other than the root DefaultClassificationNode.
+   * Use {@link #DefaultNode(NodeConfig, DefaultModel)} for these DefaultNode's.
    * <p>
    * This constructor is expected to be called by
-   * {@link SimpleClassificationNode#SimpleClassificationNode(ClassificationNodeConfig, SimpleModel)}.
+   * {@link DefaultClassificationNode#DefaultClassificationNode(ClassificationNodeConfig, DefaultModel)}.
    *
    * @param nodeConfig NodeConfig.
-   * @param simpleModel SimpleModel.
+   * @param defaultModel DefaultModel.
    */
-  protected SimpleNode(NodeConfig nodeConfig, SimpleModel simpleModel) {
-    if (simpleModel.getClassificationNodeRoot() != null) {
+  protected DefaultNode(NodeConfig nodeConfig, DefaultModel defaultModel) {
+    if (defaultModel.getClassificationNodeRoot() != null) {
       throw new RuntimeException("The model for node " + nodeConfig.getName() + " must not already have a root classification node.");
     }
 
@@ -240,30 +240,30 @@ public abstract class SimpleNode implements Node, MutableNode {
     }
 
     this.name = nodeConfig.getName();
-    this.simpleModel = simpleModel;
+    this.defaultModel = defaultModel;
   }
 
   /**
-   * Constructor for Node's other than the root SimpleClassificationNode when
+   * Constructor for Node's other than the root DefaultClassificationNode when
    * creating a {@link Model} from {@link Config}.
    * <p>
    * If nodeConfig is a {@link MutableNodeConfig} and nodeConfig.isNew(), it means
    * we are creating a new {@link MutableNode} in a {@link MutableModel} with an
    * initially empty {@link MutableNodeConfig}.
    * <p>
-   * Must not be used for the root SimpleClassificationNode. Use
-   * {@link #SimpleNode(NodeConfig, SimpleModel)} for the root
-   * SimpleClassificationNode.
+   * Must not be used for the root DefaultClassificationNode. Use
+   * {@link #DefaultNode(NodeConfig, DefaultModel)} for the root
+   * DefaultClassificationNode.
    * <p>
    * This constructor is expected to be called by
-   * {@link SimpleClassificationNode#SimpleClassificationNode(ClassificationNodeConfig, SimpleClassificationNode)}
-   * or {@link SimpleModule#SimpleModule(ModuleConfig, SimpleClassificationNode)}.
+   * {@link DefaultClassificationNode#DefaultClassificationNode(ClassificationNodeConfig, DefaultClassificationNode)}
+   * or {@link DefaultModule#DefaultModule(ModuleConfig, DefaultClassificationNode)}.
    *
    * @param nodeConfig NodeConfig.
-   * @param simpleClassificationNodeParent Parent SimpleClassificationNode.
+   * @param defaultClassificationNodeParent Parent DefaultClassificationNode.
    */
-  protected SimpleNode(NodeConfig nodeConfig, SimpleClassificationNode simpleClassificationNodeParent) {
-    if (simpleClassificationNodeParent == null) {
+  protected DefaultNode(NodeConfig nodeConfig, DefaultClassificationNode defaultClassificationNodeParent) {
+    if (defaultClassificationNodeParent == null) {
       throw new RuntimeException("The parent of node " + nodeConfig.getName() + " cannot be null.");
     }
 
@@ -279,38 +279,38 @@ public abstract class SimpleNode implements Node, MutableNode {
       this.state = State.CONFIG;
     }
 
-    this.simpleClassificationNodeParent = simpleClassificationNodeParent;
+    this.defaultClassificationNodeParent = defaultClassificationNodeParent;
     this.name = nodeConfig.getName();
-    this.simpleModel = (SimpleModel)simpleClassificationNodeParent.getModel(); // This ensures that all SimpleNode's in a SimpleModel are actually part of that SimpleModel.
+    this.defaultModel = (DefaultModel)defaultClassificationNodeParent.getModel(); // This ensures that all DefaultNode's in a DefaultModel are actually part of that DefaultModel.
   }
 
   /**
-   * Sets the parent {@link SimpleClassificationNode}.
+   * Sets the parent {@link DefaultClassificationNode}.
    * <p>
-   * This method has package scope since fields of a SimpleNode can only be set
-   * while dynamically completing a {@link SimpleModel} using
-   * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
+   * This method has package scope since fields of a DefaultNode can only be set
+   * while dynamically completing a {@link DefaultModel} using
+   * {@link ModelNodeBuilderFactory} implemented by DefaultModel.
    *
-   * @param simpleClassificationNodeParent See description.
+   * @param defaultClassificationNodeParent See description.
    */
-  void setSimpleClassificationNodeParent(SimpleClassificationNode simpleClassificationNodeParent) {
+  void setDefaultClassificationNodeParent(DefaultClassificationNode defaultClassificationNodeParent) {
     if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
       throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
     }
 
-    if (simpleClassificationNodeParent.getModel() != this.getModel()) {
+    if (defaultClassificationNodeParent.getModel() != this.getModel()) {
       throw new RuntimeException("Parent classification node is not from the same model as the module being built.");
     }
 
-    this.simpleClassificationNodeParent = simpleClassificationNodeParent;
+    this.defaultClassificationNodeParent = defaultClassificationNodeParent;
   }
 
   /**
    * Sets the name.
    * <p>
-   * This method has package scope since fields of a SimpleNode can only be set
-   * while dynamically completing a {@link SimpleModel} using
-   * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
+   * This method has package scope since fields of a DefaultNode can only be set
+   * while dynamically completing a {@link DefaultModel} using
+   * {@link ModelNodeBuilderFactory} implemented by DefaultModel.
    *
    * @param name Name.
    */
@@ -325,14 +325,14 @@ public abstract class SimpleNode implements Node, MutableNode {
   /**
    * Sets the value of a property.
    * <p>
-   * This method has package scope since fields of a SimpleNode can only be set
-   * while dynamically completing a {@link SimpleModel} using
-   * {@link ModelNodeBuilderFactory} implemented by SimpleModel.
+   * This method has package scope since fields of a DefaultNode can only be set
+   * while dynamically completing a {@link DefaultModel} using
+   * {@link ModelNodeBuilderFactory} implemented by DefaultModel.
    *
    * @param name Name of the property.
    * @param indOnlyThisNode Indicates that this property applies specifically to the
-   *   SimpleNode on which it is defined, as opposed to being inherited by child
-   *   SimpleNode.
+   *   DefaultNode on which it is defined, as opposed to being inherited by child
+   *   DefaultNode.
    * @param value Value of the property.
    */
   void setProperty(String name, String value, boolean indOnlyThisNode) {
@@ -352,9 +352,9 @@ public abstract class SimpleNode implements Node, MutableNode {
    * This method invokes all the {@link NodeInitPlugin}.
    * <p>
    * This method has package scope since it can only be called by
-   * {@link SimpleClassificationNode#createChildNodesFromConfig},
-   * {@link SimpleNode#setNodeConfigTransferObject} and
-   * {@link SimpleNodeBuilder#create}.
+   * {@link DefaultClassificationNode#createChildNodesFromConfig},
+   * {@link DefaultNode#setNodeConfigTransferObject} and
+   * {@link DefaultNodeBuilder#create}.
    */
   void init() {
     List<String> listPluginId;
@@ -364,7 +364,7 @@ public abstract class SimpleNode implements Node, MutableNode {
     }
 
     // We set the state before performing initialization since during initialization,
-    // the  SimpleNode may be accessed.
+    // the  DefaultNode may be accessed.
     // this.state can also be State.CONFIG, in which case it must remain so.
     if (this.state == State.DYNAMICALLY_BEING_COMPLETED) {
       this.state = State.DYNAMICALLY_CREATED;
@@ -395,13 +395,13 @@ public abstract class SimpleNode implements Node, MutableNode {
   public ClassificationNode getClassificationNodeParent() {
     this.checkNotDeleted();
 
-    return this.simpleClassificationNodeParent;
+    return this.defaultClassificationNodeParent;
   }
 
   /**
-   * If the SimpleNode was created from {@link Config}, this is equivalent to
+   * If the DefaultNode was created from {@link Config}, this is equivalent to
    * nodeConfig.getName. Otherwise, this is the name set when building the
-   * SimpleNode.
+   * DefaultNode.
    *
    * @return Name.
    */
@@ -420,7 +420,7 @@ public abstract class SimpleNode implements Node, MutableNode {
   public Model getModel() {
     this.checkNotDeleted();
 
-    return this.simpleModel;
+    return this.defaultModel;
   }
 
   @Override
@@ -428,62 +428,62 @@ public abstract class SimpleNode implements Node, MutableNode {
     this.checkNotDeleted();
 
     // The root ClassificationNode does not have a NodePath.
-    if (this.simpleClassificationNodeParent == null) {
+    if (this.defaultClassificationNodeParent == null) {
       return null;
     }
 
     if (this.nodePath == null) {
-      this.nodePath = new NodePath(this.simpleClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeType.CLASSIFICATION);
+      this.nodePath = new NodePath(this.defaultClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeType.CLASSIFICATION);
     }
 
     return this.nodePath;
   }
 
   /**
-   * See comment about initialization Properties in {@link SimpleModel}. If the
+   * See comment about initialization Properties in {@link DefaultModel}. If the
    * property cannot be resolved from initialization properties, it will be
    * obtained from the {@link Model} according to below.
    * <p>
-   * SimpleNode inheritance is considered. The value returned is that of the named
-   * property on the first SimpleNode that defines it while traversing the parent
-   * hierarchy of SimpleNode's starting with this Node.
+   * DefaultNode inheritance is considered. The value returned is that of the named
+   * property on the first DefaultNode that defines it while traversing the parent
+   * hierarchy of DefaultNode's starting with this Node.
    * <p>
-   * If no SimpleNode in the parent hierarchy defines the property, null is
+   * If no DefaultNode in the parent hierarchy defines the property, null is
    * returned.
    * <p>
-   * If the first SimpleNode in the parent hierarchy that defines the property
+   * If the first DefaultNode in the parent hierarchy that defines the property
    * defines it as null (to avoid inheritance), null is also returned.
    * <p>
-   * If the first SimpleNode in the parent hierarchy that defines the property
-   * defines it only for that specific SimpleNode
+   * If the first DefaultNode in the parent hierarchy that defines the property
+   * defines it only for that specific DefaultNode
    * ({@link PropertyDefConfig#isOnlyThisNode} or {@link #setProperty} called with
-   * indOnlyThisNode) and this first SimpleNode is not the one associated with this
-   * SimpleNode, null is also returned.
+   * indOnlyThisNode) and this first DefaultNode is not the one associated with this
+   * DefaultNode, null is also returned.
    * <p>
-   * If the value of a property as evaluated on the SimpleNode using the algorithm
+   * If the value of a property as evaluated on the DefaultNode using the algorithm
    * above contains "$parent$", these parent references (generally there will be at
    * most one such reference) are replaced with the value of the same property
-   * evaluated in the context of the SimpleNode that is the parent of the SimpleNode
+   * evaluated in the context of the DefaultNode that is the parent of the DefaultNode
    * that defined the property, or an empty string if null. This allows defining
    * cumulative properties, such as Maven properties. For example, if the root
-   * SimpleNode defines "MAVEN_PROPERTIES=property1,property2" and a child
-   * SimpleNode defines "MAVEN_PROPERTIES=$parent$,property3", the value of the
-   * property MAVEN_PROPERTIES evaluated on the child SimpleNode is
+   * DefaultNode defines "MAVEN_PROPERTIES=property1,property2" and a child
+   * DefaultNode defines "MAVEN_PROPERTIES=$parent$,property3", the value of the
+   * property MAVEN_PROPERTIES evaluated on the child DefaultNode is
    * "property1,property2,property3". See {@link MavenBuilderPluginImpl} for more
    * information about this specific example.
    * <p>
    * It is conceivable that eventually property values can contain expressions
    * expressed in an embedded expression language such as Groovy. In that case this
    * method would evaluate these expressions. These expressions would be evaluated
-   * in the context of this SimpleNode, but the SimpleNode on which the property
+   * in the context of this DefaultNode, but the DefaultNode on which the property
    * value was actually defined would also be provided as a root object. This would
    * provide for a very flexible and powerful inheritance mechanism that would
    * subsume the functionality provided by parent references described above and
    * much more.
    * <p>
-   * Depending on how the SimpleNode was created, either from {@link Config} or
+   * Depending on how the DefaultNode was created, either from {@link Config} or
    * dynamically using {@link ModelNodeBuilderFactory} implemented by
-   * {@link SimpleModel}, the property of a SimpleNode in the parent hierarchy may
+   * {@link DefaultModel}, the property of a DefaultNode in the parent hierarchy may
    * come from the Config or may have been using setProperty.
    *
    * @param name Name of the property.
@@ -495,7 +495,7 @@ public abstract class SimpleNode implements Node, MutableNode {
     StringBuilder stringBuilder;
     Properties propertiesInit;
     String value;
-    SimpleNode simpleNodeCurrent;
+    DefaultNode defaultNodeCurrent;
 
     this.checkNotDeleted();
 
@@ -509,7 +509,7 @@ public abstract class SimpleNode implements Node, MutableNode {
       arrayNodeName = this.getNodePath().getArrayNodeName();
     }
 
-    propertiesInit = this.simpleModel.getInitProperties();
+    propertiesInit = this.defaultModel.getInitProperties();
     value = propertiesInit.getProperty(name);
 
     stringBuilder = new StringBuilder();
@@ -529,27 +529,27 @@ public abstract class SimpleNode implements Node, MutableNode {
     // When the property is resolved from real Model properties, the special "@parent"
     // is handled at the end of this method. But the notion of parent is not supported
     // when the property is resolved from initialization properties.
-    simpleNodeCurrent = null;
+    defaultNodeCurrent = null;
 
     if (value == null) {
-      simpleNodeCurrent = this;
+      defaultNodeCurrent = this;
       value = null;
 
-      while ((simpleNodeCurrent != null) && (value == null)) {
-        // A SimpleNode either has properties from the Config from which it was created,
+      while ((defaultNodeCurrent != null) && (value == null)) {
+        // A DefaultNode either has properties from the Config from which it was created,
         // or from properties set using setProperty when dynamically creating it. It is
-        // not possible for a SimpleNode to have both since setProperty can only be called
-        // by SimpleNodeBuilder which has nothing to do with Config.
+        // not possible for a DefaultNode to have both since setProperty can only be called
+        // by DefaultNodeBuilder which has nothing to do with Config.
 
-        if (simpleNodeCurrent.state == State.CONFIG) {
+        if (defaultNodeCurrent.state == State.CONFIG) {
           PropertyDefConfig propertyDefConfig;
 
-          // getNodeConfig cannot return null here since if the SimpleNode was dynamically
+          // getNodeConfig cannot return null here since if the DefaultNode was dynamically
           // created, mapProperty is not null and we do not get here.
-          propertyDefConfig = simpleNodeCurrent.getNodeConfig().getPropertyDefConfig(name);
+          propertyDefConfig = defaultNodeCurrent.getNodeConfig().getPropertyDefConfig(name);
 
           if (propertyDefConfig != null) {
-            if (propertyDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
+            if (propertyDefConfig.isOnlyThisNode() && (this != defaultNodeCurrent)) {
               return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
             }
 
@@ -558,10 +558,10 @@ public abstract class SimpleNode implements Node, MutableNode {
         } else {
           Property property;
 
-          property = simpleNodeCurrent.mapProperty.get(name);
+          property = defaultNodeCurrent.mapProperty.get(name);
 
           if (property != null) {
-            if (property.indOnlyThisNode && (this != simpleNodeCurrent)) {
+            if (property.indOnlyThisNode && (this != defaultNodeCurrent)) {
               return null; // This corresponds to the case where the first NodeConfig has PropertyDefConfig.isOnlyThisNode and is not for this Node.
             }
 
@@ -569,26 +569,26 @@ public abstract class SimpleNode implements Node, MutableNode {
           }
         }
 
-        simpleNodeCurrent = (SimpleNode)simpleNodeCurrent.getClassificationNodeParent();
+        defaultNodeCurrent = (DefaultNode)defaultNodeCurrent.getClassificationNodeParent();
       };
     }
 
     if (value != null) {
       int indexParentReference;
 
-      while ((indexParentReference = value.indexOf(SimpleNode.PARENT_REFERENCE)) != -1) {
+      while ((indexParentReference = value.indexOf(DefaultNode.PARENT_REFERENCE)) != -1) {
         String valueParent;
 
-        // Because of the way the loop above is constructed, simpleNodeCurrent now refers
-        // to the parent SimpleNode of the SimpleNode which defines the value, or is null
-        // if we reached the root SimpleNode.
-        if (simpleNodeCurrent == null) {
+        // Because of the way the loop above is constructed, defaultNodeCurrent now refers
+        // to the parent DefaultNode of the DefaultNode which defines the value, or is null
+        // if we reached the root DefaultNode.
+        if (defaultNodeCurrent == null) {
           valueParent = "";
         } else {
-          valueParent = simpleNodeCurrent.getProperty(name);
+          valueParent = defaultNodeCurrent.getProperty(name);
         }
 
-        value = value.substring(0, indexParentReference) + valueParent + value.substring(indexParentReference + SimpleNode.PARENT_REFERENCE.length());
+        value = value.substring(0, indexParentReference) + valueParent + value.substring(indexParentReference + DefaultNode.PARENT_REFERENCE.length());
       }
     }
 
@@ -622,19 +622,19 @@ public abstract class SimpleNode implements Node, MutableNode {
    * @return PluginDefConfig. null can be returned.
    */
   private PluginDefConfig getPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId) {
-    SimpleNode simpleNodeCurrent;
+    DefaultNode defaultNodeCurrent;
 
-    simpleNodeCurrent = this;
+    defaultNodeCurrent = this;
 
-    while (simpleNodeCurrent != null) {
+    while (defaultNodeCurrent != null) {
       PluginDefConfig pluginDefConfig;
 
       // PluginDefConfig's are available only if the Node is base on a NodeConfig.
-      if (simpleNodeCurrent.state == State.CONFIG) {
-        pluginDefConfig = simpleNodeCurrent.getNodeConfig().getPluginDefConfig(classNodePlugin, pluginId);
+      if (defaultNodeCurrent.state == State.CONFIG) {
+        pluginDefConfig = defaultNodeCurrent.getNodeConfig().getPluginDefConfig(classNodePlugin, pluginId);
 
         if (pluginDefConfig != null) {
-          if (pluginDefConfig.isOnlyThisNode() && (this != simpleNodeCurrent)) {
+          if (pluginDefConfig.isOnlyThisNode() && (this != defaultNodeCurrent)) {
             return null; // This corresponds to the case where the first NodeConfig has PluginDefConfig.isOnlyThisNode and is not for this Node.
           }
 
@@ -642,7 +642,7 @@ public abstract class SimpleNode implements Node, MutableNode {
         }
       }
 
-      simpleNodeCurrent = (SimpleNode)simpleNodeCurrent.getClassificationNodeParent();
+      defaultNodeCurrent = (DefaultNode)defaultNodeCurrent.getClassificationNodeParent();
     };
 
     return null; // This corresponds to the case where no NodeConfig defines the PluginDefConfig.
@@ -782,7 +782,7 @@ public abstract class SimpleNode implements Node, MutableNode {
   public List<String> getListPluginId(Class<? extends NodePlugin> classNodePlugin) {
     List<String> listPluginId;
     Set<String> setPluginIdEncountered;
-    SimpleNode nodeCurrent;
+    DefaultNode nodeCurrent;
 
     this.checkNotDeleted();
 
@@ -823,7 +823,7 @@ public abstract class SimpleNode implements Node, MutableNode {
         }
       }
 
-      nodeCurrent = (SimpleNode)nodeCurrent.getClassificationNodeParent();
+      nodeCurrent = (DefaultNode)nodeCurrent.getClassificationNodeParent();
     };
 
     return listPluginId;
@@ -832,8 +832,8 @@ public abstract class SimpleNode implements Node, MutableNode {
   /**
    * Registers a {@link NodeEventListener}.
    * <p>
-   * The NodeEventListener is registered within the SimpleNode, and thus within the
-   * {@link SimpleModel}. It is also possible to register NodeEventListener's in the
+   * The NodeEventListener is registered within the DefaultNode, and thus within the
+   * {@link DefaultModel}. It is also possible to register NodeEventListener's in the
    * {@link ExecContext}.
    *
    * @param nodeEventListener NodeEventListener.
@@ -920,9 +920,9 @@ public abstract class SimpleNode implements Node, MutableNode {
   @Override
   public NodeConfigTransferObject getNodeConfigTransferObject(OptimisticLockHandle optimisticLockHandle)
       throws OptimisticLockException {
-    // This will catch the case where the SimpleNode has been dynamically created, in
+    // This will catch the case where the DefaultNode has been dynamically created, in
     // which case its configuration data, which does not exist, cannot be changed.
-    // Note that it is still possible to convert a dynamically created SimpleNode into
+    // Note that it is still possible to convert a dynamically created DefaultNode into
     // one based on MutableNodeConfig. The caller has to detect the fact that it is
     // currently dynamically created using Node.isCreatedDynamically and if so, do as
     // if the Node does not exist yet by calling
@@ -944,7 +944,7 @@ public abstract class SimpleNode implements Node, MutableNode {
 
   /**
    * Called by subclasses to extract the data from a {@link NodeConfigTransferObject} and set
-   * them within the configuration of the SimpleNode.
+   * them within the configuration of the DefaultNode.
    * <p>
    * Does most of the processing that
    * {@link MutableNode#setNodeConfigTransferObject} must do, except calling init
@@ -960,7 +960,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    * ({@link OptimisticLockHandle#isLocked}) and its state must correspond to the
    * state of the data it represents, otherwise {@link OptimisticLockException} is
    * thrown. The state of the OptimisticLockHandle is updated to the new revision of
-   * the SimpleNodeConfig.
+   * the NodeConfig.
    *
    * @param nodeConfigTransferObject NodeConfigTransferObject.
    * @param optimisticLockHandle OptimisticLockHandle.
@@ -987,28 +987,28 @@ public abstract class SimpleNode implements Node, MutableNode {
     newName = nodeConfigTransferObject.getName();
 
     if (this.state == State.CONFIG) {
-      if (this.simpleClassificationNodeParent != null) {
+      if (this.defaultClassificationNodeParent != null) {
         String currentName;
 
         if (newName == null) {
-          throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
+          throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root DefaultClassificationNode.");
         }
 
         currentName = this.name;
 
         if (!newName.equals(currentName)) {
-          if (this.simpleClassificationNodeParent.getNodeChild(newName) != null) {
+          if (this.defaultClassificationNodeParent.getNodeChild(newName) != null) {
             throw new DuplicateNodeException();
           }
 
-          this.simpleClassificationNodeParent.renameSimpleNodeChild(currentName,  newName);
+          this.defaultClassificationNodeParent.renameDefaultNodeChild(currentName,  newName);
         }
       }
 
       try {
         ((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
       } catch (DuplicateNodeException dne) {
-        // We have already check for duplicate above at the SimpleClassificationNode
+        // We have already check for duplicate above at the DefaultClassificationNode
         // level. We do not expect to get this exception at the
         // MutableClassificationNodeConfig level.
         throw new RuntimeException(dne);
@@ -1016,31 +1016,31 @@ public abstract class SimpleNode implements Node, MutableNode {
 
       this.name = newName;
     } else { // if (this.state == State.CONFIG_NEW) {
-      if (this.simpleClassificationNodeParent != null) {
-        SimpleNode simpleNodeExisting;
+      if (this.defaultClassificationNodeParent != null) {
+        DefaultNode defaultNodeExisting;
 
         if (newName == null) {
-          throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root SimpleClassificationNode.");
+          throw new RuntimeException("Name of NodeConfigTrnmsferObject must not be null for non-root DefaultClassificationNode.");
         }
 
-        simpleNodeExisting = (SimpleNode)this.simpleClassificationNodeParent.getNodeChild(newName);
+        defaultNodeExisting = (DefaultNode)this.defaultClassificationNodeParent.getNodeChild(newName);
 
-        if (simpleNodeExisting != null) {
-          if (!simpleNodeExisting.isCreatedDynamically()) {
+        if (defaultNodeExisting != null) {
+          if (!defaultNodeExisting.isCreatedDynamically()) {
             throw new DuplicateNodeException();
           }
 
-          this.simpleClassificationNodeParent.removeChildNode(newName);
+          this.defaultClassificationNodeParent.removeChildNode(newName);
 
           // Sets the state to DELETED.
-          simpleNodeExisting.cleanCaches(true);
+          defaultNodeExisting.cleanCaches(true);
         }
       }
 
       try {
         ((MutableNodeConfig)this.getNodeConfig()).setNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
       } catch (DuplicateNodeException dne) {
-        // We have already check for duplicate above at the SimpleClassificationNode
+        // We have already check for duplicate above at the DefaultClassificationNode
         // level. We do not expect to get this exception at the
         // MutableClassificationNodeConfig level.
         throw new RuntimeException(dne);
@@ -1048,8 +1048,8 @@ public abstract class SimpleNode implements Node, MutableNode {
 
       this.name = newName;
 
-      if (this.simpleClassificationNodeParent != null) {
-        this.simpleClassificationNodeParent.setSimpleNodeChild(newName, this);
+      if (this.defaultClassificationNodeParent != null) {
+        this.defaultClassificationNodeParent.setDefaultNodeChild(newName, this);
       }
     }
 
@@ -1065,7 +1065,7 @@ public abstract class SimpleNode implements Node, MutableNode {
     }
 
     if (this.state == State.CONFIG) {
-      this.simpleClassificationNodeParent.removeChildNode(this.name);
+      this.defaultClassificationNodeParent.removeChildNode(this.name);
       ((MutableNodeConfig)(this.getNodeConfig())).delete();
     }
 
@@ -1084,8 +1084,8 @@ public abstract class SimpleNode implements Node, MutableNode {
   /**
    * Checks if the MutableNode is not deleted.
    * <p>
-   * Utility method to facilitate validating the {@link SimpleNode} is not deleted
-   * at the beginning of other methods. Most methods must validate the SimpleNode
+   * Utility method to facilitate validating the {@link DefaultNode} is not deleted
+   * at the beginning of other methods. Most methods must validate the DefaultNode
    * is not deleted. But some methods implicitly perform this validation by
    * verifying for specific states. In this case, calling this method is not
    * required.
@@ -1108,7 +1108,7 @@ public abstract class SimpleNode implements Node, MutableNode {
   /**
    * Called when underlying {@link MutableConfig} data have changed so that any
    * cache that could contain instantiated objects whose states are dependent on
-   * this data is cleared. The current {@link SimpleNode} and its children are
+   * this data is cleared. The current {@link DefaultNode} and its children are
    * traversed and the same method is called on all of them because of the
    * inheritance mechanisms implemented in Dragom.
    * <p>
@@ -1123,12 +1123,12 @@ public abstract class SimpleNode implements Node, MutableNode {
     this.mapProperty = null;
     this.mapNodePluginConstructor = null;
 
-    this.simpleModel.cleanCaches(this);
+    this.defaultModel.cleanCaches(this);
 
     if (indDelete) {
       this.name = null;
-      this.simpleClassificationNodeParent = null;
-      this.simpleModel = null;
+      this.defaultClassificationNodeParent = null;
+      this.defaultModel = null;
       this.eventManager = null;
 
       // To allow isDeleted to be called for a MutableNode that was created dynamically
@@ -1144,7 +1144,7 @@ public abstract class SimpleNode implements Node, MutableNode {
    */
   @Override
   public String toString() {
-    if (this.simpleClassificationNodeParent == null) {
+    if (this.defaultClassificationNodeParent == null) {
       return "[root]";
     } else {
       return this.getNodePath().toString();

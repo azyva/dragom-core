@@ -16,7 +16,7 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.impl.simple;
+package org.azyva.dragom.model.impl;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -52,11 +52,11 @@ import org.azyva.dragom.util.RuntimeExceptionAbort;
 import org.azyva.dragom.util.Util;
 
 /**
- * Simple implementation of a {@link Model} and {@link MutableModel} based on
- * {@link Config} and optionnally {@link MutableConfig}.
+ * Default {@link Model} and {@link MutableModel} implementation based on
+ * {@link Config} and optionally {@link MutableConfig}.
  * <p>
  * In addition to Config, initialization Properties can be provided to an instance
- * of SimpleModel in order to override properties defined within Config. This
+ * of DefaultModel in order to override properties defined within Config. This
  * allows customizing a Model locally, such as specifying a different base URL for
  * an SCM repository.
  * <p>
@@ -74,9 +74,9 @@ import org.azyva.dragom.util.Util;
  * can be tool-invocation-specific.
  *
  * @author David Raymond
- * @see org.azyva.dragom.model.impl.simple
+ * @see org.azyva.dragom.model.impl
  */
-public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel {
+public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableModel {
   /**
    * Model property which specifies if the determination of whether a {@link Module}
    * produces an {@link ArtifactGroupId} is optimistic.
@@ -147,10 +147,10 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   /**
    * ResourceBundle specific to this class.
    */
-  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SimpleModel.class.getName() + "ResourceBundle");
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(DefaultModel.class.getName() + "ResourceBundle");
 
   /**
-   * Indicates if the SimpleModel is mutable, based on whether the {@link Config}
+   * Indicates if the DefaultModel is mutable, based on whether the {@link Config}
    * provided is mutable.
    */
   private boolean indMutable;
@@ -167,17 +167,17 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   private Config config;
 
   /**
-   * {@link SimpleClassificationNode} representing the root
+   * {@link DefaultClassificationNode} representing the root
    * {@link ClassificationNode}.
    */
-  private SimpleClassificationNode simpleClassificationNodeRoot;
+  private DefaultClassificationNode defaultClassificationNodeRoot;
 
   /**
    * Map of known ArtifactoryGrouipId to Module. This is to avoid having to perform
    * a costly search every time the {@link #findModuleByArtifactGroupId} method is
    * called.
    */
-  private Map<ArtifactGroupId, SimpleModule> mapArtifactGroupIdModule;
+  private Map<ArtifactGroupId, DefaultModule> mapArtifactGroupIdModule;
 
   /**
    * Pattern that an ArtifactGroupId literal must match to be considered in the
@@ -338,7 +338,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
           this.moduleFound = module;
 
-          if (Util.isNotNullAndTrue(module.getProperty(SimpleModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
+          if (Util.isNotNullAndTrue(module.getProperty(DefaultModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
             break;
           }
         }
@@ -347,7 +347,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
           if (modulePossiblyFound == null) {
             modulePossiblyFound = module;
 
-            if (Util.isNotNullAndTrue(module.getProperty(SimpleModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
+            if (Util.isNotNullAndTrue(module.getProperty(DefaultModel.MODEL_PROPERTY_OPTIMISTIC_ARTIFACT_GROUP_ID_PRODUCED_MAPPING))) {
               break;
             }
           }
@@ -383,14 +383,14 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   /**
    * Constructor.
    * <p>
-   * This is the only way to instantiate a new {@link SimpleModel}. However, once
-   * instantiated, a SimpleModel can be completed dynamically using
-   * {@link ModelNodeBuilderFactory} methods to create new {@link SimpleNode}'s.
+   * This is the only way to instantiate a new {@link DefaultModel}. However, once
+   * instantiated, a DefaultModel can be completed dynamically using
+   * {@link ModelNodeBuilderFactory} methods to create new {@link DefaultNode}'s.
    *
    * @param config Config.
    * @param propertiesInit Initialization properties.
    */
-  public SimpleModel(Config config, Properties propertiesInit) {
+  public DefaultModel(Config config, Properties propertiesInit) {
     String modelProperty;
 
     this.propertiesInit = propertiesInit;
@@ -399,25 +399,25 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
     if (this.indMutable) {
       if (config.getClassificationNodeConfigRoot() != null) {
-        this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
+        this.defaultClassificationNodeRoot = new DefaultClassificationNode(config.getClassificationNodeConfigRoot(), this);
       }
     } else {
       if (config.getClassificationNodeConfigRoot() == null) {
         throw new RuntimeException("Root ClassificationNodeConfig must be specified.");
       }
 
-      this.simpleClassificationNodeRoot = new SimpleClassificationNode(config.getClassificationNodeConfigRoot(), this);
+      this.defaultClassificationNodeRoot = new DefaultClassificationNode(config.getClassificationNodeConfigRoot(), this);
     }
 
-    this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, SimpleModule>();
+    this.mapArtifactGroupIdModule = new HashMap<ArtifactGroupId, DefaultModule>();
 
-    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX);
+    modelProperty = this.defaultClassificationNodeRoot.getProperty(DefaultModel.MODEL_PROPERTY_INCLUDE_ARTIFACT_GROUP_ID_REGEX);
 
     if (modelProperty != null) {
       this.patternIncludeArtifactGroupId = Pattern.compile(modelProperty);
     }
 
-    modelProperty = this.simpleClassificationNodeRoot.getProperty(SimpleModel.MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX);
+    modelProperty = this.defaultClassificationNodeRoot.getProperty(DefaultModel.MODEL_PROPERTY_EXCLUDE_ARTIFACT_GROUP_ID_REGEX);
 
     if (modelProperty != null) {
       this.patternExcludeArtifactGroupId = Pattern.compile(modelProperty);
@@ -426,10 +426,10 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
   /**
    * Returns the initialization properties that were used when creating this
-   * SimpleModel.
+   * DefaultModel.
    * <p>
    * This method is not part of {@link Model} and is therefore intended to be used
-   * by the other classes that make up the SimpleModel, namely {@link SimpleNode}.
+   * by the other classes that make up the DefaultModel, namely {@link DefaultNode}.
    * <p>
    * Initialization properties should be considered read-only.
    *
@@ -444,13 +444,13 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    */
   @Override
   public ClassificationNode getClassificationNodeRoot() {
-    return this.simpleClassificationNodeRoot;
+    return this.defaultClassificationNodeRoot;
   }
 
   /**
-   * At each step while following the path of {SimpleClassificationNode},
-   * {@link SimpleClassificationNode#getSimpleClassificationNodeChildDynamic} is
-   * used so that new SimpleClassificationNode can be dynamically created if
+   * At each step while following the path of {DefaultClassificationNode},
+   * {@link DefaultClassificationNode#getDefaultClassificationNodeChildDynamic} is
+   * used so that new DefaultClassificationNode can be dynamically created if
    * required.
    *
    * @param nodePath NodePath of the ClassificationNode to return. Must be partial.
@@ -459,30 +459,30 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    */
   @Override
   public ClassificationNode getClassificationNode(NodePath nodePath) {
-    SimpleClassificationNode simpleClassificationNodeCurrent;
+    DefaultClassificationNode defaultClassificationNodeCurrent;
 
     if (!nodePath.isPartial()) {
       throw new RuntimeException("Cannot get a classification node given a complete non-partial NodsePath " + nodePath + '.');
     }
 
-    simpleClassificationNodeCurrent = this.simpleClassificationNodeRoot;
+    defaultClassificationNodeCurrent = this.defaultClassificationNodeRoot;
 
     for (int i = 0; i < nodePath.getNodeCount(); i++) {
-      simpleClassificationNodeCurrent = simpleClassificationNodeCurrent.getSimpleClassificationNodeChildDynamic(nodePath.getNodeName(i));
+      defaultClassificationNodeCurrent = defaultClassificationNodeCurrent.getDefaultClassificationNodeChildDynamic(nodePath.getNodeName(i));
 
-      if (simpleClassificationNodeCurrent == null) {
+      if (defaultClassificationNodeCurrent == null) {
         return null;
       }
     }
 
-    return simpleClassificationNodeCurrent;
+    return defaultClassificationNodeCurrent;
   }
 
   /**
    * This method uses {@link #getClassificationNode} to get the parent
-   * {@link SimpleClassificationNode}. It then uses
-   * {@link SimpleClassificationNode#getSimpleModuleChildDynamic} to get the
-   * requested SimpleModule which therefore can be dynamically created if required.
+   * {@link DefaultClassificationNode}. It then uses
+   * {@link DefaultClassificationNode#getDefaultModuleChildDynamic} to get the
+   * requested DefaultModule which therefore can be dynamically created if required.
    *
    * @param nodePath NodePath of the Module to return. Must not be partial.
    * @return Module. null if no Module corresponding to the specified NodePath
@@ -490,19 +490,19 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
    */
   @Override
   public Module getModule(NodePath nodePath) {
-    SimpleClassificationNode classificationNode;
+    DefaultClassificationNode classificationNode;
 
     if (nodePath.isPartial()) {
       throw new RuntimeException("Cannot get a module given a partial NodsePath " + nodePath + '.');
     }
 
-    classificationNode = (SimpleClassificationNode)this.getClassificationNode(nodePath.getNodePathParent());
+    classificationNode = (DefaultClassificationNode)this.getClassificationNode(nodePath.getNodePathParent());
 
     if (classificationNode == null) {
       return null;
     }
 
-    return classificationNode.getSimpleModuleChildDynamic(nodePath.getModuleName());
+    return classificationNode.getDefaultModuleChildDynamic(nodePath.getModuleName());
   }
 
   /**
@@ -535,7 +535,7 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
   @Override
   public Module findModuleByArtifactGroupId(ArtifactGroupId artifactGroupId) {
     FindModuleByArtifactGroupIdModuleNodeVisitor findModuleByArtifactGroupIdModuleNodeVisitor;
-    SimpleModule moduleFound;
+    DefaultModule moduleFound;
     FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor;
     Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
@@ -561,9 +561,9 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
     findModuleByArtifactGroupIdModuleNodeVisitor = new FindModuleByArtifactGroupIdModuleNodeVisitor(artifactGroupId);
 
-    this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.MODULE, findModuleByArtifactGroupIdModuleNodeVisitor);
+    this.defaultClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.MODULE, findModuleByArtifactGroupIdModuleNodeVisitor);
 
-    moduleFound = (SimpleModule)findModuleByArtifactGroupIdModuleNodeVisitor.getModuleFound();
+    moduleFound = (DefaultModule)findModuleByArtifactGroupIdModuleNodeVisitor.getModuleFound();
 
     if (moduleFound != null) {
       this.mapArtifactGroupIdModule.put(artifactGroupId, moduleFound);
@@ -578,24 +578,24 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
     findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor = new FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor(artifactGroupId);
 
-    this.simpleClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.CLASSIFICATION, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
+    this.defaultClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.CLASSIFICATION, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
 
-    moduleFound = (SimpleModule)findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor.getModuleFound();
+    moduleFound = (DefaultModule)findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor.getModuleFound();
 
     if (moduleFound != null) {
       this.mapArtifactGroupIdModule.put(artifactGroupId, moduleFound);
       return moduleFound;
     }
 
-    toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, SimpleModel.EXCEPTIONAL_COND_MODULE_NOT_FOUND);
+    toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, DefaultModel.EXCEPTIONAL_COND_MODULE_NOT_FOUND);
 
     if (toolExitStatusAndContinue.indContinue) {
-      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
+      ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class).provideInfo(MessageFormat.format(DefaultModel.resourceBundle.getString(DefaultModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
 
       this.mapArtifactGroupIdModule.put(artifactGroupId, null);
       return null;
     } else {
-      throw new RuntimeExceptionAbort(MessageFormat.format(SimpleModel.resourceBundle.getString(SimpleModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
+      throw new RuntimeExceptionAbort(MessageFormat.format(DefaultModel.resourceBundle.getString(DefaultModel.MSG_PATTERN_KEY_MODULE_NOT_FOUND), toolExitStatusAndContinue.toolExitStatus, artifactGroupId));
     }
   }
 
@@ -631,70 +631,70 @@ public class SimpleModel implements Model, ModelNodeBuilderFactory, MutableModel
 
   @Override
   public ClassificationNodeBuilder createClassificationNodeBuilder() {
-    return new SimpleClassificationNodeBuilder(this);
+    return new DefaultClassificationNodeBuilder(this);
   }
 
   @Override
   public ModuleBuilder createModuleBuilder() {
-    return new SimpleModuleBuilder(this);
+    return new DefaultModuleBuilder(this);
   }
 
   /**
-   * Sets the root {@link SimpleClassificationNode}.
+   * Sets the root {@link DefaultClassificationNode}.
    * <p>
    * This method is intended to be called by
-   * {@link SimpleNode#setNodeConfigTransferObject}.
+   * {@link DefaultNode#setNodeConfigTransferObject}.
    *
-   * @param simpleClassificationNodeRoot Root SimpleClassificationNode.
+   * @param defaultClassificationNodeRoot Root DefaultClassificationNode.
    */
-  void setSimpleClassificationNodeRoot(SimpleClassificationNode simpleClassificationNodeRoot) {
+  void setDefaultClassificationNodeRoot(DefaultClassificationNode defaultClassificationNodeRoot) {
     if (!this.indMutable) {
-      throw new IllegalStateException("SimpleModel must be mutable.");
+      throw new IllegalStateException("DefaultModel must be mutable.");
     }
 
-    if (this.simpleClassificationNodeRoot != null && simpleClassificationNodeRoot != null) {
-      throw new RuntimeException("Replacing the root SimpleClassificationNode is not allowed.");
+    if (this.defaultClassificationNodeRoot != null && defaultClassificationNodeRoot != null) {
+      throw new RuntimeException("Replacing the root DefaultClassificationNode is not allowed.");
     }
 
     // Setting this.simplClassificationNodeRoot to null is allowed since this
-    // can happen when deleting the root SimpleClassificationNode.
-    this.simpleClassificationNodeRoot = simpleClassificationNodeRoot;
+    // can happen when deleting the root DefaultClassificationNode.
+    this.defaultClassificationNodeRoot = defaultClassificationNodeRoot;
   }
 
   @Override
   public MutableClassificationNode createMutableClassificationNodeRoot() {
     if (!this.indMutable) {
-      throw new IllegalStateException("SimpleModel must be mutable.");
+      throw new IllegalStateException("DefaultModel must be mutable.");
     }
 
-    return new SimpleClassificationNode(((MutableConfig)this.config).createMutableClassificationNodeConfigRoot(), this);
+    return new DefaultClassificationNode(((MutableConfig)this.config).createMutableClassificationNodeConfigRoot(), this);
   }
 
   /**
-   * Called by {@link SimpleNode#cleanCaches} for a {@link SimpleNode} being
-   * cleaned so that the SimpleModel can clean any cached reference to the
-   * SimpleNode.
+   * Called by {@link DefaultNode#cleanCaches} for a {@link DefaultNode} being
+   * cleaned so that the DefaultModel can clean any cached reference to the
+   * DefaultNode.
    *
-   * @param simpleNode SimpleModel.
+   * @param defaultNode DefaultModel.
    */
-  void cleanCaches(SimpleNode simpleNode) {
-    if (simpleNode.getNodeType() == NodeType.MODULE) {
-      Iterator<Map.Entry<ArtifactGroupId, SimpleModule>> iteratorArtifactGroupIdModule;
+  void cleanCaches(DefaultNode defaultNode) {
+    if (defaultNode.getNodeType() == NodeType.MODULE) {
+      Iterator<Map.Entry<ArtifactGroupId, DefaultModule>> iteratorArtifactGroupIdModule;
 
       /*
        * We need to remove any entry in this.mapArtifactGroupIdModule which refers to
-       * the SimpleNode.
+       * the DefaultNode.
        */
 
       iteratorArtifactGroupIdModule = this.mapArtifactGroupIdModule.entrySet().iterator();
 
       while (iteratorArtifactGroupIdModule.hasNext()) {
-        Map.Entry<ArtifactGroupId, SimpleModule> mapEntry;
+        Map.Entry<ArtifactGroupId, DefaultModule> mapEntry;
 
         mapEntry = iteratorArtifactGroupIdModule.next();
 
-        // We use identity comparison since only one copy of a given SimpleNode is kept.
-        if (mapEntry.getValue() == simpleNode) {
+        // We use identity comparison since only one copy of a given DefaultNode is kept.
+        if (mapEntry.getValue() == defaultNode) {
           iteratorArtifactGroupIdModule.remove();
         }
       }

@@ -17,25 +17,25 @@
  * along with Dragom.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.azyva.dragom.model.impl.simple;
+package org.azyva.dragom.model.impl;
 
+import org.azyva.dragom.model.ClassificationNode;
+import org.azyva.dragom.model.ClassificationNodeBuilder;
 import org.azyva.dragom.model.ModelNodeBuilderFactory;
-import org.azyva.dragom.model.Module;
-import org.azyva.dragom.model.ModuleBuilder;
 
 /**
  *
  * @author David Raymond
  */
-public class SimpleModuleBuilder extends SimpleNodeBuilder<Module> implements ModuleBuilder {
+public class DefaultClassificationNodeBuilder extends DefaultNodeBuilder<ClassificationNode> implements ClassificationNodeBuilder {
   /**
    * This constructor has package scope to enforce the use of
-   * {@link ModelNodeBuilderFactory#createModuleBuilder} implemented
-   * by {@link SimpleModel} to create new {@link SimpleModule}'s.
+   * {@link ModelNodeBuilderFactory#createClassificationNodeBuilder} implemented
+   * by {@link DefaultModel} to create new {@link DefaultClassificationNode}'s.
    *
-   * @param simpleModel SimpleModel.
+   * @param defaultModel DefaultModel.
    */
-  protected SimpleModuleBuilder(SimpleModel simpleModel) {
-    this.setSimpleNode(new SimpleModule(simpleModel));
+  DefaultClassificationNodeBuilder(DefaultModel defaultModel) {
+    this.setDefaultNode(new DefaultClassificationNode(defaultModel));
   }
 }

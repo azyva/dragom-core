@@ -56,7 +56,7 @@ public class SimpleConfig implements Config, MutableConfig {
     }
 
     // Setting this.simplClassificationNodeRoot to null is allowed since this
-    // can happen when deleting the root SimpleClassificationNode.
+    // can happen when deleting the root DefaultClassificationNode.
     this.simpleClassificationNodeConfigRoot = simpleClassificationNodeConfigRoot;
   }
 

@@ -37,7 +37,7 @@ import java.util.regex.Matcher;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.ModelFactory;
 import org.azyva.dragom.model.config.impl.xml.XmlConfig;
-import org.azyva.dragom.model.impl.simple.SimpleModel;
+import org.azyva.dragom.model.impl.DefaultModel;
 import org.azyva.dragom.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Default {@link ModelFactory} implementation that loads a {@link Model} from
  * configuration stored in an XML resource identified by an arbitrary URL.
- * {@link XmlConfig} is used to read the XML resource and {@link SimpleModel} is
+ * {@link XmlConfig} is used to read the XML resource and {@link DefaultModel} is
  * used as the Model implementation.
  * <p>
  * A static Map of URL to Model instances is used in order to reuse Model
@@ -249,7 +249,7 @@ public class DefaultModelFactory implements ModelFactory {
     }
 
     xmlConfig = XmlConfig.load(urlXmlConfig);
-    model = new SimpleModel(xmlConfig, propertiesInit);
+    model = new DefaultModel(xmlConfig, propertiesInit);
 
     DefaultModelFactory.mapUrlXmlConfigModel.put(urlXmlConfig, model);
 

@@ -30,7 +30,7 @@ import org.azyva.dragom.execcontext.plugin.UserInteractionCallbackPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Node;
-import org.azyva.dragom.model.impl.simple.SimpleNode;
+import org.azyva.dragom.model.impl.DefaultNode;
 import org.azyva.dragom.model.plugin.ModulePlugin;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.NodePluginFactory;
@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * The {@link Model} must be such that for a NodePlugin class and plugin ID this
  * class is used as the implementation class. The process of instantiating the
- * NodePlugin therefore (see {@link SimpleNode#getNodePlugin}) obtains the
+ * NodePlugin therefore (see {@link DefaultNode#getNodePlugin}) obtains the
  * NodePluginFactory using the {@link #getInstance} method since it is defined.
  * <p>
  * Then, {@link #getPlugin} is called with the NodePlugin class specified in the
@@ -252,7 +252,7 @@ public class RuntimeSelectionPluginFactory implements NodePluginFactory {
         // meaning the plugin is not supported (allowing the user to not select any
         // plugin). But this is contradictory to the design requirement that
         // Node.getNodePlugin, which can eventually can this method, must not return null.
-        // And for now we do not want to make SimpleNode.isNodePluginExists more complex.
+        // And for now we do not want to make DefaultNode.isNodePluginExists more complex.
         // So we do not support optional plugins.
 
         return node.getNodePlugin(classNodePlugin, specificPluginId);

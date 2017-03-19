@@ -47,7 +47,7 @@ import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
 import org.azyva.dragom.model.config.PluginDefConfig;
-import org.azyva.dragom.model.impl.simple.SimpleNode;
+import org.azyva.dragom.model.impl.DefaultNode;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.model.plugin.NodePluginFactory;
 import org.azyva.dragom.model.plugin.ScmPlugin;
@@ -1285,7 +1285,7 @@ public final class Util {
    * otherwise simply instantiates the class.
    * <p>
    * This s used by {@link #getDefaultClassNodePlugin} and
-   * {@link #getDefaultPluginId}, as well as {@link SimpleNode#getNodePlugin}.
+   * {@link #getDefaultPluginId}, as well as {@link DefaultNode#getNodePlugin}.
    *
    * @param stringClassNodePlugin NodePlugin implementation class. Must implement
    *   NodePluginFactory.
