@@ -200,6 +200,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   private static final String RUNTIME_PROPERTY_GIT_HTTP_USER = "GIT_HTTP_USER";
 
   /**
+   * Runtime property specifying the configured user name.
+   */
+  private static final String RUNTIME_PROPERTY_GIT_CONFIG_USER_NAME = "GIT_CONFIG_USER_NAME";
+
+  /**
+   * Runtime property specifying the configured user email.
+   */
+  private static final String RUNTIME_PROPERTY_GIT_CONFIG_USER_EMAIL = "GIT_CONFIG_USER_EMAIL";
+
+  /**
    * Runtime property specifying the path to the git executable.
    */
   private static final String RUNTIME_PROPERTY_GIT_PATH_EXECUTABLE = "GIT_PATH_EXECUTABLE";
@@ -240,6 +250,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * merge.
    */
   private static final String RUNTIME_PROPERTY_IND_PULL_REBASE = "GIT_IND_PULL_REBASE";
+
+  /**
+   * Runtime property indicating to show the merge summary when performing a merge
+   * (even if there is no conflict).
+   */
+  private static final String RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY = "IND_PROVIDE_MERGE_SUMMARY";
 
   /**
    * Transient data that is a Set of Path's that have already been fetched and used
@@ -315,17 +331,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_MERGE_SUMMARY = "MERGE_SUMMARY";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS = "WARNING_MERGE_CONFLICTS";
 
   /**
    * See description in ResourceBundle.
    */
-  private static final String MSG_PATTERN_KEY_NO_DIVERGING_COMMITS = "NO_DIVERGING_COMMITS";
-
-  /**
-   * See description in ResourceBundle.
-   */
-  private static final String MSG_PATTERN_KEY_VERSIONS_EQUAL = "VERSIONS_EQUAL";
+  private static final String MSG_PATTERN_KEY_MERGE_PATCH_SUMMARY = "MERGE_PATCH_SUMMARY";
 
   /**
    * ResourceBundle specific to this class.
@@ -515,6 +531,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // Since we updated the remote repository above, we need to update all references
       // in order to obtain the true remote references.
       git.fetch(pathModuleWorkspace, reposUrl, "refs/remotes/origin/*:refs/remotes/origin/*", false, true);
+
+      // If pathRemote is not null it means we cloned from a local repository from which
+      // we have just fetched above. As an optimization, we can safely conclude we have
+      // also fetched from the new one since it is a fresh clone. This will help when
+      // the main user working directory for a module is established after having
+      // existed as a system workspace directory.
+      this.hasFetched(pathModuleWorkspace);
 
       if (version != null) {
         git.checkout(pathModuleWorkspace, version);
@@ -1132,10 +1155,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // known only to this plugin and the users who use the tools developped with
       // Dragom.
       if (indExternal && !indPushAll && aheadBehindInfo.ahead != 0) {
-        // It is not clear if it is OK for this plugin to use
-        // UserInteractionCallbackPlugin as it would seem this plugin should operate at a
-        // low level. But for now this seems to be the only way to properly inform the
-        // user about what to do with the merge conflicts.
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS), pathModuleWorkspace));
       }
     }
@@ -1903,11 +1922,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   public MergeResult merge(Path pathModuleWorkspace, Version versionSrc, String message) {
     Git git;
     Version versionDest;
+    ExecContext execContext;
     WorkspacePlugin workspacePlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     List<ScmPlugin.Commit> listCommit;
     String mergeMessage;
-    StringBuilder stringBuilderConflictMessages;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    StringBuilder stringBuilderMergeSummary;
 
     git = this.getGit();
 
@@ -1924,18 +1945,19 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
     }
 
-    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+    execContext = ExecContextHolder.get();
+
+    workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
 
     if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     listCommit = this.getListCommitDiverge(versionSrc, versionDest, null, null);
 
     if (listCommit.isEmpty()) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
       return MergeResult.NOTHING_TO_MERGE;
     }
 
@@ -1956,11 +1978,17 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       mergeMessage = message + '\n' + mergeMessage;
     }
 
-    stringBuilderConflictMessages = new StringBuilder();
+    stringBuilderMergeSummary = new StringBuilder();
 
-    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderConflictMessages, false) == 1) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderConflictMessages));
+    if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderMergeSummary, false) == 1) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
       return MergeResult.CONFLICTS;
+    }
+
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+
+    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY))) {
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
     }
 
     this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
@@ -1972,6 +2000,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   public MergeResult mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
     Git git;
     Version versionDest;
+    ExecContext execContext;
     WorkspacePlugin workspacePlugin;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     StringBuilder stringBuilderMergeMessage;
@@ -1979,7 +2008,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     String commitIdRangeStart;
     Iterator<Commit> iteratorCommit;
     int patchCount;
-    StringBuilder stringBuilderConflictMessages;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    StringBuilder stringBuilderMergeSummary;
 
     git = this.getGit();
 
@@ -1996,13 +2026,15 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
     }
 
-    workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
+    execContext = ExecContextHolder.get();
+
+    workspacePlugin = execContext.getExecContextPlugin(WorkspacePlugin.class);
 
     if (workspacePlugin.getWorkspaceDirAccessMode(pathModuleWorkspace) != WorkspacePlugin.WorkspaceDirAccessMode.READ_WRITE) {
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     try {
       //*********************************************************************************
@@ -2012,7 +2044,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       listCommit = this.getListCommitDiverge(versionSrc, versionDest, null, null);
 
       if (listCommit.isEmpty()) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_NO_DIVERGING_COMMITS), pathModuleWorkspace, versionSrc, versionDest));
         return MergeResult.NOTHING_TO_MERGE;
       }
 
@@ -2151,6 +2182,8 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // assumes that the merge is complete.
       //*********************************************************************************
 
+      runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+
       for (int patchIndex = 1; patchIndex <= patchCount; patchIndex++) {
         String patchFileName;
         String patchFileNameCurrent;
@@ -2164,16 +2197,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           throw new RuntimeException(ioe);
         }
 
-        stringBuilderConflictMessages = new StringBuilder();
+        stringBuilderMergeSummary = new StringBuilder();
 
-        if (git.executeGitCommand(new String[] {"apply", "--3way", "--whitespace=nowarn", patchFileNameCurrent}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 1) {
-          // It is not clear if it is OK for this plugin to use
-          // UserInteractionCallbackPlugin as it would seem this plugin should operate at a
-          // low level. But for now this seems to be the only way to properly inform the
-          // user about what to do with the merge conflicts.
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderConflictMessages));
+        if (git.executeGitCommand(new String[] {"apply", "--3way", "--whitespace=nowarn", patchFileNameCurrent}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderMergeSummary, false) == 1) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
 
           return MergeResult.CONFLICTS;
+        }
+
+        if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY))) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_PATCH_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, new Integer(patchIndex).toString(), stringBuilderMergeSummary));
         }
 
         try {
@@ -2217,7 +2250,6 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     Git git;
     Version versionDest;
     WorkspacePlugin workspacePlugin;
-    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     String mergeMessage;
 
     git = this.getGit();
@@ -2241,10 +2273,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
-    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
-
     if (git.executeGitCommand(new String[] {"diff", "--quiet", git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, null, false) == 0) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_VERSIONS_EQUAL), pathModuleWorkspace, versionSrc, versionDest));
       return MergeResult.NOTHING_TO_MERGE;
     }
 
@@ -2390,6 +2419,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
         git.setUser(credentials.user);
         git.setPassword(credentials.password);
+
+        git.setConfigUserName(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_GIT_CONFIG_USER_NAME));
+        git.setConfigUserEmail(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_GIT_CONFIG_USER_EMAIL));
       }
     }
 

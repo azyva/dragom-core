@@ -398,7 +398,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
         try {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
           scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
         } catch (RuntimeException re) {
@@ -415,7 +415,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // actual merge.
       //********************************************************************************
 
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
         // The return value not important since the caller is expected to check for
@@ -456,7 +456,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         if (listCommit.isEmpty()) {
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace, stringBuilderListCommits.toString());
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), stringBuilderListCommits.toString());
 
           if (!toolExitStatusAndContinue.indContinue) {
             throw new RuntimeExceptionAbort(message);
@@ -493,7 +493,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
 
           this.listActionsPerformed.add(message);
 
@@ -513,7 +513,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         }
 
         if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
         }
 
         break;
@@ -549,7 +549,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
-          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
+          message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
 
           this.listActionsPerformed.add(message);
 
@@ -569,7 +569,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         }
 
         if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+          this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
         }
 
         break;
@@ -588,14 +588,14 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           }
 
           if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode));
+            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
           }
         } else {
           // ScmPlugin.merge ensures that the working directory is synchronized.
           mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
 
           if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, mergeMainMode, stringBuilderListCommits.toString()));
+            this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode, stringBuilderListCommits.toString()));
           }
         }
 
@@ -603,7 +603,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       }
 
       if (mergeResult == ScmPlugin.MergeResult.NOTHING_TO_MERGE) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
       }
     } finally {
         if (pathModuleWorkspace != null) {

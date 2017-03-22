@@ -127,6 +127,16 @@ public class DefaultGitImpl implements Git {
   private String password;
 
   /**
+   * Configured user name.
+   */
+  private String configUserName;
+
+  /**
+   * Configured user email.
+   */
+  private String configUserEmail;
+
+  /**
    * HTTP credentials to include in the credentials file provided to git through the
    * "store" credential helper.
    * <p>
@@ -157,6 +167,16 @@ public class DefaultGitImpl implements Git {
   @Override
   public void setPassword(String password) {
     this.password = password;
+  }
+
+  @Override
+  public void setConfigUserName(String configUserName) {
+    this.configUserName = configUserName;
+  }
+
+  @Override
+  public void setConfigUserEmail(String configUserEmail) {
+    this.configUserEmail = configUserEmail;
   }
 
   @Override
@@ -224,6 +244,19 @@ public class DefaultGitImpl implements Git {
         // It seems like Git, being a Linux based tool, does not like having \ in paths,
         // at least for the store credential helper file.
         commandLine.addArgument("-c").addArgument(("credential.helper=store --file=" + pathFileCredentials.toString()).replace("\\", "/"), false);
+      }
+
+      if (this.configUserName != null) {
+        commandLine.addArgument("-c").addArgument("user.name=" + this.configUserName);
+      }
+
+      if (this.configUserEmail != null) {
+        if (this.configUserEmail.length() == 0) {
+          // This is the trick to support empty email.
+          commandLine.addArgument("-c").addArgument("user.email=<>");
+        } else {
+          commandLine.addArgument("-c").addArgument("user.email=" + this.configUserEmail);
+        }
       }
 
       for (String arg: arrayArg) {

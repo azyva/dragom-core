@@ -119,6 +119,28 @@ public interface Git {
   void setPassword(String password);
 
   /**
+   * Set the configured user name.
+   *
+   * <p>Used when creating commits.
+   *
+   * <p>If not set, the default behavior or the Git installation is used.
+   *
+   * @param configUserName See description.
+   */
+  void setConfigUserName(String configUserName);
+
+  /**
+   * Set the configured user email.
+   *
+   * <p>Used when creating commits.
+   *
+   * <p>If not set, the default behavior or the Git installation is used.
+   *
+   * @param configUserEmail See description.
+   */
+  void setConfigUserEmail(String configUserEmail);
+
+  /**
    * Helper method to execute a Git command.
    * <p>
    * Mostly used internally, but can be used by callers in order to submit a Git
