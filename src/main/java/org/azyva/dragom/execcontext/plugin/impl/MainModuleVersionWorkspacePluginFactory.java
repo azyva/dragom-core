@@ -69,11 +69,11 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Since the root of the ExecContext workspace directory is occupied by the main
  * ModuleVersion and Dragom needs to have a metadata directory, that main
- * MmoduleVersion will have this metadata directory present at the root of its
+ * ModuleVersion will have this metadata directory present at the root of its
  * workspace directory. It will not have its own totally independent workspace
  * directory.
  * <p>
- * The other ModuleVersions ({@link WorkspaceDirSystemModule}) required during
+ * The other ModuleVersion's ({@link WorkspaceDirSystemModule}) required during
  * Dragom's execution will be within that metadata directory.
  * <p>
  * This is useful in a continuous delivery context where a single ModuleVersion
@@ -89,7 +89,7 @@ import org.slf4j.LoggerFactory;
  * releasing only that single ModuleVersion and expect to find existing static
  * {@link Version}'s for referenced ModuleVersion's.
  * <p>
- * When the workspace has not been initlized yet, the main ModuleVersion must be
+ * When the workspace has not been initialized yet, the main ModuleVersion must be
  * specified using the runtime property MAIN_MODULE_VERSION. Once initialized, the
  * ModuleVersion is persisted within the ExecContext and the MAIN_MODULE_VERSION
  * runtime property need not be specified anymore, but if it is, it must refer to
@@ -685,7 +685,7 @@ public class MainModuleVersionWorkspacePluginFactory implements ExecContextPlugi
   }
 
   /**
-   * @return WorkspaePlugin.
+   * @return WorkspacePlugin.
    */
   @Override
   public WorkspacePlugin getExecContextPlugin(ExecContext execContext) {
@@ -728,6 +728,7 @@ public class MainModuleVersionWorkspacePluginFactory implements ExecContextPlugi
       }
 
       workspaceExecContext.setWorkspaceFormatVersion(new WorkspaceExecContext.WorkspaceFormatVersion(MainModuleVersionWorkspacePluginFactory.WORKSPACE_FORMAT, MainModuleVersionWorkspacePluginFactory.WORKSPACE_VERSION));
+      execContext.setProperty(MainModuleVersionWorkspacePluginFactory.EXEC_CONTEXT_PROPERTY_MAIN_MODULE_VERSION, stringMainModuleVersion);
       indWorkspaceInit = false;
     } else {
       if (!workspaceFormatVersion.format.equals(MainModuleVersionWorkspacePluginFactory.WORKSPACE_FORMAT) || !workspaceFormatVersion.version.equals(MainModuleVersionWorkspacePluginFactory.WORKSPACE_VERSION)) {

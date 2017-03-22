@@ -115,9 +115,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * This property is intended to be specified on an intermediate ClassificationNode
    * under which all Module Git repositories share the same base URL.
    *
-   * A "/" appended after following it, unless it is defined but empty.
+   * A "/" is appended after it, unless it is defined but empty.
    *
-   * If this property and GIT_REPOS_DOMAIN_PREFIX are is not defined for the module,
+   * If this property and GIT_REPOS_DOMAIN_PREFIX are not defined for the module,
    * the NodePath of the parent Node of the Module is used (which includes a
    * trailing "/").
    */
