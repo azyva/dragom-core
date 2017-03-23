@@ -68,7 +68,7 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
   /**
    * Runtime property that specifies to use the default Version as the base Version.
    */
-  private static final String RUNTIME_PROPERTY_IND_USE_DEFAULT_VERSION_AS_BASE = "IND_USE_DEFAULT_VERSION_AS_BASE";
+  private static final String RUNTIME_PROPERTY_USE_DEFAULT_VERSION_AS_BASE = "USE_DEFAULT_VERSION_AS_BASE";
 
   /**
    * See description in ResourceBundle.
@@ -282,7 +282,7 @@ public abstract class SelectDynamicVersionPluginBaseImpl extends ModulePluginAbs
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_BASE_VERSION_SPECIFIED), this.getModule(), versionDynamicSelected, versionBase));
 
       return versionBase;
-    } else if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_IND_USE_DEFAULT_VERSION_AS_BASE))) {
+    } else if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), SelectDynamicVersionPluginBaseImpl.RUNTIME_PROPERTY_USE_DEFAULT_VERSION_AS_BASE))) {
       versionBase = scmPlugin.getDefaultVersion();
 
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SelectDynamicVersionPluginBaseImpl.resourceBundle.getString(SelectDynamicVersionPluginBaseImpl.MSG_PATTERN_KEY_USING_DEFAULT_VERSION_AS_BASE), this.getModule(), versionDynamicSelected, versionBase));

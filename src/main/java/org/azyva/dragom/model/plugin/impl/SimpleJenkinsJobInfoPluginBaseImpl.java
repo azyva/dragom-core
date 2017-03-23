@@ -66,7 +66,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
    * <p>
    * Accessed on the {@link Module} for which a job is to be created.
    */
-  private static final String RUNTIME_PROPERTY_USE_CLASSIFICATION_NODE_PATH_SUBFOLDER = "JENKINS_USE_CLASSIFICATION_NODE_PATH";
+  private static final String RUNTIME_PROPERTY_USE_NODE_PATH_SUBFOLDER = "JENKINS_USE_NODE_PATH";
 
   /**
    * Runtime property specifying the subfolder where the job for the Module is
@@ -132,7 +132,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
    * <p>
    * Accessed on the {@link Module} for which a job is to be created.
    */
-  private static final String RUNTIME_PROPERTY_IND_INCLUDE_VERSION = "JENKINS_IND_INCLUDE_VERSION";
+  private static final String RUNTIME_PROPERTY_INCLUDE_VERSION = "JENKINS_INCLUDE_VERSION";
 
   /**
    * See description in ResourceBundle.
@@ -186,7 +186,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
 
     jobRootFolder = runtimePropertiesPlugin.getProperty(null,  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_JOBS_ROOT_FOLDER);
 
-    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(),  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_USE_CLASSIFICATION_NODE_PATH_SUBFOLDER))) {
+    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(),  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_USE_NODE_PATH_SUBFOLDER))) {
       // Will contain the trailing "/".
       subfolder = this.getModule().getNodePath().getNodePathParent().toString();
     } else {
@@ -222,9 +222,9 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SimpleJenkinsJobInfoPluginBaseImpl.resourceBundle.getString(SimpleJenkinsJobInfoPluginBaseImpl.MSG_PATTERN_KEY_SUBFOLDER_AUTOMATICALLY_REUSED), moduleVersion, subfolder));
         } else {
           if (subfolder == null) {
-            subfolder = userInteractionCallbackPlugin.getInfo(MessageFormat.format(SimpleJenkinsJobInfoPluginBaseImpl.resourceBundle.getString(SimpleJenkinsJobInfoPluginBaseImpl.MSG_PATTERN_KEY_INPUT_SUBFOLDER), moduleVersion));
+            subfolder = userInteractionCallbackPlugin.getInfo(MessageFormat.format(SimpleJenkinsJobInfoPluginBaseImpl.resourceBundle.getString(SimpleJenkinsJobInfoPluginBaseImpl.MSG_PATTERN_KEY_INPUT_SUBFOLDER), jobRootFolder, moduleVersion));
           } else {
-            subfolder = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(SimpleJenkinsJobInfoPluginBaseImpl.resourceBundle.getString(SimpleJenkinsJobInfoPluginBaseImpl.MSG_PATTERN_KEY_INPUT_SUBFOLDER_WITH_DEFAULT), moduleVersion, subfolder), subfolder);
+            subfolder = userInteractionCallbackPlugin.getInfoWithDefault(MessageFormat.format(SimpleJenkinsJobInfoPluginBaseImpl.resourceBundle.getString(SimpleJenkinsJobInfoPluginBaseImpl.MSG_PATTERN_KEY_INPUT_SUBFOLDER_WITH_DEFAULT), jobRootFolder, moduleVersion, subfolder), subfolder);
           }
 
           runtimePropertiesPlugin.setProperty(null, SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_REUSE_SUBFOLDER, subfolder);
@@ -245,7 +245,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
     }
 
     project = runtimePropertiesPlugin.getProperty(this.getModule(),  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_PROJECT);
-    indIncludeVersion = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(),  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_IND_INCLUDE_VERSION));
+    indIncludeVersion = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(),  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_INCLUDE_VERSION));
 
     stringBuilder = new StringBuilder();
 
@@ -259,11 +259,6 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
 
     // moduleSubfolder always ends with "/".
     stringBuilder.append(subfolder);
-
-    // In all cases, we have a subfolder separation here.
-    if (stringBuilder.length() != 0) {
-      stringBuilder.append('/');
-    }
 
     if (project != null) {
       stringBuilder.append(project);

@@ -155,7 +155,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * Runtime property that indicates that the lifecycle phase clean should be
    * included before any other target when performing a build.
    */
-  private static final String RUNTIME_PROPERTY_IND_CLEAN_BEFORE_BUILD = "MAVEN_IND_CLEAN_BEFORE_BUILD";
+  private static final String RUNTIME_PROPERTY_CLEAN_BEFORE_BUILD = "MAVEN_CLEAN_BEFORE_BUILD";
 
   /**
    * Runtime property specifying the Maven properties to include on the command
@@ -220,7 +220,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * Can also be overridden in the dragom.properties source file of a {@link Module}.
    */
-  private static final String RUNTIME_PROPERTY_IND_UPDATE_SNAPSHOTS = "MAVEN_IND_UPDATE_SNAPSHOTS";
+  private static final String RUNTIME_PROPERTY_UPDATE_SNAPSHOTS = "MAVEN_UPDATE_SNAPSHOTS";
 
   /**
    * Runtime property that indicates to include the --fail-fast (-ff) option on the
@@ -228,7 +228,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * Can also be overridden in the dragom.properties source file of a {@link Module}.
    */
-  private static final String RUNTIME_PROPERTY_IND_FAIL_FAST = "MAVEN_IND_FAIL_FAST";
+  private static final String RUNTIME_PROPERTY_FAIL_FAST = "MAVEN_FAIL_FAST";
 
   /**
    * Runtime property to specify a POM file on the command line with the --file (-f)
@@ -252,7 +252,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * Can also be overridden in the dragom.properties source file of a {@link Module}.
    */
-  private static final String RUNTIME_PROPERTY_IND_SHOW_VERSION = "MAVEN_IND_SHOW_VERSION";
+  private static final String RUNTIME_PROPERTY_SHOW_VERSION = "MAVEN_SHOW_VERSION";
 
   /**
    * Runtime property to specify extra Maven options on the command line.  No
@@ -273,7 +273,7 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
    * <p>
    * Can also be overridden in the dragom.properties source file of a {@link Module}.
    */
-  private static final String RUNTIME_PROPERTY_IND_WRITE_LOG_TO_FILE = "MAVEN_IND_WRITE_LOG_TO_FILE";
+  private static final String RUNTIME_PROPERTY_WRITE_LOG_TO_FILE = "MAVEN_WRITE_LOG_TO_FILE";
 
   /**
    * File to write the log of the build process to when the
@@ -507,17 +507,17 @@ public class MavenBuilderPluginImpl extends ModulePluginAbstractImpl implements 
       targets = null;
     }
 
-    indCleanBeforeBuild = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_CLEAN_BEFORE_BUILD));
+    indCleanBeforeBuild = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_CLEAN_BEFORE_BUILD));
     properties = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_PROPERTIES);
     profiles = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_PROFILES);
-    indUpdateSnapshots = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_UPDATE_SNAPSHOTS));
-    indFailFast = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_FAIL_FAST));
+    indUpdateSnapshots = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_UPDATE_SNAPSHOTS));
+    indFailFast = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_FAIL_FAST));
     pomFile = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_POM_FILE);;
     indOffline = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_OFFLINE));
-    indShowVersion = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_SHOW_VERSION));
+    indShowVersion = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_SHOW_VERSION));
     extraOptions = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_EXTRA_OPTIONS);
 
-    indWriteLogToFile = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_IND_WRITE_LOG_TO_FILE));
+    indWriteLogToFile = Boolean.parseBoolean(this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_WRITE_LOG_TO_FILE));
     logFilePath = this.getRuntimeOrModuleProperty(propertiesModule, MavenBuilderPluginImpl.RUNTIME_PROPERTY_LOG_FILE_PATH);
 
     if (indWriteLogToFile && (logFilePath == null)) {

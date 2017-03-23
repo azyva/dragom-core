@@ -249,13 +249,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    * Runtime property indicating to perform a pull with a rebase mode instead of a
    * merge.
    */
-  private static final String RUNTIME_PROPERTY_IND_PULL_REBASE = "GIT_IND_PULL_REBASE";
+  private static final String RUNTIME_PROPERTY_USE_PULL_REBASE = "GIT_USE_PULL_REBASE";
 
   /**
    * Runtime property indicating to show the merge summary when performing a merge
    * (even if there is no conflict).
    */
-  private static final String RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY = "IND_PROVIDE_MERGE_SUMMARY";
+  private static final String RUNTIME_PROPERTY_PROVIDE_MERGE_SUMMARY = "PROVIDE_MERGE_SUMMARY";
 
   /**
    * Transient data that is a Set of Path's that have already been fetched and used
@@ -676,7 +676,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     this.fetch(pathModuleWorkspace);
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-    indPullRebase = Boolean.valueOf(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_IND_PULL_REBASE));
+    indPullRebase = Boolean.valueOf(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_USE_PULL_REBASE));
 
     if (indPullRebase) {
       return git.rebaseSimple(pathModuleWorkspace);
@@ -1987,7 +1987,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY))) {
+    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_PROVIDE_MERGE_SUMMARY))) {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
     }
 
@@ -2205,7 +2205,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
           return MergeResult.CONFLICTS;
         }
 
-        if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_IND_PROVIDE_MERGE_SUMMARY))) {
+        if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_PROVIDE_MERGE_SUMMARY))) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_PATCH_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, new Integer(patchIndex).toString(), stringBuilderMergeSummary));
         }
 

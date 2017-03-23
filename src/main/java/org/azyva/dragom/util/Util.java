@@ -86,7 +86,7 @@ public final class Util {
    * execution, but this would not be useful as it would indicate to abort the tool
    * immediately. If is expected to be set only within the code.
    */
-  public static final String RUNTIME_PROPERTY_IND_ABORT = "IND_ABORT";
+  public static final String RUNTIME_PROPERTY_ABORT = "ABORT";
 
   /**
    * Context for {@link Util#handleDoYouWantToContinue} that represents updating a
@@ -164,7 +164,7 @@ public final class Util {
   /**
    * Suffix for the continuation indicator associated with an exceptional condition.
    */
-  public static final String SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE = ".IND_CONTINUE";
+  public static final String SUFFIX_EXCEPTIONAL_COND_CONTINUE = ".CONTINUE";
 
   /**
    * See description in ResourceBundle.
@@ -1552,7 +1552,7 @@ public final class Util {
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-    return (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_ABORT)));
+    return (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_ABORT)));
   }
 
   /**
@@ -1563,7 +1563,7 @@ public final class Util {
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-    runtimePropertiesPlugin.setProperty(null, Util.RUNTIME_PROPERTY_IND_ABORT, "true");
+    runtimePropertiesPlugin.setProperty(null, Util.RUNTIME_PROPERTY_ABORT, "true");
   }
 
   /**
@@ -1784,7 +1784,7 @@ public final class Util {
       stringBuilder.append("Current ToolExitStatus not updated since equal or more severe. ");
     }
 
-    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_IND_CONTINUE);
+    runtimeProperty = runtimePropertiesPlugin.getProperty(node, Util.PREFIX_EXCEPTIONAL_COND + exceptionalCond + Util.SUFFIX_EXCEPTIONAL_COND_CONTINUE);
 
     if (runtimeProperty == null) {
       toolExitStatusAndContinue.indContinue = (toolExitStatusAndContinue.toolExitStatus != ToolExitStatus.ERROR);

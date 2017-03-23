@@ -89,7 +89,7 @@ public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements 
    * {@link Module} when multiple Version's are matched to checkout. The possible
    * values are true and false (or absent).
    */
-  private static final String RUNTIME_PROPERTY_IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS = "IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS";
+  private static final String RUNTIME_PROPERTY_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS = "DO_NOT_CHECKOUT_MULTIPLE_VERSIONS";
   /**
    * See description in ResourceBundle.
    */
@@ -245,7 +245,7 @@ public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements 
         listVersion.add(moduleVersion.getVersion());
       }
 
-      indDoNotCheckoutMultipleVersions = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, Checkout.RUNTIME_PROPERTY_IND_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS));
+      indDoNotCheckoutMultipleVersions = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, Checkout.RUNTIME_PROPERTY_DO_NOT_CHECKOUT_MULTIPLE_VERSIONS));
 
       // We reuse listModuleVersion for the new List of selected ModuleVersion's that
       // will be built.

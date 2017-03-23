@@ -348,7 +348,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
       if (indRelease) {
         // This should not happen since this method is not supposed to be called on static
         // version with indRelease.
-        throw new RuntimeException("ModuleVersion " + reference.getModuleVersion() + " within ReferencePath " + this.referencePath + " is not dynamic.");
+        throw new RuntimeException("ModuleVersion " + reference.getModuleVersion() + " within ReferencePath\n" + this.referencePath + "\nis not dynamic.");
       }
 
       // We are only interested in dynamic Version's.
@@ -370,7 +370,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      Release.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+      Release.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
 
@@ -470,7 +470,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
             continue;
           }
 
-          Release.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
+          Release.logger.info("Processing reference " + referenceChild + " within ReferencePath\n" + this.referencePath + '.');
 
           byReferenceVersionChild = new ByReference<Version>();
 

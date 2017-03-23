@@ -43,6 +43,7 @@ import org.azyva.dragom.model.plugin.ModuleVersionMatcherPlugin;
 import org.azyva.dragom.model.plugin.ReferenceManagerPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.Reference;
+import org.azyva.dragom.reference.ReferencePath;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverYesNoAskUserResponse;
 import org.azyva.dragom.util.RuntimeExceptionAbort;
@@ -114,6 +115,11 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
    * See description in ResourceBundle.
    */
   protected static final String MSG_PATTERN_KEY_VERSION_DOES_NOT_EXIST = "VERSION_DOES_NOT_EXIST";
+
+  /**
+   * See description in ResourceBundle.
+   */
+  protected static final String MSG_PATTERN_KEY_ROOT_MODULE_VERSION_SKIPPED = "ROOT_MODULE_VERSION_SKIPPED";
 
   /**
    * See description in ResourceBundle.
@@ -240,7 +246,8 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
   /*
    * NOTE: It is not believed this method is really useful. It wastes processing
    * time since when root ModuleVersion's were added to the list of root they can be
-   * be assumed to have been validated then.
+   * be assumed to have been validated then. If we remove completely do not forget to
+   * remove the messages it uses.
    *
    * Called by {@link #performJob} to validate the root ModuleVersion's.
    * <p>
@@ -340,6 +347,11 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
 
       moduleVersion = this.listModuleVersionRoot.get(indexModuleVersionRoot);
 
+      if (!this.checkVisitRootModuleVersion(moduleVersion)) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_ROOT_MODULE_VERSION_SKIPPED), moduleVersion));
+        continue;
+      }
+
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION), moduleVersion));
 
       try {
@@ -391,6 +403,65 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     }
 
     userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_JOB_COMPLETED), this.getClass().getSimpleName()));
+  }
+
+  /**
+   * Performs a quick check for the need to visit a root {@link ModuleVersion}.
+   *
+   * <p>This is an optimization for the cases where the
+   * {@link ReferencePathMatcher}'s do not match a given root ModuleVersion nor any
+   * of its children, which can then be skipped without having to peform the heavier
+   * operations such as checking out the ModuleVersionl.
+   *
+   * @param rootModuleVersion Root ModuleVersion.
+   * @return Indicates if the root ModuleVersion should be skipped.
+   */
+  protected boolean checkVisitRootModuleVersion(ModuleVersion rootModuleVersion) {
+    ReferencePath referencePath;
+
+    referencePath = new ReferencePath();
+    referencePath.add(new Reference(rootModuleVersion));
+
+    // The verification for handling or not static Version can be done here since if
+    // static Version's are not to be handled and this is a static Version, there is
+    // no need to traverse the graph since by definition all directly and indirectly
+    // referenced ModuleVersion's are also static.
+    if ((rootModuleVersion.getVersion().getVersionType() == VersionType.STATIC) && !this.indHandleStaticVersion) {
+      RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " is static and is not to be handled.");
+      return false;
+    }
+
+    if (!this.indDepthFirst) {
+      if ((rootModuleVersion.getVersion().getVersionType() == VersionType.STATIC) || this.indHandleDynamicVersion) {
+        if (this.getReferencePathMatcher().matches(referencePath)) {
+          if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
+            RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath " + referencePath + " matched by ReferencePathMather.");
+            return false;
+          } else {
+            return true;
+          }
+        }
+      }
+    }
+
+    if (this.getReferencePathMatcher().canMatchChildren(referencePath)) {
+      return true;
+    }
+
+    if (this.indDepthFirst) {
+      if ((rootModuleVersion.getVersion().getVersionType() == VersionType.STATIC) || this.indHandleDynamicVersion) {
+        if (this.getReferencePathMatcher().matches(referencePath)) {
+          if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
+            RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath " + referencePath + " matched by ReferencePathMather.");
+            return false;
+          } else {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -456,7 +527,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+      RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
 
@@ -481,12 +552,16 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         return false;
       }
 
+
       // We need to have access to the sources of the Module at different places below:
       // - For verifying for unsynchronized local or remote changes
       // - To obtain the list of references and iterate over them
-      // There are a few combinations of cases where accessing the sources is not
-      // required at all, but they are few and we prefer simplicity here and to always
-      // obtain the path to the workspace directory.
+      // It is tempting to attempt to perform a checkout only once for all these cases.
+      // But the workspace read/write access validations performed by Dragom makes this
+      // hard. Workspace access reservation should be effective for the shortest period
+      // of time. The impact of performing a system checkout should be considered low if
+      // the workspace directory is already available.
+
       // If the user already has the correct version of the module checked out, we need
       // to use it. If not, we need an internal working directory.
       // ScmPlugin.checkoutSystem does just that.
@@ -548,6 +623,9 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         }
       }
 
+      workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
+      pathModuleWorkspace = null;
+
       moduleVersionMatcherPlugin = module.getNodePlugin(ModuleVersionMatcherPlugin.class, null);
 
       if (moduleVersionMatcherPlugin != null) {
@@ -564,7 +642,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
+              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + this.referencePath + "\nmatched by ReferencePathMather.");
               return false;
             }
 
@@ -590,11 +668,6 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
               // the finally block from resetting it.
               this.referencePath.removeLeafReference();;
               indReferencePathAlreadyReverted = true;
-
-              // We need to release before visiting the matched ModuleVersion since the
-              // workspace directory may need to be accessed again.
-              workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-              pathModuleWorkspace = null;
 
               indVisitChildren = this.visitMatchedModuleVersion(reference);
 
@@ -642,7 +715,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
             continue;
           }
 
-          RootModuleVersionJobAbstractImpl.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
+          RootModuleVersionJobAbstractImpl.logger.info("Processing reference " + referenceChild + " within ReferencePath\n" + this.referencePath + '.');
 
           try {
             // Generally the byReferenceVersion parameter must not be null. But here we are
@@ -678,7 +751,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath " + this.referencePath + " matched by ReferencePathMather.");
+              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + this.referencePath + "\nmatched by ReferencePathMather.");
               return false;
             } else {
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
@@ -702,13 +775,6 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
               // the finally block from resetting it.
               this.referencePath.removeLeafReference();;
               indReferencePathAlreadyReverted = true;
-
-              // We need to release before iterating through the references since the workspace
-              // directory may need to be accessed again.
-              if (pathModuleWorkspace != null) {
-                workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-                pathModuleWorkspace = null;
-              }
 
               // Return value is useless when the traversal is depth first.
               this.visitMatchedModuleVersion(reference);

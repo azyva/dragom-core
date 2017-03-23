@@ -102,7 +102,7 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
    * different for each Module. But in general it will be defined for the root
    * NodePath only.
    */
-  public static final String RUNTIME_PROPERTY_IND_BUILD_REFERENCE_PATH = "IND_BUILD_REFERENCE_PATH";
+  public static final String RUNTIME_PROPERTY_BUILD_REFERENCE_PATH = "BUILD_REFERENCE_PATH";
 
   /**
    * Runtime property that specifies the delay between build monitoring cycles, in
@@ -139,7 +139,7 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
    * different for each Module. But in general it will be defined for the root
    * NodePath only.
    */
-  public static final String RUNTIME_PROPERTY_IND_INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES = "INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES";
+  public static final String RUNTIME_PROPERTY_INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES = "INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES";
 
   /**
    * Runtime property that specifies if the {@link Version} of the
@@ -152,7 +152,7 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
    * different for each Module. But in general it will be defined for the root
    * NodePath only.
    */
-  public static final String RUNTIME_PROPERTY_IND_INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES = "INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES";
+  public static final String RUNTIME_PROPERTY_INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES = "INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES";
 
   /**
    * Suffix for build log file names.
@@ -354,7 +354,7 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
                 return ReferenceGraph.VisitControl.CONTINUE;
               }
 
-              indBuildReferencePath = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_IND_BUILD_REFERENCE_PATH));
+              indBuildReferencePath = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_BUILD_REFERENCE_PATH));
 
               if (enumSetVisitAction.contains(ReferenceGraph.VisitAction.MATCHED) || indBuildReferencePath) {
                 boolean indReferenceBuildNotCompletedAndSuccess;
@@ -488,8 +488,8 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
               pathBuildLogDir = Paths.get(runtimeProperty);
             }
 
-            indIncludeNodePathInBuildLogFileNames = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_IND_INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES));
-            indIncludeVersionInBuildLogFileNames = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_IND_INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES));
+            indIncludeNodePathInBuildLogFileNames = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_INCLUDE_NODE_PATH_IN_BUILD_LOG_FILE_NAMES));
+            indIncludeVersionInBuildLogFileNames = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, BuildRemote.RUNTIME_PROPERTY_INCLUDE_VERSION_IN_BUILD_LOG_FILE_NAMES));
 
             if (indIncludeNodePathInBuildLogFileNames) {
               buildLogFileName = moduleVersion.getNodePath().getPropertyNameSegment();

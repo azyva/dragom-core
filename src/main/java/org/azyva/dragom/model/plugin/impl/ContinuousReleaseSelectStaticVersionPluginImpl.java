@@ -121,7 +121,7 @@ public class ContinuousReleaseSelectStaticVersionPluginImpl extends SelectStatic
    * It is not specified for the main ModuleVersion being released since its
    * references generally need to be updated to their newer Version's.
    */
-  private static final String RUNTIME_PROPERTY_IND_FORCE_REUSE_EXISTING_STATIC_VERSION = "FORCE_REUSE_STATIC_VERSION";
+  private static final String RUNTIME_PROPERTY_FORCE_REUSE_EXISTING_STATIC_VERSION = "FORCE_REUSE_STATIC_VERSION";
 
   /**
    * Default initial value of the revision part of a new Version.
@@ -210,7 +210,7 @@ public class ContinuousReleaseSelectStaticVersionPluginImpl extends SelectStatic
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
 
-    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), ContinuousReleaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_IND_FORCE_REUSE_EXISTING_STATIC_VERSION))) {
+    if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(this.getModule(), ContinuousReleaseSelectStaticVersionPluginImpl.RUNTIME_PROPERTY_FORCE_REUSE_EXISTING_STATIC_VERSION))) {
       // versionLatestStatic can be null and this is OK (will stop processing).
       // While we are returning the latest existing static Version, it is possible that
       // the dynamic Version contains commits which are not included in that Version,

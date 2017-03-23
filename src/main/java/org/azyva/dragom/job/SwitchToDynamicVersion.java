@@ -253,7 +253,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
    */
   @Override
   protected boolean visitModuleVersion(Reference reference, ByReference<Version> byReferenceVersion) {
-    return this.visitModuleForSwitchToDynamicVersion(reference, byReferenceVersion) == VisitModuleActionPerformed.SWITCH;
+    return this.visitModuleForSwitchToDynamicVersion(reference, byReferenceVersion, false) == VisitModuleActionPerformed.SWITCH;
   }
 
   /**
@@ -293,7 +293,16 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
      * the ModuleVersion being visited was switched. The caller must update the parent
      * ModuleVersion accordingly while processing it.
      */
-    SWITCH
+    SWITCH,
+
+    /**
+     * This does not represent an action performed, but rather a request for unwinding
+     * the call stack corresponding to the current ReferencePath since it was detected
+     * that there is a match and that some parent has already been switched, so that
+     * there is no point in processing all the ModuleVersions in the ReferencePath
+     * other than this parent.
+     */
+    UNWIND_SWITCH_PARENT
   }
 
   /**
@@ -337,9 +346,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
    * @param byReferenceVersionParent Upon return will contain the new version of the
    *   module if true is returned. Can be null if the caller is not interested in
    *   that information.
+   * @param indAllowUnwinding Indicates that unwinding is allowed.
    * @return VisitModuleActionPerformed.
    */
-  private VisitModuleActionPerformed visitModuleForSwitchToDynamicVersion(Reference referenceParent, ByReference<Version> byReferenceVersionParent) {
+  private VisitModuleActionPerformed visitModuleForSwitchToDynamicVersion(Reference referenceParent, ByReference<Version> byReferenceVersionParent, boolean indAllowUnwinding) {
     Map<Reference, VisitModuleActionPerformed> mapReferenceVisitModuleActionPerformed;
     UserInteractionCallbackPlugin.IndentHandle indentHandle;
     Module module;
@@ -370,7 +380,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion " + referenceParent.getModuleVersion() + " of ReferencePath " + this.referencePath + '.');
+      SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion " + referenceParent.getModuleVersion() + " of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
 
@@ -446,10 +456,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
             continue;
           }
 
-          SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
+          SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath\n" + this.referencePath + '.');
 
           try {
-            visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null);
+            visitModuleActionPerformedReference = this.visitModuleForSwitchToDynamicVersion(referenceChild, null, true);
           } catch (RuntimeExceptionAbort rea) {
             throw rea;
           } catch (RuntimeException re) {
@@ -470,6 +480,20 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           if (Util.isAbort()) {
             // We return NONE by default, but it does not really matter when aborting.
             return VisitModuleActionPerformed.NONE;
+          }
+
+          if (visitModuleActionPerformedReference == VisitModuleActionPerformed.UNWIND_SWITCH_PARENT) {
+            for (int i = 0; i < this.referencePath.size(); i++) {
+              Reference reference;
+
+              reference = this.referencePath.get(i);
+
+              if (this.mapNodePathVersionDynamic.get(reference.getModuleVersion().getNodePath()) != null) {
+                return VisitModuleActionPerformed.UNWIND_SWITCH_PARENT;
+              }
+            }
+
+            visitModuleActionPerformedReference = VisitModuleActionPerformed.SWITCH;
           }
 
           mapReferenceVisitModuleActionPerformed.put(referenceChild, visitModuleActionPerformedReference);
@@ -656,6 +680,19 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
          * *******************************************************************************/
 
         if (this.getReferencePathMatcher().matches(this.referencePath)) {
+
+          if (indAllowUnwinding) {
+            for (int i = 0; i < this.referencePath.size() - 1; i++) {
+              Reference reference;
+
+              reference = this.referencePath.get(i);
+
+              if (this.mapNodePathVersionDynamic.get(reference.getModuleVersion().getNodePath()) != null) {
+                return VisitModuleActionPerformed.UNWIND_SWITCH_PARENT;
+              }
+            }
+          }
+
           // The current ReferencePath is matched by the ReferencePathMatcherAnd. The
           // current ModuleVersion must be processed.
 
@@ -791,9 +828,9 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
               }
             }
           } else if (indCanMatchChildren) {
-            SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath " + this.referencePath + '.');
+            SwitchToDynamicVersion.logger.info("Processing reference " + referenceChild + " within ReferencePath\n" + this.referencePath + '.');
 
-            if (this.visitModuleForSwitchToDynamicVersion(referenceChild, byReferenceVersionChild) == VisitModuleActionPerformed.SWITCH) {
+            if (this.visitModuleForSwitchToDynamicVersion(referenceChild, byReferenceVersionChild, false) == VisitModuleActionPerformed.SWITCH) {
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_PARENT_WILL_BE_UPDATED_BECAUSE_REFERENCE_CHANGED), this.referencePath, referenceChild, byReferenceVersionChild.object));
 
               if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {

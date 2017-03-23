@@ -40,7 +40,7 @@ import org.azyva.dragom.reference.support.SimpleReferenceGraph;
  *
  * @author David Raymond
  */
-public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion, ConfigReentryAvoider {
+public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implements ConfigHandleStaticVersion {
   /**
    * ReferenceGraph that will be built.
    */
@@ -49,11 +49,6 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implem
   @Override
   public void setIndHandleStaticVersion(boolean indHandleStaticVersion) {
     this.indHandleStaticVersion = indHandleStaticVersion;
-  }
-
-  @Override
-  public void setIndAvoidReentry(boolean indAvoidReentry) {
-    this.indAvoidReentry = indAvoidReentry;
   }
 
   /**
@@ -66,6 +61,9 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implem
    */
   public BuildReferenceGraph(ReferenceGraph referenceGraph, List<ModuleVersion> listModuleVersionRoot) {
     super(listModuleVersionRoot);
+
+    // By default this is true and must be false for this class.
+    this.setIndAvoidReentry(false);
 
     if (referenceGraph == null) {
       this.referenceGraph = new SimpleReferenceGraph();
@@ -94,7 +92,7 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implem
    * all taken care of by {@link ReferenceGraph#addMatchedReferencePath}.
    *
    * @param reference Reference to the matched ModuleVersion.
-   * @return Indicates if children must be visited. true is returned.
+   * @return Indicates if children must be visited.
    */
   @Override
   protected boolean visitMatchedModuleVersion(Reference reference) {
@@ -106,7 +104,10 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implem
       this.referencePath.removeLeafReference();
     }
 
-    return true;
+    // We cannot reuse the reentry avoidance mechanism offered by the base class since
+    // we need to visit all instances of ModuleVersion's which occur at different
+    // places in the reference graph. However, once we encounter a given ModuleVersion
+    // for the second time, we do not need to visit its children.
+    return this.moduleReentryAvoider.processModule(reference.getModuleVersion());
   }
-
 }

@@ -38,7 +38,7 @@ public class ModuleReentryAvoider {
   }
 
   /**
-   * Indicates the intent of processing a module.
+   * Indicates the intent of processing a ModuleVersion.
    *
    * @param moduleVersion ModuleVersion.
    * @return Indicates if the module can be processed, meaning that it has not
@@ -46,5 +46,16 @@ public class ModuleReentryAvoider {
    */
   public boolean processModule(ModuleVersion moduleVersion) {
     return this.setModuleVersion.add(moduleVersion);
+  }
+
+  /**
+   * Indicates if a ModuleVersion has already been processed without
+   * registering the fact that it will be processed.
+   *
+   * @param moduleVersion ModuleVersion.
+   * @return See description.s
+   */
+  public boolean isModuleProcessed(ModuleVersion moduleVersion) {
+    return this.setModuleVersion.contains(moduleVersion);
   }
 }

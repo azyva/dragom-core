@@ -670,6 +670,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
     buildReferenceGraph = new BuildReferenceGraph(null, this.listModuleVersionRoot);
     buildReferenceGraph.setReferencePathMatcherProvided(this.getReferencePathMatcher());
+    buildReferenceGraph.setIndHandleStaticVersion(false);
     buildReferenceGraph.performJob();
     referenceGraph = buildReferenceGraph.getReferenceGraph();
 
