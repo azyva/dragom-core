@@ -361,15 +361,13 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
       } catch (RuntimeException re) {
         Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
-        RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + moduleVersion + '.', re);
-
         toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING);
 
         if (toolExitStatusAndContinue.indContinue) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
           continue;
         } else {
-          throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion));
+          throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
         }
       }
 
@@ -727,15 +725,13 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           } catch (RuntimeException re) {
             Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
-            RootModuleVersionJobAbstractImpl.logger.error("Exception thrown while visiting " + referenceChild + '.', re);
-
             toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING);
 
             if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion));
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
               continue;
             } else {
-              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion));
+              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
             }
           }
 
@@ -753,22 +749,22 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
             if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
               RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + this.referencePath + "\nmatched by ReferencePathMather.");
               return false;
-            } else {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+            }
 
-              if (moduleVersionMatcherPlugin != null) {
-                byReferenceMessage.object = null;
+            if (moduleVersionMatcherPlugin != null) {
+              byReferenceMessage.object = null;
 
-                enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
+              enumSetMatchFlag = moduleVersionMatcherPlugin.matches(this.referencePath, moduleVersion, byReferenceMessage);
 
-                if (byReferenceMessage.object != null) {
-                  userInteractionCallbackPlugin.provideInfo(byReferenceMessage.object);
-                  this.listMatchMessages.add(byReferenceMessage.object);
-                }
+              if (byReferenceMessage.object != null) {
+                userInteractionCallbackPlugin.provideInfo(byReferenceMessage.object);
+                this.listMatchMessages.add(byReferenceMessage.object);
               }
             }
 
             if ((enumSetMatchFlag == null) || enumSetMatchFlag.contains(ModuleVersionMatcherPlugin.MatchFlag.MATCH)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, moduleVersion));
+
               // We are about to delegate to visitMatchedModuleVersion for the rest of the
               // processing. This method starts working on the same current module and also
               // manages the ReferencePath. We must therefore reset it now. And we must prevent

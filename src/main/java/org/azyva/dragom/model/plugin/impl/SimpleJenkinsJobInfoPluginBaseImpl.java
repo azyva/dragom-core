@@ -135,6 +135,12 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
   private static final String RUNTIME_PROPERTY_INCLUDE_VERSION = "JENKINS_INCLUDE_VERSION";
 
   /**
+   * Transient data préfix to cache the job full name. The suffix is the Version in
+   * littral form.
+   */
+  private static final String TRANSIENT_DATA_PREFIX_JOB_FULL_NAME = SimpleJenkinsJobInfoPluginBaseImpl.class.getName() + ".JobFullName.";
+
+  /**
    * See description in ResourceBundle.
    */
   private static final String MSG_PATTERN_KEY_SUBFOLDER_AUTOMATICALLY_REUSED = "SUBFOLDER_AUTOMATICALLY_REUSED";
@@ -170,6 +176,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
   @Override
   public String getJobFullName(Version versionDynamic) {
     ExecContext execContext;
+    String jobFullName;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     String jobRootFolder;
     String subfolder;
@@ -182,6 +189,13 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
     StringBuilder stringBuilder;
 
     execContext = ExecContextHolder.get();
+
+    jobFullName = (String)execContext.getTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + versionDynamic.toString());
+
+    if (jobFullName != null) {
+      return jobFullName;
+    }
+
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
     jobRootFolder = runtimePropertiesPlugin.getProperty(null,  SimpleJenkinsJobInfoPluginBaseImpl.RUNTIME_PROPERTY_JOBS_ROOT_FOLDER);
@@ -275,7 +289,11 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
 
     stringBuilder.append(this.getModule().getName());
 
-    return stringBuilder.toString();
+    jobFullName = stringBuilder.toString();
+
+    execContext.setTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + versionDynamic.toString(), jobFullName);
+
+    return jobFullName;
   }
 
   @Override

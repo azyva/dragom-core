@@ -453,7 +453,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       if (   (mergeMainMode == MergeMainMode.MERGE_EXCLUDE_VERSION_CHANGING_COMMITS_NO_DIVERGING_COMMITS)
           || (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS)) {
 
-        if (listCommit.isEmpty()) {
+        if (!listCommit.isEmpty()) {
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
           message = MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DIVERGING_COMMITS_IN_DEST), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc.getVersion(), moduleVersionDest, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), stringBuilderListCommits.toString());

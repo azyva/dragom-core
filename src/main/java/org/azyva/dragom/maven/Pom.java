@@ -1199,7 +1199,7 @@ public class Pom {
         nodeVersion = (Node)xPath.evaluate(
               "/project/profiles/profile[id='"
             + referencedArtifact.profile
-            + "]/dependencies/dependency[groupId='"
+            + "']/dependencies/dependency[groupId='"
             + referencedArtifact.groupId
             + "' and artifactId='"
             + referencedArtifact.artifactId

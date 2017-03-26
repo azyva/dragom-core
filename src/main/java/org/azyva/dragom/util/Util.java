@@ -19,8 +19,10 @@
 
 package org.azyva.dragom.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystems;
@@ -1808,5 +1810,19 @@ public final class Util {
 
 
     return toolExitStatusAndContinue;
+  }
+
+  public static String getStackTrace(Exception e) {
+    ByteArrayOutputStream byteArrayOutputStream;
+    PrintStream printStream;
+
+    byteArrayOutputStream = new ByteArrayOutputStream();
+    printStream = new PrintStream(byteArrayOutputStream);
+
+    e.printStackTrace(printStream);
+
+    printStream.close();
+
+    return byteArrayOutputStream.toString();
   }
 }

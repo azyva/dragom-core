@@ -830,7 +830,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     } catch (RuntimeExceptionUserError reue) {
       throw reue;
     } catch (RuntimeException re) {
-      throw new RuntimeException("Could not checkout Version " + version + " of Module " + this.getModule() + '.');
+      throw new RuntimeException("Could not checkout Version " + version + " of Module " + this.getModule() + '.', re);
     }
   }
 
@@ -993,7 +993,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     } catch (RuntimeExceptionUserError reue) {
       throw reue;
     } catch (RuntimeException re) {
-      throw new RuntimeException("Could not checkout (system directory) Version " + version + " of Module " + this.getModule() + '.');
+      throw new RuntimeException("Could not checkout (system directory) Version " + version + " of Module " + this.getModule() + '.', re);
     }
   }
 

@@ -34,6 +34,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,9 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.exec.DefaultExecutor;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.FileUtils;
+import org.azyva.dragom.execcontext.ExecContext;
 import org.azyva.dragom.execcontext.plugin.impl.DefaultWorkspacePluginFactory;
+import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.git.Git;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.VersionType;
@@ -65,6 +68,34 @@ public class DefaultGitImpl implements Git {
    * Logger for the class.
    */
   private static final Logger logger = LoggerFactory.getLogger(DefaultGitImpl.class);
+
+  /**
+   * Transient data to cache modification timestamp and current {@link Version} for
+   * workspace paths.
+   *
+   * <p>Is an optimization to avoid useless calls to the Git checkout and
+   * symbolic-ref commands.
+   *
+   * <p>The key of the Map is the path. The element is
+   * {@link PathModTimestampBranch}.
+   */
+  private static final String TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION = DefaultGitImpl.class + ".MapPathModTimestampVersion";
+
+  /**
+   * Elements of the Map that caches modification timestamp and current
+   * {@link Version} for workspace paths.
+   */
+  private static class ModTimestampVersion {
+    /**
+     * Modification timestamp.
+     */
+    public long modTimestamp;
+
+    /**
+     * Version.
+     */
+    public Version version;
+  }
 
   /**
    * Pattern to extract the user from a HTTP[S] repository URL.
@@ -289,12 +320,28 @@ public class DefaultGitImpl implements Git {
             || ((exitCode == 1) && allowExitCode == AllowExitCode.ONE)
             || ((exitCode != 0) && allowExitCode == AllowExitCode.ALL))) {
 
-        DefaultGitImpl.logger.error("Git command returned " + exitCode + '.');
-        DefaultGitImpl.logger.error("Output of the command:");
-        DefaultGitImpl.logger.error(byteArrayOutputStreamOut.toString());
-        DefaultGitImpl.logger.error("Error output of the command:");
-        DefaultGitImpl.logger.error(stderr);
-        throw new RuntimeException("Git command " + commandLine + " failed.");
+        StringBuilder stringBuilderException;
+
+        stringBuilderException = new StringBuilder();
+
+        stringBuilderException.append("Git command ").append(commandLine).append(" executed in ").append(pathWorkingDirectory).append(" failed with exit code: ").append(exitCode).append('\n');
+
+        stringBuilderException.append("Repository URL: ").append(this.reposUrl).append('\n');
+
+        if (byteArrayOutputStreamOut.size() != 0) {
+          stringBuilderException.append("Standard output:\n");
+          stringBuilderException.append(byteArrayOutputStreamOut.toString()).append('\n');
+        }
+
+        if (stderr.length() != 0) {
+          stringBuilderException.append("Error output:\n");
+          stringBuilderException.append(stderr).append('\n');
+        }
+
+        // Get rid of the trailing newline.
+        stringBuilderException.setLength(stringBuilderException.length() - 1);
+
+        throw new RuntimeException(stringBuilderException.toString());
       } else if (!stderr.isEmpty()) {
         if (exitCode != 0) {
           DefaultGitImpl.logger.error("Git command returned " + exitCode + '.');
@@ -382,8 +429,19 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public String getBranch(Path pathWorkspace) {
+    Version version;
     StringBuilder stringBuilder;
     int exitCode;
+
+    version = this.getPathWorkspaceVersion(pathWorkspace);
+
+    if (version != null) {
+      if (version.getVersionType() == VersionType.DYNAMIC) {
+        return version.getVersion();
+      } else {
+        throw new RuntimeException("Current version is a tag " + version + '.');
+      }
+    }
 
     stringBuilder = new StringBuilder();
     exitCode = this.executeGitCommand(new String[] {"symbolic-ref", "-q", "HEAD"}, false, AllowExitCode.ONE, pathWorkspace, stringBuilder, true);
@@ -587,7 +645,14 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public void checkout(Path pathWorkspace, Version version) {
+    Version versionCurrent;
     boolean isDetachedHead;
+
+    versionCurrent = this.getPathWorkspaceVersion(pathWorkspace);
+
+    if ((versionCurrent != null)  && versionCurrent.equals(version)) {
+      return;
+    }
 
     // The checkout command takes a branch or tag name, but without the complete
     // reference prefix such as heads/master or tags/v-1.2.3. This means that it is
@@ -613,6 +678,8 @@ public class DefaultGitImpl implements Git {
 
       throw new RuntimeException("Requested version is static but checked out version is a branch.");
     }
+
+    this.setPathWorkspaceVersion(pathWorkspace, version);
   }
 
   @Override
@@ -853,5 +920,55 @@ public class DefaultGitImpl implements Git {
         return "refs/remotes/origin/" + version.getVersion();
       }
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Version getPathWorkspaceVersion(Path pathWorkspace) {
+    ExecContext execContext;
+    Map<Path, ModTimestampVersion> mapPathModTimestampVersion;
+    ModTimestampVersion modTimestampVersion;
+
+    execContext = ExecContextHolder.get();
+
+    mapPathModTimestampVersion = (Map<Path, ModTimestampVersion>)execContext.getTransientData(DefaultGitImpl.TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION);
+
+    if (mapPathModTimestampVersion == null) {
+      mapPathModTimestampVersion = new HashMap<Path, ModTimestampVersion>();
+      execContext.setTransientData(DefaultGitImpl.TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION, mapPathModTimestampVersion);
+    }
+
+    modTimestampVersion = mapPathModTimestampVersion.get(pathWorkspace);
+
+    if (modTimestampVersion == null) {
+      return null;
+    }
+
+    if (pathWorkspace.toFile().lastModified() != modTimestampVersion.modTimestamp) {
+      return null;
+    }
+
+    return modTimestampVersion.version;
+  }
+
+  private void setPathWorkspaceVersion(Path pathWorkspace, Version version) {
+    ExecContext execContext;
+    Map<Path, ModTimestampVersion> mapPathModTimestampVersion;
+    ModTimestampVersion modTimestampVersion;
+
+    execContext = ExecContextHolder.get();
+
+    mapPathModTimestampVersion = (Map<Path, ModTimestampVersion>)execContext.getTransientData(DefaultGitImpl.TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION);
+
+    if (mapPathModTimestampVersion == null) {
+      mapPathModTimestampVersion = new HashMap<Path, ModTimestampVersion>();
+      execContext.setTransientData(DefaultGitImpl.TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION, mapPathModTimestampVersion);
+    }
+
+    modTimestampVersion = new ModTimestampVersion();
+
+    modTimestampVersion.modTimestamp = pathWorkspace.toFile().lastModified();
+    modTimestampVersion.version = version;
+
+    mapPathModTimestampVersion.put(pathWorkspace, modTimestampVersion);
   }
 }
