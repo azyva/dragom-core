@@ -408,8 +408,8 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
    *
    * <p>This is an optimization for the cases where the
    * {@link ReferencePathMatcher}'s do not match a given root ModuleVersion nor any
-   * of its children, which can then be skipped without having to peform the heavier
-   * operations such as checking out the ModuleVersionl.
+   * of its children, which can then be skipped without having to perform the heavier
+   * operations such as checking out the ModuleVersion.
    *
    * @param rootModuleVersion Root ModuleVersion.
    * @return Indicates if the root ModuleVersion should be skipped.
