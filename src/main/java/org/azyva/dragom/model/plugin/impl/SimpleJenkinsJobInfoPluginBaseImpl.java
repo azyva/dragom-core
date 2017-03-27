@@ -73,7 +73,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
    * created.
    * <p>
    * If not defined and if
-   * {@link #RUNTIME_PROPERTY_USE_CLASSIFICATION_NODE_PATH_SUBFOLDER} is not defined
+   * {@link #RUNTIME_PROPERTY_USE_NODE_PATH_SUBFOLDER} is not defined
    * either, interaction with the user occurs to allow him to define a subfolder.
    * <p>
    * Concatenated with the Jenkins base URL managed by {@link SetupJenkinsJobs} and root

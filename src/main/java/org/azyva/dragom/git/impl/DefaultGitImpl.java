@@ -77,7 +77,7 @@ public class DefaultGitImpl implements Git {
    * symbolic-ref commands.
    *
    * <p>The key of the Map is the path. The element is
-   * {@link PathModTimestampBranch}.
+   * {@link ModTimestampVersion}.
    */
   private static final String TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION = DefaultGitImpl.class + ".MapPathModTimestampVersion";
 

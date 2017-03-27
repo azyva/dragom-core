@@ -1814,7 +1814,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
-    // Releasing the temporary dynamic Version implies switching batck to the original
+    // Releasing the temporary dynamic Version implies switching back to the original
     // Version.
     git.checkout(pathModuleWorkspace, versionTempDynamicBase);
 
