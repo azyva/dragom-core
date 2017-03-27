@@ -439,7 +439,7 @@ public class DefaultGitImpl implements Git {
       if (version.getVersionType() == VersionType.DYNAMIC) {
         return version.getVersion();
       } else {
-        throw new RuntimeException("Current version is a tag " + version + '.');
+        return null;
       }
     }
 
@@ -452,7 +452,11 @@ public class DefaultGitImpl implements Git {
       branch = stringBuilder.toString();
 
       if (branch.startsWith("refs/heads/")) {
-        return branch.substring(11);
+        String stringVersion;
+
+        stringVersion = branch.substring(11);
+        this.setPathWorkspaceVersion(pathWorkspace, new Version(VersionType.DYNAMIC, stringVersion));
+        return stringVersion;
       } else {
         throw new RuntimeException("Unrecognized branch reference " + branch + " returned by git symbolic-ref.");
       }
@@ -785,8 +789,15 @@ public class DefaultGitImpl implements Git {
 
   @Override
   public Version getVersion(Path pathWorkspace) {
+    Version version;
     String branch;
     StringBuilder stringBuilder;
+
+    version = this.getPathWorkspaceVersion(pathWorkspace);
+
+    if (version != null) {
+      return version;
+    }
 
     branch = this.getBranch(pathWorkspace);
 
@@ -800,7 +811,11 @@ public class DefaultGitImpl implements Git {
     stringBuilder = new StringBuilder();
     this.executeGitCommand(new String[] {"describe", "--exact-match"}, false, AllowExitCode.NONE, pathWorkspace, stringBuilder, true);
 
-    return new Version(VersionType.STATIC, stringBuilder.toString());
+    version = new Version(VersionType.STATIC, stringBuilder.toString());
+
+    this.setPathWorkspaceVersion(pathWorkspace, version);
+
+    return version;
   }
 
   @Override
