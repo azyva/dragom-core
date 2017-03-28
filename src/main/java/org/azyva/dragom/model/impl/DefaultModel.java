@@ -613,6 +613,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    * @param artifactGroupId artifactGroupId.
    * @return See description.
    */
+  @Override
   public boolean isArtifactGroupIdIncluded(ArtifactGroupId artifactGroupId) {
     if (this.patternIncludeArtifactGroupId != null) {
       if (!this.patternIncludeArtifactGroupId.matcher(artifactGroupId.toString()).matches()) {

@@ -87,6 +87,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_MODULE_NOT_FOUND_CONTEXT = "MODULE_NOT_FOUND_CONTEXT";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
 
   /**
@@ -272,6 +277,11 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       for(Pom.ReferencedArtifact referencedArtifact: listReferencedArtifact) {
         ArtifactGroupId artifactGroupId;
         Module module;
+        ArtifactVersion artifactVersion;
+        ModuleVersion moduleVersion;
+        Reference reference;
+        ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
+
 
         try {
           artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
@@ -295,67 +305,77 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           continue;
         }
 
-        module = model.findModuleByArtifactGroupId(artifactGroupId);
+        // A Module not being found is treated as an exceptional condition in
+        // {@link Model#findmoduleByArtifactGroupId} and either null is returned to
+        // to recover or an exception is thrown. In both cases, it can be useful to
+        // know what referred to the Module.
+        try {
+          module = model.findModuleByArtifactGroupId(artifactGroupId);
 
-        if (module != null) {
-          ArtifactVersion artifactVersion;
-          ModuleVersion moduleVersion;
-          Reference reference;
-          ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
-
-          try {
-            artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
-          } catch (RuntimeException re) {
-            Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
-
-            MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved. Reason:", re);
-
-            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT);
-
-            if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, referencedArtifact));
-              continue;
-            } else {
-              throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, referencedArtifact));
+          if (module == null) {
+            if (model.isArtifactGroupIdIncluded(artifactGroupId)) {
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND_CONTEXT), this.getModule(), pathModuleWorkspace, pom.getPathPom(), referencedArtifact));
             }
+
+            continue;
           }
-
-          artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
-
-          moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
-
-          // We probably could simply perform an object equality here since Module's are
-          // singletons. But just in case, we compare their NodePath.
-          if (module.getNodePath().equals(this.getNode().getNodePath())) {
-            String stringReferencedArtifact;
-            Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
-
-            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM);
-
-            // A ReferencedArtifact from the Pom can contain property references and we want
-            // to provide the resolved properties. But if the ReferencedArtifact does not
-            // contain property references, we want to avoid redundant information.
-            if (   !referencedArtifact.getGroupId().equals(artifactGroupId.getGroupId())
-                || !referencedArtifact.getArtifactId().equals(artifactGroupId.getArtifactId())
-                || !referencedArtifact.getVersion().equals(artifactVersion.toString())) {
-
-              stringReferencedArtifact = referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')';
-            } else {
-              stringReferencedArtifact = referencedArtifact.toString();
-            }
-
-            if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
-              continue;
-            } else {
-              throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
-            }
-          }
-
-          reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
-
-          listReference.add(reference);
+        } catch (Exception e) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_MODULE_NOT_FOUND_CONTEXT), this.getModule(), pathModuleWorkspace, pom.getPathPom(), referencedArtifact));
+          throw e;
         }
+
+        try {
+          artifactVersion = new ArtifactVersion(pom.resolveProperties(referencedArtifact.getVersion(), pomResolver));
+        } catch (RuntimeException re) {
+          Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
+
+          MavenReferenceManagerPluginImpl.logger.error("ReferencedArtifact " + referencedArtifact + " could not be resolved. Reason:", re);
+
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT);
+
+          if (toolExitStatusAndContinue.indContinue) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, referencedArtifact));
+            continue;
+          } else {
+            throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, referencedArtifact));
+          }
+        }
+
+        artifactVersionMapperPlugin = module.getNodePlugin(ArtifactVersionMapperPlugin.class, null);
+
+        moduleVersion = new ModuleVersion(module.getNodePath(), artifactVersionMapperPlugin.mapArtifactVersionToVersion(artifactVersion));
+
+        // We probably could simply perform an object equality here since Module's are
+        // singletons. But just in case, we compare their NodePath.
+        if (module.getNodePath().equals(this.getNode().getNodePath())) {
+          String stringReferencedArtifact;
+          Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
+
+          toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(this.getModule(), MavenReferenceManagerPluginImpl.EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM);
+
+          // A ReferencedArtifact from the Pom can contain property references and we want
+          // to provide the resolved properties. But if the ReferencedArtifact does not
+          // contain property references, we want to avoid redundant information.
+          if (   !referencedArtifact.getGroupId().equals(artifactGroupId.getGroupId())
+              || !referencedArtifact.getArtifactId().equals(artifactGroupId.getArtifactId())
+              || !referencedArtifact.getVersion().equals(artifactVersion.toString())) {
+
+            stringReferencedArtifact = referencedArtifact.toString() + " (" + artifactGroupId + ':' + artifactVersion + ')';
+          } else {
+            stringReferencedArtifact = referencedArtifact.toString();
+          }
+
+          if (toolExitStatusAndContinue.indContinue) {
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
+            continue;
+          } else {
+            throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
+          }
+        }
+
+        reference = new Reference(moduleVersion, artifactGroupId, artifactVersion, new ReferenceImplData(pathModuleWorkspace.relativize(pom.getPathPom()), referencedArtifact));
+
+        listReference.add(reference);
 
         // We expect the handling of the tool exit status to be done by
         // model.findModuleByArtifactGroupId called above. If we get here with a null

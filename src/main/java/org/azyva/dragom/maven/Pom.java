@@ -1283,7 +1283,9 @@ public class Pom {
 
       nodeSubmodule = nodeListSubmodules.item(i);
 
-      listSubmodule.add(nodeSubmodule.getTextContent());
+      // Maven seems to allow "\" in module references. But this causes problems on *nix
+      // systems.
+      listSubmodule.add(nodeSubmodule.getTextContent().replace('\\', '/'));
     }
 
     return listSubmodule;
