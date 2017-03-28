@@ -511,7 +511,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    *
    * <p>If an existing Module could not be found,
    * {@link FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor}
-   * is used to ask the exising {@link ClassificationNode}'s about such a Module.
+   * is used to ask the existing {@link ClassificationNode}'s about such a Module.
    *
    * <p>In all cases the mapping between the ArtifactGroupId and the found Module is
    * cached and used to speed up subsequent requests for the same ArtifactGroupId.

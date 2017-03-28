@@ -88,9 +88,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *  @author David Raymond
  */
 public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl implements ArtifactInfoPlugin {
-  private static final String MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES = "MODULE_NODE_PATH_INFERENCE_RULES";
+  /**
+   * Model property defining the groupId of artifacts produced by the
+   * {@link Module}'s.
+   *
+   * <p>This Model property is shared with {@link SimpleFindModuleByArtifactGroupIdPluginImpl}.
+   */
+  private static final String MODEL_PROPERTY_GROUP_ID = "GROUP_ID";
+
   // Shared with SimpleFindModuleByArtifactGrouipIdPluginImpl.
   private static final String MODEL_PROPERTY_BASE_GROUP_ID = "BASE_GROUP_ID";
+
+  private static final String MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES = "MODULE_NODE_PATH_INFERENCE_RULES";
   private static final String MODEL_PROPERTY_ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED = "ARRAY_DEFINITE_ARTIFACT_GROUP_ID_PRODUCED";
   boolean isInferRuleSubmodules;
   String groupIdInferredSubmodules;
@@ -100,7 +109,7 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
     super(module);
 
     String inferenceRules;
-    boolean isInferRuleBaseArtifactId = false;
+    boolean isInferRuleBaseArtifactId;
     String baseGroupId;
     String groupId = null;
     String stringJsonArrayDefiniteArtifactGroupIdProduced;
@@ -108,27 +117,31 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
 
     inferenceRules = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_MODULE_NODE_PATH_INFERENCE_RULES);
 
+    isInferRuleBaseArtifactId = false;
+
     if ((inferenceRules == null) || inferenceRules.equals("ALL")) {
       isInferRuleBaseArtifactId = true;
       this.isInferRuleSubmodules = true;
-    } else if (inferenceRules != null) {
-      if (inferenceRules.equals("ONLY_BASE_ARTIFACT_ID")) {
-        isInferRuleBaseArtifactId = true;
-      } else if (!inferenceRules.equals("NONE")) {
-        throw new RuntimeException("Invalid value for the property " + inferenceRules + " read by plugin " + this.toString() + '.');
-      }
+    } else if (inferenceRules.equals("ONLY_BASE_ARTIFACT_ID")) {
+      isInferRuleBaseArtifactId = true;
+    } else if (!inferenceRules.equals("NONE")) {
+      throw new RuntimeException("Invalid value for the property " + inferenceRules + " read by plugin " + this.toString() + '.');
     }
 
     /* If either of the two rules must be applied, we need to know the groupId
      * inferred from the module node path.
      */
     if (isInferRuleBaseArtifactId || this.isInferRuleSubmodules) {
-      baseGroupId = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
+      groupId = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_GROUP_ID);
 
-      if (baseGroupId == null) {
-        groupId = Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
-      } else {
-        groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
+      if (groupId == null) {
+        baseGroupId = module.getProperty(SimpleArtifactInfoPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
+
+        if (baseGroupId == null) {
+          groupId = Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
+        } else {
+          groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(module.getNodePath());
+        }
       }
     }
 
@@ -150,8 +163,6 @@ public class SimpleArtifactInfoPluginImpl extends ModulePluginAbstractImpl imple
 
     if (stringJsonArrayDefiniteArtifactGroupIdProduced != null) {
       JsonNode jsonNode;
-
-      this.setDefiniteArtifactGroupIdProduced = new HashSet<ArtifactGroupId>();
 
       try {
         jsonNode = (new ObjectMapper()).readTree(stringJsonArrayDefiniteArtifactGroupIdProduced);

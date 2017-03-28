@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.azyva.dragom.model.ArtifactGroupId;
 import org.azyva.dragom.model.ClassificationNode;
+import org.azyva.dragom.model.Model;
+import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.NodePath;
 import org.azyva.dragom.model.plugin.FindModuleByArtifactGroupIdPlugin;
 import org.azyva.dragom.util.Util;
@@ -33,10 +35,14 @@ import org.azyva.dragom.util.Util;
  * between a module node path and the ArtifactGroupId using inference
  * rules.
  *
- * The value of the property BASE_GROUP_ID is used as the base groupId. Then each
- * node name in the node path (up to but not the module name) is converted into an
- * element of the groupId. The conversion algorithm is to convert from PascalCase
- * to lowercase-with-dash notation.
+ * <p>If the {@link Model} property GROUP_ID is defined, all artifacts produced by
+ * {@link Module}'s defined within the {@link ClassificationNode} are assumed to
+ * have this groupId.
+ *
+ * <p>Otherwise, the value of the property BASE_GROUP_ID is used as the base
+ * groupId. Then each node name in the node path (up to but not the module name)
+ * is converted into an element of the groupId. The conversion algorithm is to
+ * convert from PascalCase to lowercase-with-dash notation.
  *
  * The groupId obtained must match the groupId of the ArtifactGroupId specified.
  *
@@ -74,15 +80,28 @@ import org.azyva.dragom.util.Util;
  * my-module-submodule-name-with-many-tokens exists which says it definitively
  * produces ArtifactGroupId
  * com.acme.foo.bar.pascal-cas-node-name:my-module-submodule-name-with-many-tokens
- * in which case this moduel will be returned instead since it appears before in
+ * in which case this module will be returned instead since it appears before in
  * the list.
  *
  * @author David Raymond
  */
 public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationNodePluginAbstractImpl implements FindModuleByArtifactGroupIdPlugin {
+  /**
+   * Model property defining the groupId of artifacts produced by {@link Module}'s
+   * within the {@link ClassificationNode}.
+   *
+   * <p>This Model property is shared with {@link SimpleArtifactInfoPluginImpl}.
+   */
+  private static final String MODEL_PROPERTY_GROUP_ID = "GROUP_ID";
+
   // Shared with SimpleArtifactInfoPluginImpl.
   private static final String MODEL_PROPERTY_BASE_GROUP_ID = "BASE_GROUP_ID";
 
+  /**
+   * Set of groupIds associated with the {@link ClassificationNode}. There is one
+   * groupId derived by converting from PascalCase to lower-case-with-dashes, and
+   * one derived by also considering digits as upper case.
+   */
   private String groupId;
 
   public SimpleFindModuleByArtifactGroupIdPluginImpl(ClassificationNode classificationNode) {
@@ -90,16 +109,20 @@ public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationN
 
     String baseGroupId;
 
-    baseGroupId = classificationNode.getProperty(SimpleFindModuleByArtifactGroupIdPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
+    this.groupId = classificationNode.getProperty(SimpleFindModuleByArtifactGroupIdPluginImpl.MODEL_PROPERTY_GROUP_ID);
 
-    if (baseGroupId == null) {
-      // If there is no base groupId, we must not get here for the root ClassificationNode since an empty groupId is not allowed.
-      this.groupId = Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
-    } else if (classificationNode != classificationNode.getModel().getClassificationNodeRoot()) {
-      this.groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
-    } else {
-      // If we get here for the root ClassificationNode, the groupId is the base groupId.
-      this.groupId = baseGroupId;
+    if (this.groupId == null) {
+      baseGroupId = classificationNode.getProperty(SimpleFindModuleByArtifactGroupIdPluginImpl.MODEL_PROPERTY_BASE_GROUP_ID);
+
+      if (baseGroupId == null) {
+        // If there is no base groupId, we must not get here for the root ClassificationNode since an empty groupId is not allowed.
+        this.groupId = Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
+      } else if (classificationNode != classificationNode.getModel().getClassificationNodeRoot()) {
+        this.groupId = baseGroupId + '.' + Util.inferGroupIdSegmentFromNodePath(classificationNode.getNodePath());
+      } else {
+        // If we get here for the root ClassificationNode, the groupId is the base groupId.
+        this.groupId = baseGroupId;
+      }
     }
   }
 
@@ -109,7 +132,7 @@ public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationN
     String artifactId;
     int lastDashPos;
 
-    if (!artifactGroupId.getGroupId().equals(this.groupId)) {
+    if (!this.groupId.equals(artifactGroupId.getGroupId())) {
       return null;
     }
 

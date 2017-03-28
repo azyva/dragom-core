@@ -427,6 +427,7 @@ public class DefaultGitImpl implements Git {
     }
   }
 
+  //TODO: Should probaly only use getVersion. Unless when tag is not required it is better optimized to not look for one?
   @Override
   public String getBranch(Path pathWorkspace) {
     Version version;

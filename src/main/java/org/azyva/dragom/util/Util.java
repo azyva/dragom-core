@@ -1825,4 +1825,19 @@ public final class Util {
 
     return byteArrayOutputStream.toString();
   }
+
+  public static void main(String[] args) {
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PascalCase"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("123PascalCase"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("Pascal123Case"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PascalCase123"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PascalCASE"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("123PascalCASE"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("Pascal123CASE"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PascalCASE123"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PASCALCase"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("123PASCALCase"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PASCAL123Case"));
+    System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PASCALCase123"));
+  }
 }
