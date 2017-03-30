@@ -200,7 +200,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    * <p>
    * The nodes visited by this NodeVisitor must be Module's.
    * {@link NodeType#MODULE} must be passed to
-   * {@link ClassificationNode#traverseNodeHierarchyDepthFirst}.
+   * {@link ClassificationNode#traverseNodeHierarchy}.
    * <p>
    * Used by {@link Model#findModuleByArtifactGroupId}.
    *
@@ -227,11 +227,15 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
     }
 
     @Override
-    public boolean visitNode(Node node) {
+    public VisitControl visitNode(VisitAction visitAction, Node node) {
       ArtifactInfoPlugin artifactInfoPlugin;
 
+      if (visitAction != VisitAction.VISIT) {
+        return VisitControl.CONTINUE;
+      }
+
       if (!node.isNodePluginExists(ArtifactInfoPlugin.class, null)) {
-        return false;
+        return VisitControl.CONTINUE;
       }
 
       artifactInfoPlugin = node.getNodePlugin(ArtifactInfoPlugin.class, null);
@@ -248,7 +252,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
         this.moduleFound = (Module)node;
       }
 
-      return false;
+      return VisitControl.CONTINUE;
     }
   }
 
@@ -267,7 +271,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    * <p>
    * The nodes visited by this NodeVisitor must be ClassificationNode.
    * {@link NodeType#CLASSIFICATION} must be passed to
-   * {@link ClassificationNode#traverseNodeHierarchyDepthFirst}.
+   * {@link ClassificationNode#traverseNodeHierarchy}.
    * <p>
    * Used by {@link Model#findModuleByArtifactGroupId}.
    *
@@ -294,13 +298,17 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
     }
 
     @Override
-    public boolean visitNode(Node node) {
+    public VisitControl visitNode(VisitAction visitAction, Node node) {
       FindModuleByArtifactGroupIdPlugin findModuleByArtifactGroupIdPlugin;
       List<NodePath> listNodePath;
       Module modulePossiblyFound = null;
 
+      if (visitAction != VisitAction.VISIT) {
+        return VisitControl.CONTINUE;
+      }
+
       if (!node.isNodePluginExists(FindModuleByArtifactGroupIdPlugin.class, null)) {
-        return false;
+        return VisitControl.CONTINUE;
       }
 
       findModuleByArtifactGroupIdPlugin = node.getNodePlugin(FindModuleByArtifactGroupIdPlugin.class, null);
@@ -308,7 +316,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
       listNodePath = findModuleByArtifactGroupIdPlugin.getListModulePossiblyProduceArtifactGroupId(this.artifactGroupId);
 
       if (listNodePath == null) {
-        return false;
+        return VisitControl.CONTINUE;
       }
 
       for (NodePath nodePath: listNodePath) {
@@ -376,7 +384,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
         this.moduleFound = modulePossiblyFound;
       }
 
-      return false;
+      return VisitControl.CONTINUE;
     }
   }
 
@@ -561,7 +569,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
 
     findModuleByArtifactGroupIdModuleNodeVisitor = new FindModuleByArtifactGroupIdModuleNodeVisitor(artifactGroupId);
 
-    this.defaultClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.MODULE, findModuleByArtifactGroupIdModuleNodeVisitor);
+    this.defaultClassificationNodeRoot.traverseNodeHierarchy(NodeType.MODULE, true, findModuleByArtifactGroupIdModuleNodeVisitor);
 
     moduleFound = (DefaultModule)findModuleByArtifactGroupIdModuleNodeVisitor.getModuleFound();
 
@@ -578,7 +586,7 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
 
     findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor = new FindModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor(artifactGroupId);
 
-    this.defaultClassificationNodeRoot.traverseNodeHierarchyDepthFirst(NodeType.CLASSIFICATION, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
+    this.defaultClassificationNodeRoot.traverseNodeHierarchy(NodeType.CLASSIFICATION, true, findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor);
 
     moduleFound = (DefaultModule)findModuleThroughClassificationNodeByArtifactGroupIdClassificationNodeVisitor.getModuleFound();
 

@@ -138,7 +138,7 @@ public final class Util {
    * Exceptional condition representing the fact that an exception is thrown during
    * the visit of a matched ModuleVersion.
    */
-  public static final String EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
+  public static final String EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION = "EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION";
 
   /**
    * Exceptional condition representing the fact that conflicts occurred during a
@@ -286,7 +286,7 @@ public final class Util {
   /**
    * See description in ResourceBundle.
    */
-  public static final String MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING = "EXCEPTION_THROWN_WHILE_VISITING";
+  public static final String MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION = "EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION";
 
   /**
    * See description in ResourceBundle.

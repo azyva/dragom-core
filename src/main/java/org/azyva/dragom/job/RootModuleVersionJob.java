@@ -32,7 +32,7 @@ import org.azyva.dragom.util.RuntimeExceptionUserError;
  * {@link Reference}'s.
  *
  * <p>It allows such classes to be used generically by
- * GenericRootModuleVersionJobInvokerTool from dragom-core.
+ * GenericRootModuleVersionJobInvokerTool from dragom-cli-tools.
  *
  * <p>{@link RootModuleVersionJobAbstractImpl} provides a useful base class for
  * implementing such jobs. But jobs can also simply implement this interface if

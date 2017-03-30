@@ -221,7 +221,8 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
   }
 
   @Override
-  public boolean traverseNodeHierarchyDepthFirst(NodeType nodeTypeFilter, NodeVisitor nodeVisitor) {
+  public NodeVisitor.VisitControl traverseNodeHierarchy(NodeType nodeTypeFilter, boolean indDepthFirst, NodeVisitor nodeVisitor) {
+    NodeVisitor.VisitControl visitControl;
     Set<Map.Entry<String, DefaultNode>> setMapEntry;
 
     if ((this.state != DefaultNode.State.CONFIG) && (this.state != DefaultNode.State.DYNAMICALLY_CREATED)) {
@@ -230,47 +231,121 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
 
     this.createChildNodesFromConfig();
 
-    setMapEntry = this.mapDefaultNodeChild.entrySet();
+    visitControl = nodeVisitor.visitNode(NodeVisitor.VisitAction.STEP_IN, this);
 
-    for (Map.Entry<String, DefaultNode> mapEntry: setMapEntry) {
-      DefaultNode defaultNode;
-
-      defaultNode = mapEntry.getValue();
-
-      switch (defaultNode.getNodeType()) {
-      case CLASSIFICATION:
-        /* If the children is a classification node, it must be traversed recursively. The
-         * visiting of this node will be handled by its own traversal.
-         */
-        if (((DefaultClassificationNode)defaultNode).traverseNodeHierarchyDepthFirst(nodeTypeFilter, nodeVisitor)) {
-          return true;
-        }
+    try {
+      switch (visitControl) {
+      case CONTINUE:
         break;
+      case ABORT:
+        return NodeVisitor.VisitControl.ABORT;
+      case SKIP_CHILDREN:
+        return NodeVisitor.VisitControl.CONTINUE;
+      case SKIP_CURRENT_BASE:
+        return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
+      }
 
-      case MODULE:
-        /* If the children is a module, it cannot be traversed so its visiting must be
-         * handled here.
-         */
-        if ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.MODULE)) {
-          if (nodeVisitor.visitNode(defaultNode)) {
-            return true;
+      if (!indDepthFirst && ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.CLASSIFICATION))) {
+        visitControl = nodeVisitor.visitNode(NodeVisitor.VisitAction.VISIT, this);
+
+        switch (visitControl) {
+        case CONTINUE:
+          break;
+        case ABORT:
+          return NodeVisitor.VisitControl.ABORT;
+        case SKIP_CHILDREN:
+          return NodeVisitor.VisitControl.CONTINUE;
+        case SKIP_CURRENT_BASE:
+          return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
+        }
+      }
+
+      setMapEntry = this.mapDefaultNodeChild.entrySet();
+
+      for (Map.Entry<String, DefaultNode> mapEntry: setMapEntry) {
+        DefaultNode defaultNode;
+
+        defaultNode = mapEntry.getValue();
+
+        switch (defaultNode.getNodeType()) {
+        case CLASSIFICATION:
+          // If the children is a classification node, it must be traversed recursively. The
+          // visiting of this node will be handled by its own traversal.
+          visitControl = ((DefaultClassificationNode)defaultNode).traverseNodeHierarchy(nodeTypeFilter, indDepthFirst, nodeVisitor);
+
+          switch (visitControl) {
+          case CONTINUE:
+            break;
+          case ABORT:
+            return NodeVisitor.VisitControl.ABORT;
+          case SKIP_CHILDREN:
+            throw new RuntimeException("Unexpected SKIP_CHILDREN returned from traverseNodeHierarchy.");
+          case SKIP_CURRENT_BASE:
+            return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
           }
+
+          break;
+
+        case MODULE:
+          // If the children is a module, it cannot be traversed so its visiting must be
+          // handled here.
+          if ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.MODULE)) {
+            visitControl = nodeVisitor.visitNode(NodeVisitor.VisitAction.VISIT, defaultNode);
+
+            switch (visitControl) {
+            case CONTINUE:
+              break;
+            case ABORT:
+              return NodeVisitor.VisitControl.ABORT;
+            case SKIP_CHILDREN:
+              throw new RuntimeException("Unexpected SKIP_CHILDREN for a Module.");
+            case SKIP_CURRENT_BASE:
+              return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
+            }
+          }
+
+          break;
         }
-
-        break;
       }
+
+      // The visiting of the current node, which is necessarily a classification node,
+      // must be handled separately in its own traversal.
+      if (indDepthFirst && ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.CLASSIFICATION))) {
+        visitControl = nodeVisitor.visitNode(NodeVisitor.VisitAction.VISIT, this);
+
+        switch (visitControl) {
+        case CONTINUE:
+          break;
+        case ABORT:
+          return NodeVisitor.VisitControl.ABORT;
+        case SKIP_CHILDREN:
+          throw new RuntimeException("Unexpected SKIP_CHILDREN for a depth-first traversal.");
+        case SKIP_CURRENT_BASE:
+          return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
+        }
+      }
+    } finally {
+      visitControl = nodeVisitor.visitNode(NodeVisitor.VisitAction.STEP_OUT, this);
     }
 
-    /* The visiting of the current node, which is necessarily a classification node,
-     * must be handed separately in its own traversal.
-     */
-    if ((nodeTypeFilter == null) || (nodeTypeFilter == NodeType.CLASSIFICATION)) {
-      if (nodeVisitor.visitNode(this)) {
-        return true;
-      }
+    // If we get here, visitControl necessarily has the value assigned in the finally
+    // block above and we are exiting normally, expecting to return CONTINUE. But
+    // STEP_OUT can override that return. If the code above has already called return,
+    // we still do the STEP_OUT (because of the finally block), but we will not get
+    // here and will ignore the return corresponding to STEP_OUT.
+
+    switch (visitControl) {
+    case CONTINUE:
+      break;
+    case ABORT:
+      return NodeVisitor.VisitControl.ABORT;
+    case SKIP_CHILDREN:
+      throw new RuntimeException("Unexpected SKIP_CHILDREN for STEP_OUT.");
+    case SKIP_CURRENT_BASE:
+      return NodeVisitor.VisitControl.SKIP_CURRENT_BASE;
     }
 
-    return false;
+    return NodeVisitor.VisitControl.CONTINUE;
   }
 
   /**

@@ -361,17 +361,16 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
       } catch (RuntimeException re) {
         Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
-        toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING);
+        toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
         if (toolExitStatusAndContinue.indContinue) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
           continue;
         } else {
-          throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
+          throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
         }
       }
 
-      RootModuleVersionJobAbstractImpl.logger.info("The current traversal of the reference graph rooted at ModuleVersion " + moduleVersion + " is completed.");
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED), moduleVersion));
 
       if (indVersionChanged) {
@@ -725,13 +724,13 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           } catch (RuntimeException re) {
             Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
-            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING);
+            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
             if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
               continue;
             } else {
-              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
+              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
             }
           }
 

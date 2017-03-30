@@ -465,13 +465,13 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           } catch (RuntimeException re) {
             Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
 
-            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING);
+            toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
             if (toolExitStatusAndContinue.indContinue) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
               continue;
             } else {
-              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
+              throw new RuntimeExceptionAbort(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
             }
           }
 
