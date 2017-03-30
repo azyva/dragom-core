@@ -20,7 +20,6 @@
 package org.azyva.dragom.model.config.impl.xml;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -134,12 +133,12 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
       // If modification of XmlConfig and its members is eventually possible and
       // XmlNodeConfig becomes mutable, a LinkedHashMap should be used to preserve
       // insertion order.
-      this.mapPropertyDefConfig = Collections.emptyMap();
+      this.mapPropertyDefConfig = new LinkedHashMap<String, PropertyDefConfig>();
     }
 
     if (this.mapPluginDefConfig == null) {
       // Same comment as for mapPropertyDefConfig above.
-      this.mapPluginDefConfig = Collections.emptyMap();
+      this.mapPluginDefConfig = new LinkedHashMap<PluginKey, PluginDefConfig>();
     }
   }
 

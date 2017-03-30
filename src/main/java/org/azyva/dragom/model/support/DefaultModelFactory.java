@@ -76,7 +76,7 @@ public class DefaultModelFactory implements ModelFactory {
    *
    * <p>As a convenience, this can also be a file path, relative or absolute.
    */
-  private static final String INIT_PROP_URL_MODEL = "URL_MODEL";
+  private static final String INIT_PROPERTY_URL_MODEL = "URL_MODEL";
 
   /**
    * Initialization property indicating to ignore any cached Model and instantiate a
@@ -90,13 +90,18 @@ public class DefaultModelFactory implements ModelFactory {
    * of the Model. "~" in the value of this property is replaced by the user home
    * directory.
    */
-  private static final String INIT_PROP_MODEL_CACHE_FILE = "MODEL_CACHE_FILE";
+  private static final String INIT_PROPERTY_MODEL_CACHE_FILE = "MODEL_CACHE_FILE";
 
   /**
    * Initialization property indicating to force the update of the cache file for
    * the XML resource of the Model.
    */
-  private static final String INIT_PROP_IND_FORCE_UPDATE_CACHE_FILE = "IND_FORCE_UPDATE_CACHE_FILE";
+  private static final String INIT_PROPERTY_IND_FORCE_UPDATE_MODEL_CACHE_FILE = "IND_FORCE_UPDATE_MODEL_CACHE_FILE";
+
+  /**
+   * Initialization property defining the file to use when flushing the XmlConfig.
+   */
+  private static final String INIT_PROPERTY_MODEL_FLUSH_FILE = "MODEL_FLUSH_FILE";
 
   /**
    * Map of URLs (of {@link XmlConfig} XML configuration) to Model.
@@ -111,11 +116,12 @@ public class DefaultModelFactory implements ModelFactory {
     URL urlXmlConfig;
     XmlConfig xmlConfig;
     String xmlConfigCacheFile;
+    String flushFile;
 
-    stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_URL_MODEL);
+    stringUrlXmlConfig = propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_URL_MODEL);
 
     if (stringUrlXmlConfig == null) {
-      throw new RuntimeException("Initialization property " + DefaultModelFactory.INIT_PROP_URL_MODEL + " is not defined.");
+      throw new RuntimeException("Initialization property " + DefaultModelFactory.INIT_PROPERTY_URL_MODEL + " is not defined.");
     }
 
     indIgnoreCachedModel = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_IGNORE_CACHED_MODEL));
@@ -142,7 +148,7 @@ public class DefaultModelFactory implements ModelFactory {
 
     DefaultModelFactory.logger.info("URL of XmlConfig: " + urlXmlConfig);
 
-    xmlConfigCacheFile = propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_MODEL_CACHE_FILE);
+    xmlConfigCacheFile = propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_MODEL_CACHE_FILE);
 
     if (xmlConfigCacheFile != null) {
       boolean indRefreshXmlConfigCacheFile;
@@ -150,7 +156,7 @@ public class DefaultModelFactory implements ModelFactory {
 
       xmlConfigCacheFile = xmlConfigCacheFile.replace("~", Matcher.quoteReplacement(System.getProperty("user.home")));
 
-      indRefreshXmlConfigCacheFile = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROP_IND_FORCE_UPDATE_CACHE_FILE));
+      indRefreshXmlConfigCacheFile = Util.isNotNullAndTrue(propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_IND_FORCE_UPDATE_MODEL_CACHE_FILE));
 
       if (!indRefreshXmlConfigCacheFile) {
         File fileXmlConfigCache;
@@ -249,6 +255,13 @@ public class DefaultModelFactory implements ModelFactory {
     }
 
     xmlConfig = XmlConfig.load(urlXmlConfig);
+
+    flushFile = propertiesInit.getProperty(DefaultModelFactory.INIT_PROPERTY_MODEL_FLUSH_FILE);
+
+    if (flushFile != null) {
+      xmlConfig.setPathFlushFile(Paths.get(flushFile));
+    }
+
     model = new DefaultModel(xmlConfig, propertiesInit);
 
     DefaultModelFactory.mapUrlXmlConfigModel.put(urlXmlConfig, model);

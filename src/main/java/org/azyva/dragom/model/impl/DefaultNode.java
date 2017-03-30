@@ -427,13 +427,12 @@ public abstract class DefaultNode implements Node, MutableNode {
   public NodePath getNodePath() {
     this.checkNotDeleted();
 
-    // The root ClassificationNode does not have a NodePath.
-    if (this.defaultClassificationNodeParent == null) {
-      return null;
-    }
-
     if (this.nodePath == null) {
-      this.nodePath = new NodePath(this.defaultClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeType.CLASSIFICATION);
+      if (this.defaultClassificationNodeParent == null) {
+        this.nodePath = NodePath.ROOT;
+      } else {
+        this.nodePath = new NodePath(this.defaultClassificationNodeParent.getNodePath(), this.name, this.getNodeType() == NodeType.CLASSIFICATION);
+      }
     }
 
     return this.nodePath;

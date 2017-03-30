@@ -64,4 +64,9 @@ public class SimpleConfig implements Config, MutableConfig {
   public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
     return new SimpleClassificationNodeConfig(this);
   }
+
+  @Override
+  public void flush() {
+    // There is nothing to flush with this memory-based MutableConfig.
+  }
 }

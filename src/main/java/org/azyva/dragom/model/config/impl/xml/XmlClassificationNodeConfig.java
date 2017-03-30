@@ -129,8 +129,8 @@ public class XmlClassificationNodeConfig extends XmlNodeConfig implements Classi
   }
 
   @Override
-  public void setNodeConfigTransferObject(NodeConfigTransferObject NodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
-    this.extractNodeConfigTransferObject(NodeConfigTransferObject, optimisticLockHandle);
+  public void setNodeConfigTransferObject(NodeConfigTransferObject nodeConfigTransferObject, OptimisticLockHandle optimisticLockHandle) throws OptimisticLockException, DuplicateNodeException {
+    this.extractNodeConfigTransferObject(nodeConfigTransferObject, optimisticLockHandle);
 
     if (this.indNew) {
       if (this.xmlConfig != null) {

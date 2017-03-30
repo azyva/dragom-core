@@ -72,7 +72,7 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
   /**
    * See description in ResourceBundle.
    */
-  protected static final String MSG_PATTERN_KEY_INITIATING_TRAVERSAL_BASE_NODE_PATH = "INITIATING_TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION";
+  protected static final String MSG_PATTERN_KEY_INITIATING_TRAVERSAL_BASE_NODE_PATH = "INITIATING_TRAVERSAL_BASE_NODE_PATH";
 
   /**
    * See description in ResourceBundle.
@@ -82,7 +82,7 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
   /**
    * See description in ResourceBundle.
    */
-  protected static final String MSG_PATTERN_KEY_TRAVERSAL_BASE_NODE_PATH_COMPLETED = "TRAVERSAL_REFERENCE_GRAPH_ROOT_MODULE_VERSION_COMPLETED";
+  protected static final String MSG_PATTERN_KEY_TRAVERSAL_BASE_NODE_PATH_COMPLETED = "TRAVERSAL_BASE_NODE_PATH_COMPLETED";
 
   /**
    * See description in ResourceBundle.
@@ -179,6 +179,11 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
    *   to be performed.
    */
   protected ModelVisitorJobAbstractImpl(List<NodePath> listNodePathBase) {
+    if (listNodePathBase == null) {
+      listNodePathBase = new ArrayList<NodePath>();
+      listNodePathBase.add(NodePath.ROOT);
+    }
+
     this.listNodePathBase = listNodePathBase;
 
     this.listActionsPerformed = new ArrayList<String>();
@@ -206,13 +211,23 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
 
  /*
   * This class provides a default implementation which calls
-  * {@link #iterateListNodePathBase}. If ever this behavior is not appropriate
+  * {@link #beforeIterateListNodePathBase}, {@link #iterateListNodePathBase} and
+  * {@link #afterIterateListNodePathBase}. If ever this behavior is not appropriate
   * for the job, subclasses can simply override the method. Alternatively, the
   * methods mentioned above can be overridden individually.
   */
   @Override
   public void performJob() {
+    this.beforeIterateListNodePathBase();
     this.iterateListNodePathBase();
+    this.afterIterateListNodePathBase();
+  }
+
+  /**
+   * Called by {@link #performJob} before the iteration through the List of base
+   * {@link NodePath}'s.
+   */
+  protected void beforeIterateListNodePathBase() {
   }
 
   /**
@@ -342,6 +357,9 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
    *
    * <p>Subclasses must override (if initiateVisitBaseNodePath is not overridden).
    *
+   * <p>It is not made abstract since it does not need to be implemented if never
+   * called.
+   *
    * @param classificationNode ClassificationNode.
    * @return NodeVisitor.VisitControl.
    */
@@ -355,10 +373,21 @@ public abstract class ModelVisitorJobAbstractImpl implements ModelVisitorJob {
    *
    * <p>Subclasses must override (if initiateVisitBaseNodePath is not overridden).
    *
+   * <p>It is not made abstract since it does not need to be implemented if never
+   * called.
+   *
    * @param module Module.
    * @return NodeVisitor.VisitControl.
    */
   protected NodeVisitor.VisitControl visitModule(Module module) {
     throw new RuntimeException("Must not get here.");
   }
+
+  /**
+   * Called by {@link #performJob} after the iteration through the List of base
+   * {@link NodePath}'s.
+   */
+  protected void afterIterateListNodePathBase() {
+  }
+
 }

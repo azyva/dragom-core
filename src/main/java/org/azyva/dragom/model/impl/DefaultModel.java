@@ -709,4 +709,11 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
       }
     }
   }
+
+  @Override
+  public void flush() {
+    if (this.indMutable) {
+      ((MutableConfig)this.config).flush();
+    }
+  }
 }

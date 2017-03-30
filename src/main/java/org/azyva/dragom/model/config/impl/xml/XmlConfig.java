@@ -19,8 +19,12 @@
 
 package org.azyva.dragom.model.config.impl.xml;
 
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Path;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -49,6 +53,12 @@ import org.azyva.dragom.model.config.MutableConfig;
 public class XmlConfig implements Config, MutableConfig {
   @XmlElement(name = "root-classification-node")
   XmlClassificationNodeConfig xmlClassificationNodeConfigRoot;
+
+  /**
+   * Path to the flush file used by {@link #flush} instead of the original URL
+   * specified with {@link #load}.
+   */
+  private Path pathFlushFile;
 
   /**
    * Loads a XmlConfig from a URL.
@@ -82,6 +92,10 @@ public class XmlConfig implements Config, MutableConfig {
   /**
    * Saves this XmlConfig to an OutputStream.
    *
+   * <p>This is the low-level method which writes the XmlConfig to an OutputStream.
+   * It does not use the flush file defined with {@link XmlConfig#setFlushFile}. See
+   * {@link #flush}.
+   *
    * @param outputStreamXmlConfig OutputStream.
    */
   public void save(OutputStream outputStreamXmlConfig) {
@@ -99,6 +113,14 @@ public class XmlConfig implements Config, MutableConfig {
     } catch (JAXBException je) {
       throw new RuntimeException(je);
     }
+  }
+
+  /**
+   * Sets the file where the XmlConfig is written when {@link #flush} is called.
+   * @param pathFile
+   */
+  public void setPathFlushFile(Path pathFlushFile) {
+    this.pathFlushFile = pathFlushFile;
   }
 
   @Override
@@ -127,5 +149,24 @@ public class XmlConfig implements Config, MutableConfig {
   @Override
   public MutableClassificationNodeConfig createMutableClassificationNodeConfigRoot() {
     return new XmlClassificationNodeConfig(this);
+  }
+
+  @Override
+  public void flush() {
+    OutputStream outputStream;
+
+    if (this.pathFlushFile == null) {
+      throw new RuntimeException("flush called but no flush file specified.");
+    }
+
+    try {
+      outputStream = new BufferedOutputStream(new FileOutputStream(this.pathFlushFile.toFile()));
+
+      this.save(outputStream);
+
+      outputStream.close();
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
   }
 }
