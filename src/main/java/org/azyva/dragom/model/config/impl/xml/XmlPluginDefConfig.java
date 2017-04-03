@@ -26,7 +26,9 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.config.Config;
+import org.azyva.dragom.model.config.NodeConfig;
 import org.azyva.dragom.model.config.PluginDefConfig;
 import org.azyva.dragom.model.plugin.NodePlugin;
 import org.azyva.dragom.util.Util;
@@ -92,8 +94,9 @@ public class XmlPluginDefConfig implements PluginDefConfig {
    *   class.
    * @param pluginId Plugin ID. Can be null.
    * @param pluginClass Plugin implementation class.
-   * @param indOnlyThisNode Indicates this plugin definition applies only to the
-   *   {@link Node} on which it is defined.
+   * @param indOnlyThisNode Indicates that this plugin applies specifically to the
+   *   {@link NodeConfig} on which it is defined, as opposed to being inherited by
+   *   child NodeConfig when interpreted by the {@link Model}.
    */
   public XmlPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId, String pluginClass, boolean indOnlyThisNode) {
     if ((this.pluginClass == null) || this.pluginClass.isEmpty()){
