@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -93,8 +94,8 @@ public class XmlConfig implements Config, MutableConfig {
    * Saves this XmlConfig to an OutputStream.
    *
    * <p>This is the low-level method which writes the XmlConfig to an OutputStream.
-   * It does not use the flush file defined with {@link XmlConfig#setFlushFile}. See
-   * {@link #flush}.
+   * It does not use the flush file defined with {@link XmlConfig#setPathFlushFile}.
+   * See {@link #flush}.
    *
    * @param outputStreamXmlConfig OutputStream.
    */
@@ -117,7 +118,8 @@ public class XmlConfig implements Config, MutableConfig {
 
   /**
    * Sets the file where the XmlConfig is written when {@link #flush} is called.
-   * @param pathFile
+   *
+   * @param pathFlushFile See description.
    */
   public void setPathFlushFile(Path pathFlushFile) {
     this.pathFlushFile = pathFlushFile;
@@ -167,6 +169,16 @@ public class XmlConfig implements Config, MutableConfig {
       outputStream.close();
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
+    }
+  }
+
+  public static void main(String[] args) {
+    try {
+      XmlConfig xmlConfig = XmlConfig.load(new URL("file:///C:\\temp\\model.xml"));
+      xmlConfig.setPathFlushFile(Paths.get("C:\\temp\\modelflush.xml"));
+      xmlConfig.flush();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }

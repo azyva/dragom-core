@@ -24,17 +24,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.bind.JAXBElement;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAnyElement;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
-import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.azyva.dragom.model.config.impl.simple.SimplePropertyDefConfig;
 import org.azyva.dragom.model.config.impl.xml.MapXmlPropertyDefConfigAdapter.ListProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * XmlAdapter for mapping the Map of XmlPropertyDefConfig in {@link XmlNodeConfig}
@@ -75,23 +78,25 @@ import org.slf4j.LoggerFactory;
  * @author David Raymond
  */
 public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map<String, SimplePropertyDefConfig>> {
+  /**
+   * Logger for the class.
+   */
   private static final Logger logger = LoggerFactory.getLogger(MapXmlPropertyDefConfigAdapter.class);
 
   /**
-   * We need to introduce a class for wrapping the List of JAXBElement's, else JAXB
-   * does not know what to do with the List itself.
+   * We need to introduce a class for wrapping the List of org.w3c.dom.Node's,
+   * otherwise JAXB does not know what to do with the List itself.
    */
   @XmlAccessorType(XmlAccessType.NONE)
   public static class ListProperty {
     /**
-     * The fact of having List<JAXBElement> is the optimal and most logical
-     * configuration. It works for marshal since JAXB knows how to marshal a
-     * JAXBElement. But for unmarshal, since the elements are variable, JAXB cannot
-     * map them to a known type and does not attempt to create JAXBElement's. In
-     * unmarshal we therefore have a List<Node>, despite the declaration.
+     * Because we want elements with variable names, it seems like the only sensible
+     * solution is to work with DOM org.w3c.dom.Node's. Using JAXBElement<String>
+     * instead of org.w3c.dom.Node offers a partial solution for reading, but not for
+     * writing the properties with the ind-only-this-node attribute.
      */
     @XmlAnyElement
-    private List<JAXBElement<String>> listProperty;
+    private List<org.w3c.dom.Node> listProperty;
 
     /**
      * Default constructor required by JAXB.
@@ -100,72 +105,74 @@ public class MapXmlPropertyDefConfigAdapter extends XmlAdapter<ListProperty, Map
     }
 
     /**
-     * Constructor taking a List of properties used when marshalling.
+     * Constructor taking a List of properties used when marshaling.
      *
      * @param listProperty List of properties.
      */
-    public ListProperty(List<JAXBElement<String>> listProperty) {
+    public ListProperty(List<org.w3c.dom.Node> listProperty) {
       this.listProperty = listProperty;
     }
 
     /**
      * @return List of properties.
      */
-    public List<JAXBElement<String>> getListProperty() {
+    public List<org.w3c.dom.Node> getListProperty() {
       return this.listProperty;
     }
   }
 
-  /**
-   * TODO:
-   * This method is not really useful for now since modification of
-   * {@link XmlConfig} is not currently supported.
-   * <p>
-   * In fact this method is incomplete as it does not support the indOnlyThisNode
-   * property which must be marshalled as an attribute of the property.
-   * <p>
-   * I believe the solution revolves around:
-   * <ul>
-   * <li>Making the type of listProperty org.w3c.dom.Node instead of JAXBelement;
-   * <li>Using DocumentBuilderFactory (.newInstance()) to build a Node representing
-   *     property with the correct attribute.
-   * </ul>
-   */
   @Override
   public ListProperty marshal(Map<String, SimplePropertyDefConfig> mapPropertyDefConfigXml) {
-    List<JAXBElement<String>> listProperty;
+    List<org.w3c.dom.Node> listProperty;
+    DocumentBuilderFactory documentBuilderFactory;
+    DocumentBuilder documentBuilder;
+    Document document;
 
     if ((mapPropertyDefConfigXml == null) || mapPropertyDefConfigXml.isEmpty()) {
       return null;
     }
 
-    listProperty = new ArrayList<JAXBElement<String>>();
+    listProperty = new ArrayList<org.w3c.dom.Node>();
+
+    documentBuilderFactory = DocumentBuilderFactory.newInstance();
+
+    try {
+      documentBuilder = documentBuilderFactory.newDocumentBuilder();
+    } catch (ParserConfigurationException pce) {
+      throw new RuntimeException(pce);
+    }
+
+    document = documentBuilder.newDocument();
 
     for (SimplePropertyDefConfig xmlPropertyDefConfig: mapPropertyDefConfigXml.values()) {
-      listProperty.add(new JAXBElement<String>(new QName(xmlPropertyDefConfig.getName()), String.class, xmlPropertyDefConfig.getValue()));
+      Element property;
+
+      property = document.createElement(xmlPropertyDefConfig.getName());
+      property.setTextContent(xmlPropertyDefConfig.getValue());
+
+      if (xmlPropertyDefConfig.isOnlyThisNode()) {
+        property.setAttribute("ind-only-this-node", "true");
+      }
+
+      listProperty.add(property);
     }
 
     return new ListProperty(listProperty);
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Map<String, SimplePropertyDefConfig> unmarshal(ListProperty listProperty) {
     Map<String, SimplePropertyDefConfig> mapPropertyDefConfigXml;
-
 
     // LinkedHashMap is used to preserve insertion order.
     mapPropertyDefConfigXml = new LinkedHashMap<String, SimplePropertyDefConfig>();
 
     // May be null when the XML file contains an empty containing element.
     if (listProperty.getListProperty() == null) {
-    	return mapPropertyDefConfigXml;
+      return mapPropertyDefConfigXml;
     }
 
-    // In unmarshal, the List is in fact a List<Node> and not a List<JAXBElement> as
-    // declared. It seems we must live with this incoherence if elements with variable
-    // names are to be supported.
-    for (org.w3c.dom.Node property: (List<org.w3c.dom.Node>)(List<?>)listProperty.getListProperty()) {
+    for (org.w3c.dom.Node property: listProperty.getListProperty()) {
       try {
         org.w3c.dom.Node attributeIndOnlyThisNode;
         SimplePropertyDefConfig simplePropertyDefConfig;
