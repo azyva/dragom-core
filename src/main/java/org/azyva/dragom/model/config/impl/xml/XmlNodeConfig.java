@@ -342,13 +342,15 @@ public abstract class XmlNodeConfig implements NodeConfig, MutableNodeConfig {
     this.mapPropertyDefConfig.clear();
 
     for(PropertyDefConfig propertyDefConfig: nodeConfigTransferObject.getListPropertyDefConfig()) {
+      // There is not specific XML implementation of PropertyDefConfig.
       this.mapPropertyDefConfig.put(propertyDefConfig.getName(),  propertyDefConfig);
     }
 
     this.mapPluginDefConfig.clear();
 
     for(PluginDefConfig pluginDefConfig: nodeConfigTransferObject.getListPluginDefConfig()) {
-      this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), pluginDefConfig);
+      // We need to ensure type type is XmlPluginDefConfig.
+      this.mapPluginDefConfig.put(new PluginKey(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId()), new XmlPluginDefConfig(pluginDefConfig.getClassNodePlugin(), pluginDefConfig.getPluginId(), pluginDefConfig.getPluginClass(), pluginDefConfig.isOnlyThisNode()));
     }
 
     if (!this.indNew) {

@@ -60,6 +60,9 @@ public class XmlPluginDefConfig implements PluginDefConfig {
    */
   private Class<? extends NodePlugin> classNodePlugin;
 
+  // We use a separate field for the XML mapping so that the semantics of it being
+  // absent from the XML file can be interpreted to mean to get the default plugin
+  // ID for the plugin.
   @XmlElement(name = "plugin-id")
   private String pluginIdXml;
 
@@ -68,8 +71,12 @@ public class XmlPluginDefConfig implements PluginDefConfig {
   @XmlElement(name = "plugin-class")
   private String pluginClass;
 
-  @XmlElement(name = "ind-only-this-node")
   private boolean indOnlyThisNode;
+
+  // We use a separate Boolean field for the XML mapping so that it can be set to
+  // null for the false value so that it is not written to the XML file.
+  @XmlElement(name = "ind-only-this-node")
+  private Boolean indOnlyThisNodeXml;
 
   /**
    * Default constructor used by JAXB.
@@ -83,10 +90,12 @@ public class XmlPluginDefConfig implements PluginDefConfig {
    * @param classNodePlugin NodePlugin interface class. Can be null, in which case
    *   it is set to the first interface implemented by the plugin implementation
    *   class.
-   * @param pluginId Plugin ID. Ca be null.
+   * @param pluginId Plugin ID. Can be null.
    * @param pluginClass Plugin implementation class.
+   * @param indOnlyThisNode Indicates this plugin definition applies only to the
+   *   {@link Node} on which it is defined.
    */
-  public XmlPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId, String pluginClass) {
+  public XmlPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId, String pluginClass, boolean indOnlyThisNode) {
     if ((this.pluginClass == null) || this.pluginClass.isEmpty()){
       throw new RuntimeException("PluginDef cannot specify a null or empty plugin class.");
     }
@@ -110,6 +119,8 @@ public class XmlPluginDefConfig implements PluginDefConfig {
     this.pluginClass = pluginClass;
 
     // TODO: Should we handle default pluginId?
+
+    this.indOnlyThisNode = indOnlyThisNode;
   }
 
   /**
@@ -158,6 +169,8 @@ public class XmlPluginDefConfig implements PluginDefConfig {
       // TODO: Should we set to null if xml is empty (see above).
       this.pluginId = this.pluginIdXml;
     }
+
+    this.indOnlyThisNode = (this.indOnlyThisNodeXml == null) ? false : this.indOnlyThisNodeXml;
   }
 
   /**
@@ -169,6 +182,7 @@ public class XmlPluginDefConfig implements PluginDefConfig {
   private void beforeMarshal(Marshaller marshaller) {
     this.stringClassNodePluginXml = this.classNodePlugin.getName();
     this.pluginIdXml = this.pluginId;
+    this.indOnlyThisNodeXml = this.indOnlyThisNode ? true : null;
   }
 
   @Override

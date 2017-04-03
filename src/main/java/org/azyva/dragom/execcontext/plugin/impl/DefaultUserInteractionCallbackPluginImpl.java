@@ -465,9 +465,13 @@ public class DefaultUserInteractionCallbackPluginImpl implements UserInteraction
 
     // For the calls to WordUtils.warp above, if we don't specify the newline string,
     // the platform newline separator is used. Forcing the single character "\n" makes
-    // it easier to make to portable.
+    // it easier to make to portable. However, we still include the Windows "\r"
+    // character for splitting the lines since the string provided by the caller may
+    // legitimately include platform-specific line separators. In particular, this
+    // happens for strings containing stack trace generated with
+    // Exception.printStackTrace.
 
-    arrayLine = string.split("\n");
+    arrayLine = string.split("\r?\n");
 
     for (int i = 0; i < arrayLine.length; i++) {
       for (int j = 0 ; j < this.stackIndentHandle.size(); j++) {
