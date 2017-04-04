@@ -441,7 +441,7 @@ public final class Util {
   }
 
   /**
-   * Converts a PascalCase (or camelCase) string to lowercase with dashes.
+   * Converts a PascalCase (or camelCase) string to lowercase-with-dashes.
    *
    * @param stringPascalCase See description.
    * @return See description.
@@ -461,6 +461,37 @@ public final class Util {
         }
 
         stringBuilder.append(Character.toLowerCase(character));
+      } else {
+        stringBuilder.append(character);
+      }
+    }
+
+    return stringBuilder.toString();
+  }
+
+  /**
+   * Converts a lowercase-with-dashes string to PascalCase.
+   *
+   * @param stringLowercaseWithDashes See description.
+   * @return See description.
+   */
+  public static String convertLowercaseWithDashesToPascalCase(String stringLowercaseWithDashes) {
+    StringBuilder stringBuilder;
+    int charCount;
+    boolean indNextCharUppercase;
+
+    stringBuilder = new StringBuilder();
+    charCount = stringLowercaseWithDashes.length();
+    indNextCharUppercase = true;
+
+    for (int i = 0; i < charCount; i++) {
+      char character = stringLowercaseWithDashes.charAt(i);
+
+      if (character == '-') {
+        indNextCharUppercase = true;
+      } else if (indNextCharUppercase) {
+        stringBuilder.append(Character.toUpperCase(character));
+        indNextCharUppercase = false;
       } else {
         stringBuilder.append(character);
       }
