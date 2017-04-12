@@ -135,8 +135,8 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
   private static final String RUNTIME_PROPERTY_INCLUDE_VERSION = "JENKINS_INCLUDE_VERSION";
 
   /**
-   * Transient data préfix to cache the job full name. The suffix is the Version in
-   * littral form.
+   * Transient data préfix to cache the job full name. The suffix is the
+   * ModuleVersion in littral form.
    */
   private static final String TRANSIENT_DATA_PREFIX_JOB_FULL_NAME = SimpleJenkinsJobInfoPluginBaseImpl.class.getName() + ".JobFullName.";
 
@@ -190,7 +190,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
 
     execContext = ExecContextHolder.get();
 
-    jobFullName = (String)execContext.getTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + versionDynamic.toString());
+    jobFullName = (String)execContext.getTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + new ModuleVersion(this.getModule().getNodePath(), versionDynamic));
 
     if (jobFullName != null) {
       return jobFullName;
@@ -291,7 +291,7 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
 
     jobFullName = stringBuilder.toString();
 
-    execContext.setTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + versionDynamic.toString(), jobFullName);
+    execContext.setTransientData(SimpleJenkinsJobInfoPluginBaseImpl.TRANSIENT_DATA_PREFIX_JOB_FULL_NAME + new ModuleVersion(this.getModule().getNodePath(), versionDynamic), jobFullName);
 
     return jobFullName;
   }

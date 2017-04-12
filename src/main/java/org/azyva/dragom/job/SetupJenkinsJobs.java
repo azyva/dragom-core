@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -141,6 +142,11 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_JOB_ALREADY_CREATED_FOR_OTHER_MODULE_VERSION = "JOB_ALREADY_CREATED_FOR_OTHER_MODULE_VERSION";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_JOB_NEEDS_CREATING_OR_UPDATING = "JOB_NEEDS_CREATING_OR_UPDATING";
 
   /**
@@ -244,6 +250,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
      */
     Set<String> setJobCreated;
 
+
     /**
      * Path to the file containing the items created.
      */
@@ -268,6 +275,13 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     }
 
     /**
+     * @return Indicates if the items created file exists.
+     */
+    public boolean isFileSpecified() {
+      return this.pathItemsCreatedFile != null;
+    }
+
+    /**
      * Loads the items created file if it exists.
      *
      * @return Indicates if the items created file exists.
@@ -275,6 +289,10 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     public boolean loadIfExists() {
       BufferedReader bufferedReader;
       String line;
+
+      if (this.pathItemsCreatedFile == null) {
+        return false;
+      }
 
       if (!this.pathItemsCreatedFile.toFile().isFile()) {
         return false;
@@ -315,6 +333,10 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
      */
     public void save() {
       BufferedWriter bufferedWriter;
+
+      if (this.pathItemsCreatedFile == null) {
+        return;
+      }
 
       try {
         if (this.indModified) {
@@ -376,7 +398,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     }
 
     /**
-     * Indicates if a job has been created.
+     * Indicates if a job has been created or if it reviously existed.
      *
      * @param job Job.
      * @return See description.
@@ -471,6 +493,12 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   private ItemsCreatedFileManager itemsCreatedFileManager;
 
   /**
+   * Map of the jobs which were created during this job execution and the
+   * corresponding ModuleVersion.
+   */
+  private Map<String, ModuleVersion> mapJobModuleVersionCreated;
+
+  /**
    * JenkinsClient.
    */
   private JenkinsClient jenkinsClient;
@@ -526,6 +554,8 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
       user = credentials.user;
       password = credentials.password;
     }
+
+    this.mapJobModuleVersionCreated = new HashMap<String, ModuleVersion>();
 
     this.jenkinsClient = ServiceLocator.getService(JenkinsClient.class);
     this.jenkinsClient.setBaseUrl(jenkinsBaseUrl);
@@ -599,6 +629,10 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         throw new RuntimeExceptionUserError(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_ALREADY_EXISTS), referencePath.getLeafModuleVersion(), job));
       }
 
+      if (SetupJenkinsJobs.this.mapJobModuleVersionCreated.get(job) != null) {
+        throw new RuntimeExceptionUserError(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_ALREADY_CREATED_FOR_OTHER_MODULE_VERSION), referencePath.getLeafModuleVersion(), job, SetupJenkinsJobs.this.mapJobModuleVersionCreated.get(job)));
+      }
+
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_JOB_NEEDS_CREATING_OR_UPDATING), referencePath.getLeafModuleVersion(), job));
 
       if (!Util.handleDoYouWantToContinueWithIndividualNo(SetupJenkinsJobs.DO_YOU_WANT_TO_CONTINUE_CONTEXT_CREATE_UPDATE_JENKINS_JOB)) {
@@ -631,9 +665,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
             SetupJenkinsJobs.this.jenkinsClient.createSimpleFolder(folder);
 
-            if (SetupJenkinsJobs.this.itemsCreatedFileManager != null) {
-              SetupJenkinsJobs.this.itemsCreatedFileManager.folderCreated(folder);
-            }
+            SetupJenkinsJobs.this.itemsCreatedFileManager.folderCreated(folder);
           }
         }
       }
@@ -652,9 +684,9 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         SetupJenkinsJobs.this.jenkinsClient.createUpdateJob(job, readerConfig);
       }
 
-      if (SetupJenkinsJobs.this.itemsCreatedFileManager != null) {
-        SetupJenkinsJobs.this.itemsCreatedFileManager.jobCreated(job);
-      }
+      SetupJenkinsJobs.this.itemsCreatedFileManager.jobCreated(job);
+
+      SetupJenkinsJobs.this.mapJobModuleVersionCreated.put(job, referencePath.getLeafModuleVersion());
 
       return ReferenceGraph.VisitControl.CONTINUE;
     }
@@ -679,7 +711,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
-    if (this.itemsCreatedFileManager != null) {
+    if (this.itemsCreatedFileManager.isFileSpecified()) {
       if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.IGNORE) {
         this.itemsCreatedFileManager.save();
       } else {
@@ -785,9 +817,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         }
       }
     } finally {
-      if (this.itemsCreatedFileManager != null) {
-        this.itemsCreatedFileManager.save();
-      }
+      this.itemsCreatedFileManager.save();
     }
   }
 }
