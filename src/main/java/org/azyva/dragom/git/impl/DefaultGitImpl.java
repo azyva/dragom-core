@@ -640,12 +640,16 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public void push(Path pathWorkspace, String gitRef) {
+  public boolean push(Path pathWorkspace, String gitRef) {
+    int exitCode;
+
     if (gitRef != null) {
-      this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null, false);
+      exitCode = this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.ONE, pathWorkspace, null, false);
     } else {
-      this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
+      exitCode = this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
     }
+
+    return exitCode == 1;
   }
 
   @Override
@@ -775,17 +779,25 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public void push(Path pathWorkspace) {
+  public boolean push(Path pathWorkspace) {
+    int exitCode;
+
     // We always set the upstream tracking information because because pushes can be
     // delayed and new branches can be pushed on the call to this method other than
     // the one immediately after creating the branch.
-    this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
+    exitCode = this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
+
+    if (exitCode == 1) {
+      return true;
+    }
 
     // Unfortunately we cannot specify --all and --tags in the same command.
     // Maybe it is possible to specify --follow-tags with --all, but even if so,
     // this is not what we need since there may be exceptional cases where tags
     // are not reachable from a branch.
-    this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
+    exitCode = this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
+
+    return exitCode == 1;
   }
 
   @Override
@@ -873,7 +885,7 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush) {
+  public void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr) {
     String branch;
 
     branch = this.getBranch(pathWorkspace);
@@ -912,10 +924,6 @@ public class DefaultGitImpl implements Git {
     message = message.replace("\"", "\\\"");
 
     this.executeGitCommand(new String[] {"commit", "-m", message}, false, AllowExitCode.NONE, pathWorkspace, null, false);
-
-    if (indPush) {
-      this.push(pathWorkspace, "refs/heads/" + branch);
-    }
   }
 
   @Override
@@ -966,6 +974,7 @@ public class DefaultGitImpl implements Git {
     return modTimestampVersion.version;
   }
 
+  @SuppressWarnings("unchecked")
   private void setPathWorkspaceVersion(Path pathWorkspace, Version version) {
     ExecContext execContext;
     Map<Path, ModTimestampVersion> mapPathModTimestampVersion;

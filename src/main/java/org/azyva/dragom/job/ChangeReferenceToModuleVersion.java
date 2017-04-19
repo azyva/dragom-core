@@ -213,7 +213,13 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
           message = MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_CHANGE_REFERENCE_VERSION), this.referencePath, referenceChild, versionNew);
           mapCommitAttr = new HashMap<String, String>();
           mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-          scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+          try {
+            scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            throw new RuntimeException(une);
+          }
+
           userInteractionCallbackPlugin.provideInfo(message);
           this.listActionsPerformed.add(message);
 

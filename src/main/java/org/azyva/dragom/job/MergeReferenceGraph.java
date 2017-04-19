@@ -769,7 +769,11 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       }
 
       // ScmPlugin.merge ensures that the working directory is synchronized.
-      mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+      try {
+        mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+      } catch (ScmPlugin.UpdateNeededException une) {
+        throw new RuntimeException(une);
+      }
 
       if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
         toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
@@ -884,7 +888,13 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
                 message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHANGE_DEST_REFERENCE_VERSION), this.referencePath, referenceChildDest, referenceChildSrc.getModuleVersion().getVersion());
                 mapCommitAttr = new HashMap<String, String>();
                 mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-                scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+                try {
+                  scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+                } catch (ScmPlugin.UpdateNeededException une) {
+                  throw new RuntimeException(une);
+                }
+
                 userInteractionCallbackPlugin.provideInfo(message);
                 this.listActionsPerformed.add(message);
 
@@ -975,7 +985,13 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHANGE_DEST_REFERENCE_VERSION), this.referencePath, referenceChildDest, versionDynamicNew);
               mapCommitAttr = new HashMap<String, String>();
               mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-              scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+              try {
+                scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+              } catch (ScmPlugin.UpdateNeededException une) {
+                throw new RuntimeException(une);
+              }
+
               userInteractionCallbackPlugin.provideInfo(message);
               this.listActionsPerformed.add(message);
 

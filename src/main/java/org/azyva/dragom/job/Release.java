@@ -576,7 +576,13 @@ public class Release extends RootModuleVersionJobAbstractImpl {
           message = MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
           mapCommitAttr = new HashMap<String, String>();
           mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
-          scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+          try {
+            scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            throw new RuntimeException(une);
+          }
+
           userInteractionCallbackPlugin.provideInfo(message);
           this.listActionsPerformed.add(message);
 
@@ -797,7 +803,13 @@ public class Release extends RootModuleVersionJobAbstractImpl {
 
         mapCommitAttr = new HashMap<String, String>();
         mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE, "true");
-        scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+        try {
+          scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+        } catch (ScmPlugin.UpdateNeededException une) {
+          throw new RuntimeException(une);
+        }
+
         this.listActionsPerformed.add(message);
 
         if (indUserWorkspaceDir) {
@@ -869,7 +881,13 @@ public class Release extends RootModuleVersionJobAbstractImpl {
             mapCommitAttr = new HashMap<String, String>();
             mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_EQUIVALENT_STATIC_VERSION, versionStaticSelected.toString());
             mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE, "true");
-            scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+            try {
+              scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+            } catch (ScmPlugin.UpdateNeededException une) {
+              throw new RuntimeException(une);
+            }
+
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
 

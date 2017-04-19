@@ -874,7 +874,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           mapCommitAttr = new HashMap<String, String>();
           mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_REFERENCE_VERSION_CHANGE, "true");
           message = MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_REFERENCES_UPDATED), this.referencePath);
-          scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+
+          try {
+            scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            throw new RuntimeException(une);
+          }
 
           if (indUserWorkspaceDir) {
             message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
@@ -1179,7 +1184,12 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
 
           mapCommitAttr.put(ScmPlugin.COMMIT_ATTR_VERSION_CHANGE, "true");
 
-          scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+          try {
+            scmPlugin.commit(pathModuleWorkspace, message, mapCommitAttr);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            throw new RuntimeException(une);
+          }
+
           userInteractionCallbackPlugin.provideInfo(message);
           this.listActionsPerformed.add(message);
 

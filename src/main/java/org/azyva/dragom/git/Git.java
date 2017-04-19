@@ -272,8 +272,9 @@ public interface Git {
    *
    * @param pathWorkspace Path to the workspace.
    * @param gitRef Git reference to push. If null, the current branch is pushed.
+   * @return Indicates if push failed because remote contains new changes.
    */
-  void push(Path pathWorkspace, String gitRef);
+  boolean push(Path pathWorkspace, String gitRef);
 
   /**
    * Git checkout.
@@ -314,8 +315,9 @@ public interface Git {
    * Pushes all refs, branches and tags.
    *
    * @param pathWorkspace Path to the workspace.
+   * @return Indicates if push failed because remote contains new changes.
    */
-  void push(Path pathWorkspace);
+  boolean push(Path pathWorkspace);
 
   /**
    * Returns the current version.
@@ -361,10 +363,9 @@ public interface Git {
    * @param pathWorkspace Path to the workspace.
    * @param message Commit message.
    * @param mapCommitAttr Map of commit attributes.
-   * @param indPush Indicates to perform a push immediately after the commit.
    */
   // TODO: Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
-  void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr, boolean indPush);
+  void addCommit(Path pathWorkspace, String message, Map<String, String> mapCommitAttr);
 
   /**
    * Converts a {@link Version} to a Git reference such as refs/tags/&lt;tag&gt; if

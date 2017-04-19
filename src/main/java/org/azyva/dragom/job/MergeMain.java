@@ -40,7 +40,6 @@ import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ScmPlugin;
-import org.azyva.dragom.model.plugin.ScmPlugin.Commit;
 import org.azyva.dragom.reference.Reference;
 import org.azyva.dragom.reference.ReferencePathMatcher;
 import org.azyva.dragom.util.AlwaysNeverAskUserResponse;
@@ -80,12 +79,13 @@ import org.slf4j.LoggerFactory;
  * merged into previously during the traversal.
  * <p>
  * The source ModuleVersion must be static. Non-static ModuleVersion's are
- * ignored, even if matched by the ReferncePathMatcher.
+ * ignored, even if matched by the ReferencePathMatcher.
  * <p>
  * The destination ModuleVersion must be in a user workspace directory so that if
  * merge conflicts are encountered, the user has a workspace where they can be
  * resolved. If a destination ModuleVersion is not in a user workspace directory,
- * it is checked out for the user.
+ * it is checked out for the user and deleted after the merge if no conflicts are
+ * encountered.
  * <p>
  * The fact that the destination ModuleVersion must be in a user workspace
  * directory makes this class behave somewhat differently from others in that
@@ -212,6 +212,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   private static final String MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST = "NOTHING_TO_MERGE_SRC_INTO_DEST";
 
   /**
+   * See description in ResourceBundle.
+   */
+  private static final String MSG_PATTERN_KEY_DELETING_DEST_USER_WORKSPACE_DIR_NO_CONFLICTS = "DELETING_DEST_USER_WORKSPACE_DIR_NO_CONFLICTS";
+
+  /**
    * ResourceBundle specific to this class.
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(MergeMain.class.getName() + "ResourceBundle");
@@ -297,6 +302,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
     MergeMainMode mergeMainMode;
     WorkspaceDirUserModuleVersion workspaceDirUserModuleVersion;
     Path pathModuleWorkspace;
+    boolean indWorkspaceDirUserModuleVersionCreated;
     ScmPlugin.MergeResult mergeResult = null;
     List<ScmPlugin.Commit> listCommit = null;
     Iterator<ScmPlugin.Commit> iteratorCommit;
@@ -406,8 +412,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
           throw re;
         }
+
+        indWorkspaceDirUserModuleVersionCreated = true;
       } else {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
+        indWorkspaceDirUserModuleVersionCreated = false;
       }
 
       //********************************************************************************
@@ -418,6 +427,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
+        if (indWorkspaceDirUserModuleVersionCreated) {
+          workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
+          pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
+        }
+
         // The return value not important since the caller is expected to check for
         // Util.isAbort.
         return true;
@@ -437,7 +451,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         if (!listCommit.isEmpty()) {
           stringBuilderListCommits = new StringBuilder();
 
-          for (Commit commit: listCommit) {
+          for (ScmPlugin.Commit commit: listCommit) {
             stringBuilderListCommits.append(commit.id).append(": ").append(commit.message).append('\n');
           }
 
@@ -484,7 +498,23 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // is equivalent to a replacement in that case) since for most SCM it is faster.
       case SRC_VALIDATE_NO_DIVERGING_COMMITS:
         // ScmPlugin.merge ensures that the working directory is synchronized.
-        mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+        try {
+          mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+        } catch (ScmPlugin.UpdateNeededException une) {
+          if (indWorkspaceDirUserModuleVersionCreated) {
+            if (scmPlugin.update(pathModuleWorkspace)) {
+              throw new RuntimeException("Unexpected merge conflicts occured in " + pathModuleWorkspace + " while updating newly created WorkspaceDirUserModuleVersion.");
+            }
+
+            try {
+              mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+            } catch (ScmPlugin.UpdateNeededException une2) {
+              throw new RuntimeException(une2);
+            }
+          } else {
+            throw new RuntimeException(une);
+          }
+        }
 
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
           if (mergeMainMode == MergeMainMode.SRC_VALIDATE_NO_DIVERGING_COMMITS) {
@@ -544,7 +574,23 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         }
 
         // ScmPlugin.merge ensures that the working directory is synchronized.
-        mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+        try {
+          mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+        } catch (ScmPlugin.UpdateNeededException une) {
+          if (indWorkspaceDirUserModuleVersionCreated) {
+            if (scmPlugin.update(pathModuleWorkspace)) {
+              throw new RuntimeException("Unexpected merge conflicts occured in " + pathModuleWorkspace + " while updating newly created WorkspaceDirUserModuleVersion.");
+            }
+
+            try {
+              mergeResult = scmPlugin.mergeExcludeCommits(pathModuleWorkspace, moduleVersionSrc.getVersion(), listCommit, null);
+            } catch (ScmPlugin.UpdateNeededException une2) {
+              throw new RuntimeException(une2);
+            }
+          } else {
+            throw new RuntimeException(une);
+          }
+        }
 
         if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
           toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
@@ -581,7 +627,23 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
         // case) since for most SCM it is faster.
         if (listCommit.isEmpty()) {
           // ScmPlugin.merge ensures that the working directory is synchronized.
-          mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+          try {
+            mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            if (indWorkspaceDirUserModuleVersionCreated) {
+              if (scmPlugin.update(pathModuleWorkspace)) {
+                throw new RuntimeException("Unexpected merge conflicts occured in " + pathModuleWorkspace + " while updating newly created WorkspaceDirUserModuleVersion.");
+              }
+
+              try {
+                mergeResult = scmPlugin.merge(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+              } catch (ScmPlugin.UpdateNeededException une2) {
+                throw new RuntimeException(une2);
+              }
+            } else {
+              throw new RuntimeException(une);
+            }
+          }
 
           if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
             throw new RuntimeException("Conflicts are not expected here.");
@@ -592,7 +654,23 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
           }
         } else {
           // ScmPlugin.merge ensures that the working directory is synchronized.
-          mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+          try {
+            mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+          } catch (ScmPlugin.UpdateNeededException une) {
+            if (indWorkspaceDirUserModuleVersionCreated) {
+              if (scmPlugin.update(pathModuleWorkspace)) {
+                throw new RuntimeException("Unexpected merge conflicts occured in " + pathModuleWorkspace + " while updating newly created WorkspaceDirUserModuleVersion.");
+              }
+
+              try {
+                mergeResult = scmPlugin.replace(pathModuleWorkspace, moduleVersionSrc.getVersion(), null);
+              } catch (ScmPlugin.UpdateNeededException une2) {
+                throw new RuntimeException(une2);
+              }
+            } else {
+              throw new RuntimeException(une);
+            }
+          }
 
           if (mergeResult == ScmPlugin.MergeResult.MERGED) {
             this.listActionsPerformed.add(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_COMMITS_OVERWRITTEN), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode, stringBuilderListCommits.toString()));
@@ -604,6 +682,16 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
       if (mergeResult == ScmPlugin.MergeResult.NOTHING_TO_MERGE) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_NOTHING_TO_MERGE_SRC_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
+      }
+
+      // We get here only if no merge conflicts were encountered. In that case and if we
+      // had to checkout the destination ModuleVersion into a
+      // WorkspaceDirUserModuleVersion, we delete it.
+      if (indWorkspaceDirUserModuleVersionCreated) {
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_DELETING_DEST_USER_WORKSPACE_DIR_NO_CONFLICTS), moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
+
+        workspacePlugin.deleteWorkspaceDir(workspaceDirUserModuleVersion);
+        pathModuleWorkspace = null; // To prevent the call to workspacePlugin.releaseWorkspaceDir below.
       }
     } finally {
         if (pathModuleWorkspace != null) {

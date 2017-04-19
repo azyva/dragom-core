@@ -511,7 +511,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     git = this.getGit();
 
     if (pathRemote != null) {
-      this.gitFetch(pathRemote, null, null, false);
+      this.gitFetch(pathRemote, null, null, false, false);
 
       reposUrl = "file://" + pathRemote.toAbsolutePath();
 
@@ -554,7 +554,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
   }
 
-  private void fetch(Path pathModuleWorkspace) {
+  private void fetch(Path pathModuleWorkspace, boolean indForce) {
     NodePath nodePathModule;
     Path pathMainUserWorkspaceDir;
 
@@ -566,7 +566,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // fetch within the main Workspace directory.
       // Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
       // the case that no fetch is actually performed by this call.
-      this.gitFetch(pathMainUserWorkspaceDir, null, null, false);
+      this.gitFetch(pathMainUserWorkspaceDir, null, null, false, indForce);
 
       // Then we perform a local fetch from the main to the current Workspace directory
       // directory. For this special fetch, we need to update the remote tracking
@@ -578,12 +578,12 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // avoided because of the GIT_FETCH_PUSH_BEHAVIOR runtime property. But there
       // could be cases where the remote tracking branches are not up to date in the
       // current Workspace directory and we want to ensure they are updated.
-      this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false);
+      this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false, false);
     } else {
       // If the Workspace directory is the main one, we perform a regular fetch.
       // Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
       // the case that no fetch is actually performed by this call.
-      this.gitFetch(pathModuleWorkspace, null, null, false);
+      this.gitFetch(pathModuleWorkspace, null, null, false, indForce);
     }
   }
 
@@ -618,8 +618,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
    *   complains that fetching into the current local branch is not allowed), and
    *   performs "git reset --hard HEAD" to ensure the working copy (and index)
    *   represent the potentially changed HEAD.
+   * @param indForce Indicates to fetch even if fetching has already been performed
+   *   during the tool execution.
    */
-  private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec, boolean indFetchingIntoCurrentBranch) {
+  private void gitFetch(Path pathModuleWorkspace, Path pathRemote, String refspec, boolean indFetchingIntoCurrentBranch, boolean indForce) {
     Git git;
     String reposUrl;
 
@@ -632,7 +634,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       reposUrl = "file://" + pathRemote.toAbsolutePath();
     } else {
-      if (!this.mustFetch(pathModuleWorkspace)) {
+      if (!this.mustFetch(pathModuleWorkspace, indForce)) {
         return;
       }
 
@@ -655,7 +657,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
   }
 
-  private boolean gitPull(Path pathModuleWorkspace) {
+  private boolean gitPull(Path pathModuleWorkspace, boolean indForce) {
     Git git;
     String branch;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
@@ -673,7 +675,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // the case that no fetch is actually performed.
     // We perform the pull in two steps also because the second step may be a regular
     // merge or a rebase.
-    this.fetch(pathModuleWorkspace);
+    this.fetch(pathModuleWorkspace, indForce);
 
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
     indPullRebase = Boolean.valueOf(runtimePropertiesPlugin.getProperty(this.getModule(), GitScmPluginImpl.RUNTIME_PROPERTY_USE_PULL_REBASE));
@@ -695,7 +697,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   // Then, if there is a main workspace directory for the module, we fetch from
   // the one we just pushed, into the main one so that subsequent fetchs from the
   // main one will consider the new changes.
-  private void push(Path pathModuleWorkspace, String gitRef) {
+  private void push(Path pathModuleWorkspace, String gitRef) throws UpdateNeededException {
     Git git;
     String branch;
     NodePath nodePathModule;
@@ -719,7 +721,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // to update only the current branch (nothing to do with the remote tracking
       // branches yet). This current branch in the main Workspace directory is not
       // supposed to be the current one so there is no danger of disturbing it.
-      this.gitFetch(pathMainUserWorkspaceDir, pathModuleWorkspace, "refs/heads/" + branch + ":refs/heads/" + branch, false);
+      this.gitFetch(pathMainUserWorkspaceDir, pathModuleWorkspace, "refs/heads/" + branch + ":refs/heads/" + branch, false, false);
 
       // Then we perform a regular push within the main Workspace directory, but for the
       // current branch.
@@ -745,7 +747,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // cases where the remote tracking branches are not up to date in the current
       // Workspace directory and we want to ensure they are updated, even if this is not
       // strictly related to the push.
-      this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false);
+      this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/remotes/origin/*:refs/remotes/origin/*", false, false);
     } else {
       // If the Workspace directory is the main one, we perform a regular push.
       // Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
@@ -754,7 +756,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
   }
 
-  private void gitPush(Path pathModuleWorkspace, String gitRef) {
+  private void gitPush(Path pathModuleWorkspace, String gitRef) throws UpdateNeededException {
     Git git;
 
     git = this.getGit();
@@ -770,7 +772,9 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // pushes can be delayed and new branches can be pushed on the call to this method
     // other than the one immediately after creating the branch. In the case gitRef is
     // a tag, --set-upstream used in Git.push has no effect.
-    git.push(pathModuleWorkspace, gitRef);
+    if (git.push(pathModuleWorkspace, gitRef)) {
+      throw new UpdateNeededException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before pushing.");
+    }
   }
 
   @Override
@@ -910,7 +914,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
             return pathModuleWorkspace;
           }
 
-          this.fetch(pathModuleWorkspace);
+          this.fetch(pathModuleWorkspace, false);
 
           if (version != null) {
             git.checkout(pathModuleWorkspace, version);
@@ -928,13 +932,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
                   // the main Workspace directory into the current Workspace directory.
                   // This is the special handling of the synchronization between a workspace
                   // directory and the main one mentioned in the isSync method.
-                  this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true);
+                  this.gitFetch(pathModuleWorkspace, pathMainUserWorkspaceDir, "refs/heads/" + version.getVersion() + ":refs/heads/" + version.getVersion(), true, false);
                 }
               }
 
               // And in all cases, we pull changes from the corresponding remote tracking
               // branch.
-              if (this.gitPull(pathModuleWorkspace)) {
+              if (this.gitPull(pathModuleWorkspace, false)) {
                 throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
               }
             }
@@ -1038,7 +1042,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     if (pathModuleWorkspace != null) {
       if (this.getVersionTempDynamicBase(pathModuleWorkspace) == null) {
-        this.fetch(pathModuleWorkspace);
+        this.fetch(pathModuleWorkspace, false);
       }
 
       return pathModuleWorkspace;
@@ -1050,7 +1054,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirSystemModule,  WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.PEEK);
 
       if (this.getVersionTempDynamicBase(pathModuleWorkspace) == null) {
-        this.fetch(pathModuleWorkspace);
+        this.fetch(pathModuleWorkspace, false);
       }
 
       return pathModuleWorkspace;
@@ -1059,7 +1063,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // We are not interested in a specific Version at this point.
     pathModuleWorkspace = this.checkoutSystem(null);
     workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
-    this.fetch(pathModuleWorkspace);
+    this.fetch(pathModuleWorkspace, false);
     return pathModuleWorkspace;
   }
 
@@ -1109,7 +1113,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     // Note that depending on the GIT_FETCH_PUSH_BEHAVIOR runtime property it may be
     // the case that no fetch is actually performed by this call.
-    this.fetch(pathModuleWorkspace);
+    this.fetch(pathModuleWorkspace, false);
 
     aheadBehindInfo = git.getAheadBehindInfo(pathModuleWorkspace);
 
@@ -1138,7 +1142,10 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_IND_PUSH_ALL
       if (indPushAll = this.isPushAll()) {
         userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS), pathModuleWorkspace));
-        git.push(pathModuleWorkspace);
+
+        if (git.push(pathModuleWorkspace)) {
+          throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before pushing.");
+        }
       }
 
       if (git.isLocalChanges(pathModuleWorkspace)) {
@@ -1191,7 +1198,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       throw new RuntimeException(pathModuleWorkspace.toString() + " must be accessed for writing.");
     }
 
-    return this.gitPull(pathModuleWorkspace);
+    return this.gitPull(pathModuleWorkspace, true);
   }
 
   @Override
@@ -1493,7 +1500,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // since the corresponding branch may already be present locally in the workspace
     // and changes may have been performed outside of the workspace. We therefore
     // ensure that it is up to date.
-    if ((version.getVersionType() == VersionType.DYNAMIC) && this.gitPull(pathModuleWorkspace)) {
+    if ((version.getVersionType() == VersionType.DYNAMIC) && this.gitPull(pathModuleWorkspace, false)) {
       throw new RuntimeException("Conflicts were encountered while pulling changes into " + pathModuleWorkspace + ". This is not expected here.");
     }
 
@@ -1612,7 +1619,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
         git.executeGitCommand(new String[] {"commit", "--allow-empty", "-m", message}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
-        this.push(pathModuleWorkspace, "refs/heads/" + branch);
+        try {
+          this.push(pathModuleWorkspace, "refs/heads/" + branch);
+        } catch (UpdateNeededException une) {
+          throw new RuntimeException(une);
+        }
 
         this.getModule().raiseNodeEvent(new DynamicVersionCreatedEvent(this.getModule(), versionTarget));
       } finally {
@@ -1661,7 +1672,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       }
 
       // To push the new tag.
-      this.push(pathModuleWorkspace, "refs/tags/" + versionTarget.getVersion());
+      try {
+        this.push(pathModuleWorkspace, "refs/tags/" + versionTarget.getVersion());
+      } catch (UpdateNeededException une) {
+        throw new RuntimeException(une);
+      }
 
       this.getModule().raiseNodeEvent(new StaticVersionCreatedEvent(this.getModule(), versionTarget));
 
@@ -1882,7 +1897,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   //TODO Document Push as well...
   // Should the caller be interested in knowing commit failed because unsynced, or caller must update before?
   // Caller should not specify version attributes, especially dragom-base-version, for a commit attribute, even if in Git version attributes are stored as commit attributes on the first dummy commit.
-  public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) {
+  public void commit(Path pathModuleWorkspace, String message, Map<String, String> mapCommitAttr) throws UpdateNeededException {
     Git git;
     boolean indTempDynamicVersion;
     WorkspacePlugin workspacePlugin;
@@ -1894,10 +1909,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // In the case of a temporary dynamic Version we do not check for synchronization
     // since by definition the temporary dynamic Version is not synchronized with the
     // remote.
-    if (indTempDynamicVersion) {
+    if (!indTempDynamicVersion) {
       if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
-        throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
+        throw new UpdateNeededException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before committing.");
       }
+
+      // Note that even if UpdateNeededException is not thrown above, it could be thrown by
+      // this.push below if another commit is introduced meanwhile.
     }
 
     workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
@@ -1908,18 +1926,25 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
     // We pass false for indPush since we are pushing explicitly below in order
     // to handle the main workspace directory.
-    git.addCommit(pathModuleWorkspace, message, mapCommitAttr, false);
+    git.addCommit(pathModuleWorkspace, message, mapCommitAttr);
 
     // We push only if the version is not a temporay dynamic one.
     if (!indTempDynamicVersion) {
       // TODO: Maybe we couild pass null for gitRef since the upstream may always already be set in the case of a commit. But not sure.
-      this.push(pathModuleWorkspace, "refs/heads/" + git.getBranch(pathModuleWorkspace));
+      try {
+        this.push(pathModuleWorkspace, "refs/heads/" + git.getBranch(pathModuleWorkspace));
+      } catch (UpdateNeededException une) {
+        // If push failed, we undo the commit.
+        git.executeGitCommand(new String[] {"reset", "--mixed", "HEAD~1"}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+        throw une;
+      }
     }
   }
 
 
   @Override
-  public MergeResult merge(Path pathModuleWorkspace, Version versionSrc, String message) {
+  public MergeResult merge(Path pathModuleWorkspace, Version versionSrc, String message) throws UpdateNeededException {
     Git git;
     Version versionDest;
     ExecContext execContext;
@@ -1941,9 +1966,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
 
     // gitFetch will have been called by isSync.
-    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.LOCAL_CHANGES_ONLY, false)) {
       throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
     }
+
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
+      throw new UpdateNeededException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before merging.");
+    }
+
+    // Note that even if UpdateNeededException is not thrown above, it could be thrown by
+    // this.push below if another commit is introduced meanwhile.
 
     execContext = ExecContextHolder.get();
 
@@ -1991,13 +2023,20 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
     }
 
-    this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+    try {
+      this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+    } catch (UpdateNeededException une) {
+      // If push failed, we undo the merge.
+      git.executeGitCommand(new String[] {"reset", "--hard", "HEAD~1"}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+      throw une;
+    }
 
     return MergeResult.MERGED;
   }
 
   @Override
-  public MergeResult mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) {
+  public MergeResult mergeExcludeCommits(Path pathModuleWorkspace, Version versionSrc, List<Commit> listCommitExclude, String message) throws UpdateNeededException {
     Git git;
     Version versionDest;
     ExecContext execContext;
@@ -2022,9 +2061,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
 
     // gitFetch will have been called by isSync.
-    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.LOCAL_CHANGES_ONLY, false)) {
       throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
     }
+
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
+      throw new UpdateNeededException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before merging.");
+    }
+
+    // Note that even if UpdateNeededException is not thrown above, it could be thrown by
+    // this.push below if another commit is introduced meanwhile.
 
     execContext = ExecContextHolder.get();
 
@@ -2230,7 +2276,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       git.executeGitCommand(new String[] {"commit", "--no-edit"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
-      this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+      try {
+        this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+      } catch (UpdateNeededException une) {
+        // If push failed, we undo the merge.
+        git.executeGitCommand(new String[] {"reset", "--hard", "HEAD~1"}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+        throw une;
+      }
 
       return MergeResult.MERGED;
     } catch (RuntimeException re) {
@@ -2246,7 +2299,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   }
 
   @Override
-  public MergeResult replace(Path pathModuleWorkspace, Version versionSrc, String message) {
+  public MergeResult replace(Path pathModuleWorkspace, Version versionSrc, String message) throws UpdateNeededException {
     Git git;
     Version versionDest;
     WorkspacePlugin workspacePlugin;
@@ -2263,9 +2316,16 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     }
 
     // gitFetch will have been called by isSync.
-    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.ALL_CHANGES, false)) {
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.LOCAL_CHANGES_ONLY, false)) {
       throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized before merging.");
     }
+
+    if (!this.isSync(pathModuleWorkspace, IsSyncFlag.REMOTE_CHANGES_ONLY, false)) {
+      throw new UpdateNeededException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before replacing.");
+    }
+
+    // Note that even if UpdateNeededException is not thrown above, it could be thrown by
+    // this.push below if another commit is introduced meanwhile.
 
     workspacePlugin = ExecContextHolder.get().getExecContextPlugin(WorkspacePlugin.class);
 
@@ -2315,7 +2375,14 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     // destination Version.
     git.executeGitCommand(new String[] {"commit", "--no-edit"}, false, Git.AllowExitCode.NONE, pathModuleWorkspace, null, false);
 
-    this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+    try {
+      this.push(pathModuleWorkspace, "refs/heads/" + versionDest.getVersion());
+    } catch (UpdateNeededException une) {
+      // If push failed, we undo the merge.
+      git.executeGitCommand(new String[] {"reset", "--hard", "HEAD~1"}, false, AllowExitCode.NONE, pathModuleWorkspace, null, false);
+
+      throw une;
+    }
 
     return MergeResult.MERGED;
   }
@@ -2523,7 +2590,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
   }
 
   @SuppressWarnings("unchecked")
-  private boolean mustFetch(Path pathModuleWorkspace) {
+  private boolean mustFetch(Path pathModuleWorkspace, boolean indForce) {
     switch (this.getFetchPushBehavior()) {
     case NO_FETCH_NO_PUSH:
       GitScmPluginImpl.logger.trace("Fetching is disabled for module " + this.getModule() + " within " + pathModuleWorkspace + '.');
@@ -2533,6 +2600,11 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       ExecContext execContext;
       Set<Path> setPathAlreadyFetched;
       boolean indMustFetch;
+
+      if (indForce) {
+        GitScmPluginImpl.logger.trace("Fetching is forced for module " + this.getModule() + " within " + pathModuleWorkspace + '.');
+        return true;
+      }
 
       execContext = ExecContextHolder.get();
 

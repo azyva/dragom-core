@@ -623,10 +623,12 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
       workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
       pathModuleWorkspace = null;
 
-      moduleVersionMatcherPlugin = module.getNodePlugin(ModuleVersionMatcherPlugin.class, null);
+      if (module.isNodePluginExists(ModuleVersionMatcherPlugin.class, null)) {
+        moduleVersionMatcherPlugin = module.getNodePlugin(ModuleVersionMatcherPlugin.class, null);
 
-      if (moduleVersionMatcherPlugin != null) {
         RootModuleVersionJobAbstractImpl.logger.info("ModuleVersionMatcherPlugin defined for module " + module + ". It will be invoked for matching the ModuleVersion's.");
+      } else {
+        moduleVersionMatcherPlugin = null;
       }
 
       indVisitChildren = true;
