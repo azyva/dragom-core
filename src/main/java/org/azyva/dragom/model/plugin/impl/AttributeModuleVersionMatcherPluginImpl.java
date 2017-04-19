@@ -10,6 +10,7 @@ import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
+import org.azyva.dragom.model.Version;
 import org.azyva.dragom.model.plugin.ModuleVersionMatcherPlugin;
 import org.azyva.dragom.model.plugin.ScmPlugin;
 import org.azyva.dragom.reference.ReferencePath;
@@ -48,6 +49,11 @@ public class AttributeModuleVersionMatcherPluginImpl extends ModulePluginAbstrac
    */
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(AttributeModuleVersionMatcherPluginImpl.class.getName() + "ResourceBundle");
 
+  /**
+   * Constructor.
+   *
+   * @param module Module.
+   */
   public AttributeModuleVersionMatcherPluginImpl(Module module) {
     super(module);
   }
