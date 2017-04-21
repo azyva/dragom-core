@@ -99,7 +99,7 @@ public class XmlPluginDefConfig implements PluginDefConfig {
    *   child NodeConfig when interpreted by the {@link Model}.
    */
   public XmlPluginDefConfig(Class<? extends NodePlugin> classNodePlugin, String pluginId, String pluginClass, boolean indOnlyThisNode) {
-    if ((this.pluginClass == null) || this.pluginClass.isEmpty()){
+    if ((pluginClass == null) || pluginClass.isEmpty()){
       throw new RuntimeException("PluginDef cannot specify a null or empty plugin class.");
     }
 
@@ -118,8 +118,6 @@ public class XmlPluginDefConfig implements PluginDefConfig {
       classNodePlugin.asSubclass(NodePlugin.class);
       this.classNodePlugin = classNodePlugin;
     }
-
-    this.pluginClass = pluginClass;
 
     // TODO: Should we handle default pluginId?
 
