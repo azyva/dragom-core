@@ -370,7 +370,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      Release.logger.info("Visiting leaf ModuleVersion " + reference.getModuleVersion() + " of ReferencePath\n" + this.referencePath + '.');
+      Release.logger.info("Visiting leaf ModuleVersion of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
 
@@ -395,7 +395,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
       if (!indRelease) {
         // If the current ModuleVersion matches, we switch to release mode and continue.
         if (this.getReferencePathMatcher().matches(this.referencePath)) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.referencePath.getLeafModuleVersion()));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
           indRelease = true;
         }
       }

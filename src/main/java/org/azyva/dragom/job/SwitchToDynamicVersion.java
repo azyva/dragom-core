@@ -380,7 +380,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion " + referenceParent.getModuleVersion() + " of ReferencePath\n" + this.referencePath + '.');
+      SwitchToDynamicVersion.logger.info("Visiting leaf ModuleVersion of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
 
@@ -694,7 +694,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           // The current ReferencePath is matched by the ReferencePathMatcherAnd. The
           // current ModuleVersion must be processed.
 
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath, this.referencePath.getLeafModuleVersion()));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_REFERENCE_MATCHED), this.referencePath));
 
           indParentSwitched = this.processSwitchToDynamicVersion(referenceParent.getModuleVersion(), byReferenceVersionParent);
 

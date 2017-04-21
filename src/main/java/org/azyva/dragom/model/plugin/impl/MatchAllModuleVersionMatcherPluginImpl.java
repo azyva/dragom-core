@@ -2,7 +2,6 @@ package org.azyva.dragom.model.plugin.impl;
 
 import java.util.EnumSet;
 
-import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.model.Module;
 import org.azyva.dragom.model.ModuleVersion;
 import org.azyva.dragom.model.plugin.ModuleVersionMatcherPlugin;
@@ -29,7 +28,7 @@ public class MatchAllModuleVersionMatcherPluginImpl extends ModulePluginAbstract
   }
 
   @Override
-  public EnumSet<MatchFlag> matches(ReferencePath referencePath, ModuleVersion moduleVersion, ByReference<String> byReferenceMessage) {
+  public EnumSet<MatchFlag> matches(ReferencePath referencePath, ModuleVersion moduleVersion) {
     return MatchFlag.MATCH_CONTINUE;
   }
 }

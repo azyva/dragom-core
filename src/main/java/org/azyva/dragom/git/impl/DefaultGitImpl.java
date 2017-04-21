@@ -84,6 +84,15 @@ public class DefaultGitImpl implements Git {
   /**
    * Elements of the Map that caches modification timestamp and current
    * {@link Version} for workspace paths.
+   *
+   * <p>Used for the optimization to avoid having to invoke Git uselessly to know
+   * what is the current branch (Version) of a module workspace directory.
+   *
+   * <p>Note that using the modification timestamp is not 100% safe since its
+   * resolution can be coarse. Dragom does its best to update the elements in the
+   * Map every time the Version changes. But if the user performs changes outside of
+   * Dragom (which is technically not fully supported anyways), there may be rare
+   * cases where the algorithm fails.
    */
   private static class ModTimestampVersion {
     /**
@@ -511,6 +520,8 @@ public class DefaultGitImpl implements Git {
             null,
             false);
       }
+
+      this.setPathWorkspaceVersion(pathWorkspace, version);
     } finally {
       DefaultGitImpl.setPathToDeleteOnShutdown.remove(pathWorkspace);
     }
@@ -968,6 +979,7 @@ public class DefaultGitImpl implements Git {
     }
 
     if (pathWorkspace.toFile().lastModified() != modTimestampVersion.modTimestamp) {
+      mapPathModTimestampVersion.remove(pathWorkspace);
       return null;
     }
 
@@ -989,11 +1001,15 @@ public class DefaultGitImpl implements Git {
       execContext.setTransientData(DefaultGitImpl.TRANSIENT_DATA_MAP_PATH_MOD_TIMESTAMP_VERSION, mapPathModTimestampVersion);
     }
 
-    modTimestampVersion = new ModTimestampVersion();
+    if (version == null) {
+      mapPathModTimestampVersion.remove(pathWorkspace);
+    } else {
+      modTimestampVersion = new ModTimestampVersion();
 
-    modTimestampVersion.modTimestamp = pathWorkspace.toFile().lastModified();
-    modTimestampVersion.version = version;
+      modTimestampVersion.modTimestamp = pathWorkspace.toFile().lastModified();
+      modTimestampVersion.version = version;
 
-    mapPathModTimestampVersion.put(pathWorkspace, modTimestampVersion);
+      mapPathModTimestampVersion.put(pathWorkspace, modTimestampVersion);
+    }
   }
 }

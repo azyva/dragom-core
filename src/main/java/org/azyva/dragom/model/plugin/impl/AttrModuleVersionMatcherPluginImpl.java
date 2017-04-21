@@ -5,7 +5,6 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.ResourceBundle;
 
-import org.azyva.dragom.apiutil.ByReference;
 import org.azyva.dragom.execcontext.plugin.RuntimePropertiesPlugin;
 import org.azyva.dragom.execcontext.support.ExecContextHolder;
 import org.azyva.dragom.model.Module;
@@ -23,7 +22,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class AttributeModuleVersionMatcherPluginImpl extends ModulePluginAbstractImpl implements ModuleVersionMatcherPlugin {
+public class AttrModuleVersionMatcherPluginImpl extends ModulePluginAbstractImpl implements ModuleVersionMatcherPlugin {
   /**
    * Runtime property specifying the {@link Version} attribute to match.
    */
@@ -47,19 +46,19 @@ public class AttributeModuleVersionMatcherPluginImpl extends ModulePluginAbstrac
   /**
    * ResourceBundle specific to this class.
    */
-  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(AttributeModuleVersionMatcherPluginImpl.class.getName() + "ResourceBundle");
+  private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(AttrModuleVersionMatcherPluginImpl.class.getName() + "ResourceBundle");
 
   /**
    * Constructor.
    *
    * @param module Module.
    */
-  public AttributeModuleVersionMatcherPluginImpl(Module module) {
+  public AttrModuleVersionMatcherPluginImpl(Module module) {
     super(module);
   }
 
   @Override
-  public EnumSet<MatchFlag> matches(ReferencePath referencePath, ModuleVersion moduleVersion, ByReference<String> byReferenceMessage) {
+  public EnumSet<MatchFlag> matches(ReferencePath referencePath, ModuleVersion moduleVersion) {
     Module module;
     RuntimePropertiesPlugin runtimePropertiesPlugin;
     String matchVersionAttr;
@@ -71,12 +70,12 @@ public class AttributeModuleVersionMatcherPluginImpl extends ModulePluginAbstrac
 
     module = this.getModule();
     runtimePropertiesPlugin = ExecContextHolder.get().getExecContextPlugin(RuntimePropertiesPlugin.class);
-    matchVersionAttr = runtimePropertiesPlugin.getProperty(module, AttributeModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_VERSION_ATTR);
-    matchVersionAttrValue = runtimePropertiesPlugin.getProperty(module, AttributeModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_VERSION_ATTR_VALUE);
-    indDoNotSkipChildrenIfNoMatch = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, AttributeModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_IND_DO_NOT_SKIP_CHILDREN_IF_NO_MATCH));
+    matchVersionAttr = runtimePropertiesPlugin.getProperty(module, AttrModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_VERSION_ATTR);
+    matchVersionAttrValue = runtimePropertiesPlugin.getProperty(module, AttrModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_VERSION_ATTR_VALUE);
+    indDoNotSkipChildrenIfNoMatch = Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(module, AttrModuleVersionMatcherPluginImpl.RUNTIME_PROPERTY_IND_DO_NOT_SKIP_CHILDREN_IF_NO_MATCH));
 
     if ((matchVersionAttr == null) || (matchVersionAttrValue == null)) {
-      throw new RuntimeExceptionUserError(MessageFormat.format(AttributeModuleVersionMatcherPluginImpl.resourceBundle.getString(AttributeModuleVersionMatcherPluginImpl.MSG_PATTERN_KEY_MATCH_VERSION_ATTR_OR_VALUE_NOT_SPECIFIED), module));
+      throw new RuntimeExceptionUserError(MessageFormat.format(AttrModuleVersionMatcherPluginImpl.resourceBundle.getString(AttrModuleVersionMatcherPluginImpl.MSG_PATTERN_KEY_MATCH_VERSION_ATTR_OR_VALUE_NOT_SPECIFIED), module));
     }
 
     scmPlugin = module.getNodePlugin(ScmPlugin.class, null);

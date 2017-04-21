@@ -269,7 +269,7 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       }
 
       if (!version.equals(aggregationVersion)) {
-        throw new RuntimeException("The submodule POM " + pathPom + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + aggregationVersion + '.');
+        throw new RuntimeException("The submodule POM " + pom.getPathPom() + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + aggregationVersion + '.');
       }
 
       listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
