@@ -429,13 +429,13 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         pathModuleWorkspace = scmPlugin.checkoutSystem(reference.getModuleVersion().getVersion());
 
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
-          throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+          throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
         }
 
         indUserWorkspaceDir = workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion;
 
         if (indUserWorkspaceDir) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), reference.getModuleVersion(), pathModuleWorkspace));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), reference.getModuleVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
         }
 
         if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -587,7 +587,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
           this.listActionsPerformed.add(message);
 
           if (indUserWorkspaceDir) {
-            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
           } else {
@@ -770,14 +770,14 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         builderPlugin = module.getNodePlugin(BuilderPlugin.class,  null);
         buildContext = runtimePropertiesPlugin.getProperty(module, Release.RUNTIME_PROPERTY_RELEASE_VERSION_BUILD_CONTEXT);
 
-        try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace, versionStaticSelected))) {
+        try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), versionStaticSelected))) {
           indBuildSuccessful = builderPlugin.build(pathModuleWorkspace, buildContext, writerLog);
         } catch (IOException ioe) {
           throw new RuntimeException(ioe);
         }
 
         if (!indBuildSuccessful) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_BUILD_FAILED), moduleVersion, pathModuleWorkspace, versionStaticSelected));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Release.resourceBundle.getString(Release.MSG_PATTERN_KEY_BUILD_FAILED), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), versionStaticSelected));
 
           // If the build failed and the ArtifactVersion was changed (as indicated by
           // indCommitRequired), we revert it so that if the user attempts again there will
@@ -813,7 +813,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
         this.listActionsPerformed.add(message);
 
         if (indUserWorkspaceDir) {
-          message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+          message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
           userInteractionCallbackPlugin.provideInfo(message);
           this.listActionsPerformed.add(message);
         } else {
@@ -892,7 +892,7 @@ public class Release extends RootModuleVersionJobAbstractImpl {
             this.listActionsPerformed.add(message);
 
             if (indUserWorkspaceDir) {
-              message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+              message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
               userInteractionCallbackPlugin.provideInfo(message);
               this.listActionsPerformed.add(message);
             } else {

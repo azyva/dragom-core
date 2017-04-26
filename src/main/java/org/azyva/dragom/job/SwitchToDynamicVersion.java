@@ -428,7 +428,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
         && (workspacePlugin.getWorkspaceDirFromPath(pathModuleWorkspace) instanceof WorkspaceDirUserModuleVersion)
         && !scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
 
-        throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+        throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
       }
 
       if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -882,7 +882,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           }
 
           if (indUserWorkspaceDir) {
-            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
           } else {
@@ -1007,10 +1007,10 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
       if (indUserWorkspaceDir) {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, WorkspacePlugin.GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), moduleVersion, pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SwitchToDynamicVersion.resourceBundle.getString(SwitchToDynamicVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
-          throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+          throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
         }
       }
 
@@ -1055,7 +1055,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
 
-            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM), pathModuleWorkspace);
+            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
           } else {
@@ -1194,7 +1194,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
           this.listActionsPerformed.add(message);
 
           if (indUserWorkspaceDir) {
-            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
           } else {

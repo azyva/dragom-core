@@ -723,7 +723,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
         try {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersionDest, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
           scmPlugin.checkout(moduleVersionDest.getVersion(), pathModuleWorkspace);
         } catch (RuntimeException re) {
@@ -759,9 +759,9 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       }
 
       if (listCommit.isEmpty()) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
       } else {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, listCommit));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST_EXCLUDING_VERSION_CHANGING_COMMITS), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), listCommit));
       }
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
@@ -778,7 +778,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       if (mergeResult == ScmPlugin.MergeResult.CONFLICTS) {
         toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_MERGE_CONFLICTS);
 
-        message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace);
+        message = MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST_CONFLICTS), toolExitStatusAndContinue.toolExitStatus, moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
 
         this.listActionsPerformed.add(message);
 
@@ -796,7 +796,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
       }
 
       if (mergeResult == ScmPlugin.MergeResult.MERGED) {
-        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace));
+        this.listActionsPerformed.add(MessageFormat.format(MergeReferenceGraph.resourceBundle.getString(MergeReferenceGraph.MSG_PATTERN_KEY_SRC_MERGED_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
       }
 
       //********************************************************************************
@@ -898,7 +898,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
                 userInteractionCallbackPlugin.provideInfo(message);
                 this.listActionsPerformed.add(message);
 
-                message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+                message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
                 userInteractionCallbackPlugin.provideInfo(message);
                 this.listActionsPerformed.add(message);
               }
@@ -995,7 +995,7 @@ public class MergeReferenceGraph extends RootModuleVersionJobAbstractImpl {
               userInteractionCallbackPlugin.provideInfo(message);
               this.listActionsPerformed.add(message);
 
-              message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+              message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
               userInteractionCallbackPlugin.provideInfo(message);
               this.listActionsPerformed.add(message);
 

@@ -1141,7 +1141,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
 
       // See GitScmPluginImpl.RUNTIME_PROPERTY_GIT_IND_PUSH_ALL
       if (indPushAll = this.isPushAll()) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS), pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_PUSHING_UNPUSHED_COMMITS), pathModuleWorkspace, this.gitReposCompleteUrl));
 
         if (git.push(pathModuleWorkspace)) {
           throw new RuntimeException("Working directory " + pathModuleWorkspace + " must be synchronized with remote changes before pushing.");
@@ -1162,7 +1162,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
       // known only to this plugin and the users who use the tools developped with
       // Dragom.
       if (indExternal && !indPushAll && aheadBehindInfo.ahead != 0) {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS), pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_UNPUSHED_COMMITS), pathModuleWorkspace, this.gitReposCompleteUrl));
       }
     }
 
@@ -2013,7 +2013,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     stringBuilderMergeSummary = new StringBuilder();
 
     if (git.executeGitCommand(new String[] {"merge", "--no-edit", "--no-ff", "-m", mergeMessage, git.convertToRef(pathModuleWorkspace, versionSrc)}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderMergeSummary, false) == 1) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS), pathModuleWorkspace, this.gitReposCompleteUrl, versionSrc, versionDest, stringBuilderMergeSummary));
       return MergeResult.CONFLICTS;
     }
 
@@ -2246,13 +2246,13 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
         stringBuilderMergeSummary = new StringBuilder();
 
         if (git.executeGitCommand(new String[] {"apply", "--3way", "--whitespace=nowarn", patchFileNameCurrent}, false, Git.AllowExitCode.ONE, pathModuleWorkspace, stringBuilderMergeSummary, false) == 1) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_WARNING_MERGE_CONFLICTS_EXCLUDE_COMMITS), pathModuleWorkspace, this.gitReposCompleteUrl, versionSrc, versionDest, stringBuilderMergeSummary));
 
           return MergeResult.CONFLICTS;
         }
 
         if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_PROVIDE_MERGE_SUMMARY))) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_PATCH_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, new Integer(patchIndex).toString(), stringBuilderMergeSummary));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_PATCH_SUMMARY), pathModuleWorkspace, this.gitReposCompleteUrl, versionSrc, versionDest, new Integer(patchIndex).toString(), stringBuilderMergeSummary));
         }
 
         try {

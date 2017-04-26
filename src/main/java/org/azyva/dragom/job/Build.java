@@ -203,12 +203,12 @@ public class Build extends RootModuleVersionJobAbstractImpl {
 
     this.referencePath.add(reference);
 
+    scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
+
     try {
       if (workspacePlugin.isWorkspaceDirExist(workspaceDirUserModuleVersion)) {
         pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
       } else {
-        scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
-
         switch (buildScope) {
         case ONLY_USER:
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_IGNORING_MODULE_VERSION_ONLY_USER), moduleVersion));
@@ -238,7 +238,7 @@ public class Build extends RootModuleVersionJobAbstractImpl {
       builderPlugin = module.getNodePlugin(BuilderPlugin.class,  null);
 
       if (builderPlugin.isSomethingToBuild(pathModuleWorkspace)) {
-        try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace))) {
+        try (Writer writerLog = userInteractionCallbackPlugin.provideInfoWithWriter(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_INITIATING_BUILD), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)))) {
           if (!builderPlugin.build(pathModuleWorkspace, buildContext, writerLog)) {
             Util.setAbort();
           }
@@ -246,7 +246,7 @@ public class Build extends RootModuleVersionJobAbstractImpl {
           throw new RuntimeException(ioe);
         }
       } else {
-        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_MODULE_VERSION_DOES_NOT_NEED_BUILDING), moduleVersion, pathModuleWorkspace));
+        userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Build.resourceBundle.getString(Build.MSG_PATTERN_KEY_MODULE_VERSION_DOES_NOT_NEED_BUILDING), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
       }
     } finally {
       if (pathModuleWorkspace != null) {

@@ -757,10 +757,10 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
           switch (this.unsyncChangesBehaviorLocal) {
           case USER_ERROR:
-            throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+            throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
           case INTERACT:
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, moduleVersion));
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CANNOT_PROCEED_WITH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion));
 
             if (!Util.handleDoYouWantToContinue(RootModuleVersionJobAbstractImpl.DO_YOU_WANT_TO_CONTINUE_CONTEXT_SWITCH_WITH_UNSYNC_LOCAL_CHANGES)) {
               return;
@@ -777,24 +777,24 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.REMOTE_CHANGES_ONLY)) {
           switch (this.unsyncChangesBehaviorRemote) {
           case USER_ERROR:
-            throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+            throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
           case INTERACT:
             alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
                 runtimePropertiesPlugin,
                 RootModuleVersionJobAbstractImpl.RUNTIME_PROPERTY_SYNC_WORKSPACE_DIR,
                 userInteractionCallbackPlugin,
-                MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES), pathModuleWorkspace, moduleVersion));
+                MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_DO_YOU_WANT_TO_UPDATE_UNSYNC_REMOTE_CHANGES), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion));
 
             if (alwaysNeverYesNoAskUserResponse.isYes()) {
-              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATING), pathModuleWorkspace, moduleVersion));
+              userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_UPDATING), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion));
 
               if (scmPlugin.update(pathModuleWorkspace)) {
                 // We thought about allowing processing to continue when update fails, so that the
                 // other ModuleVersion get processed. But this does not always work since if it is
                 // the pom.xml that has conflicts, it may actually not be valid XML anymore
                 // because of the conflict markers.
-                throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, moduleVersion));
+                throw new RuntimeExceptionUserError(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_CONFLICTS_WHILE_UPDATING), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion));
               }
             }
             break;

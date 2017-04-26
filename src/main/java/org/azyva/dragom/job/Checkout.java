@@ -357,7 +357,7 @@ public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements 
           pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_GET_EXISTING, WorkspaceDirAccessMode.READ_WRITE);
 
           try {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, moduleVersion));
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_MODULE_VERSION_ALREADY_CHECKED_OUT), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion));
           } finally {
             if (pathModuleWorkspace != null) {
               workspacePlugin.releaseWorkspaceDir(pathModuleWorkspace);
@@ -370,7 +370,7 @@ public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements 
           pathModuleWorkspace = workspacePlugin.getWorkspaceDir(workspaceDirUserModuleVersion, GetWorkspaceDirMode.ENUM_SET_CREATE_NEW_NO_PATH, WorkspaceDirAccessMode.READ_WRITE);
 
           try {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace));
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CHECKING_OUT_MODULE_VERSION), moduleVersion, pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
 
             scmPlugin.checkout(moduleVersion.getVersion(), pathModuleWorkspace);
           } catch (RuntimeException re) {
@@ -397,17 +397,17 @@ public class Checkout extends RootModuleVersionJobSimpleAbstractImpl implements 
           // in the user workspace directory is not the one that was used when building the
           // ReferenceGraph so synchronization has not been handled.
           if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.LOCAL_CHANGES_ONLY)) {
-            throw new RuntimeExceptionUserError(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+            throw new RuntimeExceptionUserError(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_CANNOT_SWITCH_UNSYNC_LOCAL_CHANGES), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), workspaceDirUserModuleVersionConflict.getModuleVersion(), moduleVersion.getVersion()));
           }
 
           alwaysNeverYesNoAskUserResponse = Util.getInfoAlwaysNeverYesNoAskUserResponseAndHandleAsk(
               runtimePropertiesPlugin,
               Checkout.RUNTIME_PROPERTY_SWITCH_MODULE_VERSION,
               userInteractionCallbackPlugin,
-              MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
+              MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_DO_YOU_WANT_TO_SWITCH_MODULE_VERSION), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), workspaceDirUserModuleVersionConflict.getModuleVersion(),  moduleVersion.getVersion()));
 
           if (alwaysNeverYesNoAskUserResponse.isYes()) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION), workspaceDirUserModuleVersionConflict.getModuleVersion(), pathModuleWorkspace, moduleVersion.getVersion()));
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Checkout.resourceBundle.getString(Checkout.MSG_PATTERN_KEY_SWITCHING_MODULE_VERSION), workspaceDirUserModuleVersionConflict.getModuleVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), moduleVersion.getVersion()));
 
             scmPlugin.switchVersion(pathModuleWorkspace, moduleVersion.getVersion());
 

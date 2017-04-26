@@ -168,7 +168,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
     pathModuleWorkspace = scmPlugin.checkoutSystem(version);
 
     if (!scmPlugin.isSync(pathModuleWorkspace, ScmPlugin.IsSyncFlag.ALL_CHANGES)) {
-      throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace));
+      throw new RuntimeExceptionUserError(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_WORKSPACE_DIRECTORY_NOT_SYNC), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
     }
 
     if (!module.isNodePluginExists(ReferenceManagerPlugin.class, null)) {
@@ -200,7 +200,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
 
 
         if (indUserWorkspaceDir) {
-          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), new ModuleVersion(module.getNodePath(), version), pathModuleWorkspace));
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(ChangeReferenceToModuleVersion.resourceBundle.getString(ChangeReferenceToModuleVersion.MSG_PATTERN_KEY_MODULE_VERSION_CHECKED_OUT_IN_USER_WORKSPACE_DIRECTORY), new ModuleVersion(module.getNodePath(), version), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace)));
         }
 
         if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_UPDATE_REFERENCE)) {
@@ -224,7 +224,7 @@ public class ChangeReferenceToModuleVersion extends RootModuleVersionJobAbstract
           this.listActionsPerformed.add(message);
 
           if (indUserWorkspaceDir) {
-            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace);
+            message = MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_PREVIOUS_CHANGE_COMMITTED_SCM), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace));
             userInteractionCallbackPlugin.provideInfo(message);
             this.listActionsPerformed.add(message);
           } else {
