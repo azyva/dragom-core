@@ -969,7 +969,7 @@ public class DefaultJenkinsClientImpl implements JenkinsClient {
    * @return Item path.
    */
   private static String convertItemToPath(String item) {
-    return "/job/" + item.replaceAll("/", "/job/");
+    return "/job/" + item.replace("/", "/job/");
   }
 
   /**

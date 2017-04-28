@@ -1857,6 +1857,25 @@ public final class Util {
     return byteArrayOutputStream.toString();
   }
 
+  public static String getOneLineExceptionSummary(Exception e) {
+    StringBuilder stringBuilder;
+    Throwable throwable;
+
+    stringBuilder = new StringBuilder();
+    throwable = e;
+
+    while (throwable != null) {
+      stringBuilder.append(throwable.getMessage().replace('\n', ' '));
+      throwable = throwable.getCause();
+
+      if (throwable != null) {
+        stringBuilder.append(" caused by ");
+      }
+    }
+
+    return stringBuilder.toString();
+  }
+
   public static void main(String[] args) {
     System.out.println(Util.convertPascalCaseToLowercaseWithDashes("PascalCase"));
     System.out.println(Util.convertPascalCaseToLowercaseWithDashes("123PascalCase"));

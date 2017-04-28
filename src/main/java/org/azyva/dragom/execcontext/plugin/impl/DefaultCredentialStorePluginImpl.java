@@ -222,7 +222,7 @@ public class DefaultCredentialStorePluginImpl implements CredentialStorePlugin {
     if (stringMasterKeyFile == null) {
       throw new RuntimeException("Initialization property " + DefaultCredentialStorePluginImpl.INIT_PROPERTY_MASTER_KEY_FILE + " is not defined.");
     } else {
-      stringMasterKeyFile = stringMasterKeyFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+      stringMasterKeyFile = stringMasterKeyFile.replace("~", Matcher.quoteReplacement(System.getProperty("user.home")));
       pathMasterKeyFile = Paths.get(stringMasterKeyFile);
     }
 

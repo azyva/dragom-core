@@ -468,6 +468,7 @@ public class SwitchToDynamicVersion extends RootModuleVersionJobAbstractImpl {
             toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
             if (toolExitStatusAndContinue.indContinue) {
+              this.listExceptionThrownWhileVisitingModuleVersion.add(referenceChild.getModuleVersion().toString() + " - " + Util.getOneLineExceptionSummary(re));
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
               continue;
             } else {

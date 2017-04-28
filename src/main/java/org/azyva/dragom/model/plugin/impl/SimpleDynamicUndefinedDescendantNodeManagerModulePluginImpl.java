@@ -162,7 +162,7 @@ public class SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl extends
         if (moduleExistenceCacheFile == null) {
           throw new RuntimeException("Initialization property " + SimpleDynamicUndefinedDescendantNodeManagerModulePluginImpl.INIT_PROPERTY_MODULE_EXISTENCE_CACHE_FILE + " is not defined.");
         } else {
-          moduleExistenceCacheFile = moduleExistenceCacheFile.replaceAll("~", Matcher.quoteReplacement(System.getProperty("user.home")));
+          moduleExistenceCacheFile = moduleExistenceCacheFile.replace("~", Matcher.quoteReplacement(System.getProperty("user.home")));
         }
 
         wormFileCacheModuleExistanceCache = WormFile.getCache(Paths.get(moduleExistenceCacheFile));

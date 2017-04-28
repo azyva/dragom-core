@@ -147,7 +147,7 @@ public class SimpleFindModuleByArtifactGroupIdPluginImpl extends ClassificationN
       artifactId = artifactId.substring(1);
     }
 
-    artifactId = artifactGroupId.getArtifactId().replaceAll("\\.", "");
+    artifactId = artifactGroupId.getArtifactId().replace(".", "");
 
     do {
       listNodePath.add(new NodePath(this.getNode().getNodePath(), artifactId));

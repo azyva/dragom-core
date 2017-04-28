@@ -844,5 +844,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       userInteractionCallbackPlugin.provideInfo(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_LIST_MODULE_VERSION_SKIPPED));
       userInteractionCallbackPlugin.provideInfo(String.join("\n", this.listStringModuleVersionSkipped));
     }
+
+    this.showExceptionsThrownWhileVisitingModuleVersions();
   }
 }

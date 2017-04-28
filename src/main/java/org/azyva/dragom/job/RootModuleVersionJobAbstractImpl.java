@@ -178,6 +178,11 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
   protected static final String MSG_PATTERN_KEY_NO_ACTIONS_PERFORMED = "NO_ACTIONS_PERFORMED";
 
   /**
+   * See description in ResourceBundle.
+   */
+  protected static final String MSG_PATTERN_KEY_LIST_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION = "LIST_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION";
+
+  /**
    * ResourceBundle specific to this class.
    */
   protected static final ResourceBundle resourceBundle = ResourceBundle.getBundle(RootModuleVersionJobAbstractImpl.class.getName() + "ResourceBundle");
@@ -186,6 +191,13 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
    * Used to accumulate a description for the actions performed.
    */
   protected List<String> listActionsPerformed;
+
+  /**
+   * List of exception details thrown while visiting {@link ModuleVersion}'s. Each
+   * entry should provide the ModuleVersion literal for which an exception was
+   * thrown, as well as a summary of the exception.
+   */
+  protected List<String> listExceptionThrownWhileVisitingModuleVersion;
 
   /**
    * Indicates that the List of root {@link ModuleVersion} passed to the constructor
@@ -203,6 +215,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     super(listModuleVersionRoot);
 
     this.listActionsPerformed = new ArrayList<String>();
+    this.listExceptionThrownWhileVisitingModuleVersion = new ArrayList<String>();
   }
 
  /*
@@ -352,6 +365,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
         toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
         if (toolExitStatusAndContinue.indContinue) {
+          this.listExceptionThrownWhileVisitingModuleVersion.add(moduleVersion.toString() + " - " + Util.getOneLineExceptionSummary(re));
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, moduleVersion, Util.getStackTrace(re)));
           continue;
         } else {
@@ -644,6 +658,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
             toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(module, Util.EXCEPTIONAL_COND_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION);
 
             if (toolExitStatusAndContinue.indContinue) {
+              this.listExceptionThrownWhileVisitingModuleVersion.add(referenceChild.getModuleVersion().toString() + " - " + Util.getOneLineExceptionSummary(re));
               userInteractionCallbackPlugin.provideInfo(MessageFormat.format(Util.getLocalizedMsgPattern(Util.MSG_PATTERN_KEY_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION), toolExitStatusAndContinue.toolExitStatus, referenceChild, Util.getStackTrace(re)));
               continue;
             } else {
@@ -845,5 +860,24 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
    * This implementation does nothing.
    */
   protected void afterIterateListModuleVersionRoot() {
+  }
+
+  /**
+   * Shows the exceptions thrown while visiting {@link ModuleVersion}'s.
+   *
+   * <p>This method is not automatically called by this class. If and when the
+   * implementation subclass needs to show these exceptions, it calls this method.
+   */
+  protected void showExceptionsThrownWhileVisitingModuleVersions() {
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+
+    userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    if (!this.listExceptionThrownWhileVisitingModuleVersion.isEmpty()) {
+      Collections.sort(this.listExceptionThrownWhileVisitingModuleVersion);
+
+      userInteractionCallbackPlugin.provideInfo(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_LIST_EXCEPTION_THROWN_WHILE_VISITING_MODULE_VERSION));
+      userInteractionCallbackPlugin.provideInfo(String.join("\n", this.listExceptionThrownWhileVisitingModuleVersion));
+    }
   }
 }
