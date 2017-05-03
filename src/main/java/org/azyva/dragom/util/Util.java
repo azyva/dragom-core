@@ -1534,6 +1534,51 @@ public final class Util {
    * "Do you want to continue?".
    * <p>
    * Its behavior is similar to that of {@link #handleDoYouWantToContinue} except
+   * that it uses a simple yes/no question and does not support repetition.
+   *
+   * @param context Context.
+   * @return true if continue, false if abort.
+   */
+  public static boolean handleDoYouWantToContinueSimple(String context) {
+    ExecContext execContext;
+    RuntimePropertiesPlugin runtimePropertiesPlugin;
+    UserInteractionCallbackPlugin userInteractionCallbackPlugin;
+    String runtimeProperty;
+
+    if (context == null) {
+      throw new RuntimeException("context must not be null.");
+    }
+
+    execContext = ExecContextHolder.get();
+    runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
+    userInteractionCallbackPlugin = execContext.getExecContextPlugin(UserInteractionCallbackPlugin.class);
+
+    runtimeProperty = runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context);
+
+    if ((runtimeProperty != null) && Boolean.valueOf(runtimeProperty)) {
+      return true;
+    } else if (Boolean.valueOf(runtimePropertiesPlugin.getProperty(null, Util.RUNTIME_PROPERTY_IND_NO_CONFIRM))) {
+      return true;
+    }
+
+    Util.logger.info("Interacting with the user for handling \"Do you want to continue?\" for context " + context + ". You can set the runtime property " + Util.RUNTIME_PROPERTY_IND_NO_CONFIRM + '.' + context + " to true to continue without user interaction.");
+
+    switch (Util.getInfoYesNoUserResponse(userInteractionCallbackPlugin, Util.resourceBundle.getString(Util.MSG_PATTERN_DO_YOU_WANT_TO_CONTINUE), YesAlwaysNoUserResponse.YES)) {
+    case NO:
+      Util.setAbort();
+      return false;
+    case YES:
+      return true;
+    default:
+      throw new RuntimeException("Must not get here.");
+    }
+  }
+
+  /**
+   * Helper method that handles generically the typical question
+   * "Do you want to continue?".
+   * <p>
+   * Its behavior is similar to that of {@link #handleDoYouWantToContinue} except
    * that it handles the "no" response to mean "no for this iteration" (and simply
    * return false), and provides a separate "abort" response to mean "no and abort"
    * (and return false and set the IND_ABORT runtime property to true).

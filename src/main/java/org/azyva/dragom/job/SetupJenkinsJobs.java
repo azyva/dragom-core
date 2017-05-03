@@ -617,7 +617,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         return ReferenceGraph.VisitControl.SKIP_CHILDREN;
       }
 
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_VISITING_MODULE_VERSION), referencePath, referencePath.getLeafModuleVersion()));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_VISITING_MODULE_VERSION), referencePath));
 
       model = execContext.getModel();
       module = model.getModule(referencePath.getLeafModuleVersion().getNodePath());
@@ -727,7 +727,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
       // Traversal is not depth-first as jobs will often refer to downstream jobs
       // which are actually jobs that correspond to ModuleVersion's higher in the
       // ReferenceGraph.
-      referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.NO_REENTRY, referenceGraphVisitorSetupJob);
+      referenceGraph.traverseReferenceGraph(null, ReferenceGraph.TraversalOrder.ALL_PARENTS_FIRST, ReferenceGraph.ReentryMode.NO_REENTRY, referenceGraphVisitorSetupJob);
 
       if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE) {
         // We start by deleting the folders since this will delete all jobs within them at

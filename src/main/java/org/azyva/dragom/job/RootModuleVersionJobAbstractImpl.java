@@ -417,6 +417,11 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     referencePath = new ReferencePath();
     referencePath.add(new Reference(rootModuleVersion));
 
+    if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
+      RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + referencePath + '.');
+      return false;
+    }
+
     // The verification for handling or not static Version can be done here since if
     // static Version's are not to be handled and this is a static Version, there is
     // no need to traverse the graph since by definition all directly and indirectly
@@ -429,12 +434,8 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     if (!this.indDepthFirst) {
       if ((rootModuleVersion.getVersion().getVersionType() == VersionType.STATIC) || this.indHandleDynamicVersion) {
         if (this.getReferencePathMatcher().matches(referencePath)) {
-          if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
-            RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath " + referencePath + " matched by ReferencePathMather.");
-            return false;
-          } else {
-            return true;
-          }
+          // Reentry avoidance is handled at the beginning of the method above.
+          return true;
         }
       }
     }
@@ -446,12 +447,8 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     if (this.indDepthFirst) {
       if ((rootModuleVersion.getVersion().getVersionType() == VersionType.STATIC) || this.indHandleDynamicVersion) {
         if (this.getReferencePathMatcher().matches(referencePath)) {
-          if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
-            RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath " + referencePath + " matched by ReferencePathMather.");
-            return false;
-          } else {
-            return true;
-          }
+          // Reentry avoidance is handled at the beginning of the method above.
+          return true;
         }
       }
     }
@@ -493,8 +490,8 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     ExecContext execContext;
     UserInteractionCallbackPlugin userInteractionCallbackPlugin;
     WorkspacePlugin workspacePlugin;
-    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     ModuleVersion moduleVersion;
+    UserInteractionCallbackPlugin.IndentHandle indentHandle;
     Module module;
     ScmPlugin scmPlugin;
     boolean indReferencePathAlreadyReverted;
@@ -516,6 +513,15 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
+      moduleVersion = reference.getModuleVersion();
+
+      // Reentry avoidance is handled as soon as possible. This is important mostly
+      // for depth-first traversal.
+      if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(moduleVersion)) {
+        RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + referencePath + '.');
+        return false;
+      }
+
       RootModuleVersionJobAbstractImpl.logger.info("Visiting leaf ModuleVersion of ReferencePath\n" + this.referencePath + '.');
 
       indentHandle = userInteractionCallbackPlugin.startIndent();
@@ -527,7 +533,6 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
       //TODO: Probably should remove altogether, including message in bundle. Redundant.
       //userInteractionCallbackPlugin.provideInfo(MessageFormat.format(RootModuleVersionJobAbstractImpl.resourceBundle.getString(RootModuleVersionJobAbstractImpl.MSG_PATTERN_KEY_VISITING_LEAF_MODULE_VERSION), this.referencePath, this.referencePath.getLeafModuleVersion()));
 
-      moduleVersion = reference.getModuleVersion();
       module = execContext.getModel().getModule(moduleVersion.getNodePath());
 
       scmPlugin = module.getNodePlugin(ScmPlugin.class, null);
@@ -558,9 +563,9 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-            if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + this.referencePath + "\nmatched by ReferencePathMather.");
-              return false;
+            if (this.indAvoidReentry) {
+              // Reentry avoidance is handled at the beginning of the method above.
+              this.moduleReentryAvoider.processModule(moduleVersion);
             }
 
             if (moduleVersionMatcherPlugin != null) {
@@ -677,9 +682,9 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
           RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " is dynamic and is not to be handled.");
         } else {
           if (this.getReferencePathMatcher().matches(this.referencePath)) {
-            if (this.indAvoidReentry && !this.moduleReentryAvoider.processModule(moduleVersion)) {
-              RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + this.referencePath + "\nmatched by ReferencePathMather.");
-              return false;
+            if (this.indAvoidReentry) {
+              // Reentry avoidance is handled at the beginning of the method above.
+              this.moduleReentryAvoider.processModule(moduleVersion);
             }
 
             if (moduleVersionMatcherPlugin != null) {

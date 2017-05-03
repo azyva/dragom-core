@@ -323,7 +323,7 @@ public class BuildRemote extends RootModuleVersionJobSimpleAbstractImpl {
 
       referenceGraph.traverseReferenceGraph(
           null, // Traverse all root ModuleVersion's.
-          true, // Depth first.
+          ReferenceGraph.TraversalOrder.ALL_PARENTS_FIRST,
           ReferenceGraph.ReentryMode.NO_REENTRY,
           new ReferenceGraph.Visitor() {
             @Override

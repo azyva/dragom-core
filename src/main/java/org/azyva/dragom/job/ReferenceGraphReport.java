@@ -462,7 +462,7 @@ public class ReferenceGraphReport extends RootModuleVersionJobSimpleAbstractImpl
     // this.referenceGraphMode is TREE_NO_REDUNDANCY, existing
     // ReportReferenceGraphNode are reused. It is just that ReportReference with
     // jumpToReferenceGraphNodeBookmark are generated when appropriate.
-    referenceGraph.traverseReferenceGraph(null, false, ReferenceGraph.ReentryMode.ONLY_PARENT, referenceGraphVisitorReport);
+    referenceGraph.traverseReferenceGraph(null, ReferenceGraph.TraversalOrder.PARENT_FIRST, ReferenceGraph.ReentryMode.ONLY_PARENT, referenceGraphVisitorReport);
 
     // The reference graph report has been created by including all ReportModule's,
     // regardless of the ModuleFilter since it is not possible to perform the
