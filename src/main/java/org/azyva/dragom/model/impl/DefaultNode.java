@@ -239,9 +239,6 @@ public abstract class DefaultNode implements Node, MutableNode {
       this.state = State.CONFIG;
     }
 
-    this.validateNodeName(nodeConfig.getName());
-
-    this.name = nodeConfig.getName();
     this.defaultModel = defaultModel;
   }
 
