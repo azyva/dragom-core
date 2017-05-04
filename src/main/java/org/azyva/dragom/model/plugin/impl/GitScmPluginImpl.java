@@ -2020,7 +2020,7 @@ public class GitScmPluginImpl extends ModulePluginAbstractImpl implements ScmPlu
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
 
     if (Util.isNotNullAndTrue(runtimePropertiesPlugin.getProperty(null, GitScmPluginImpl.RUNTIME_PROPERTY_PROVIDE_MERGE_SUMMARY))) {
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_SUMMARY), pathModuleWorkspace, versionSrc, versionDest, stringBuilderMergeSummary));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(GitScmPluginImpl.resourceBundle.getString(GitScmPluginImpl.MSG_PATTERN_KEY_MERGE_SUMMARY), pathModuleWorkspace, this.gitReposCompleteUrl, versionSrc, versionDest, stringBuilderMergeSummary));
     }
 
     try {

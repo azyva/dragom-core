@@ -464,9 +464,11 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    * @param nodePath NodePath of the ClassificationNode to return. Must be partial.
    * @return ClassificationNode. null if no ClassificationNode corresponding to the
    *   specified NodePath exist.
+   * @throws IllegalArgumentException If the {@link Node} identified by nodePath is
+   *   not a ClassificationNode.
    */
   @Override
-  public ClassificationNode getClassificationNode(NodePath nodePath) {
+  public ClassificationNode getClassificationNode(NodePath nodePath) throws IllegalArgumentException {
     DefaultClassificationNode defaultClassificationNodeCurrent;
 
     if (!nodePath.isPartial()) {
@@ -495,9 +497,11 @@ public class DefaultModel implements Model, ModelNodeBuilderFactory, MutableMode
    * @param nodePath NodePath of the Module to return. Must not be partial.
    * @return Module. null if no Module corresponding to the specified NodePath
    *   exist.
+   * @throws IllegalArgumentException If the {@link Node} identified by nodePath is
+   *   not a Module.
    */
   @Override
-  public Module getModule(NodePath nodePath) {
+  public Module getModule(NodePath nodePath) throws IllegalArgumentException {
     DefaultClassificationNode classificationNode;
 
     if (nodePath.isPartial()) {

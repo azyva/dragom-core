@@ -188,7 +188,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
   /**
    * See description in ResourceBundle.
    */
-  private static final String MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST = "SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST";
+  private static final String MSG_PATTERN_KEY_MERGING_SRC_MODULE_VERSION_INTO_DEST = "MERGING_SRC_MODULE_VERSION_INTO_DEST";
 
   /**
    * See description in ResourceBundle.
@@ -332,8 +332,11 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
 
     this.setupReferencePathMatcherForProjectCode();
     this.setIndHandleDynamicVersion(false);
-    //TODO: It may be more logical to do a depth-first traversal, but it does not work well. It seems the same ModuleVersion is checked out multiple times uselessly.
-    //this.setIndDepthFirst(true);
+
+    // The traversal order is not very important. But it is a little bit better if we
+    // do it depth-first since this ensure that if a ModuleVersion is merged into its
+    // main Version, we can assume its references are also.
+    this.setIndDepthFirst(true);
 
     this.setModuleVersionDestMergeConflicts = new HashSet<ModuleVersion>();
     this.listStringModuleVersionMerge = new ArrayList<String>();
@@ -497,7 +500,7 @@ public class MergeMain extends RootModuleVersionJobAbstractImpl {
       // actual merge.
       //********************************************************************************
 
-      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_SHALLOW_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
+      userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MergeMain.resourceBundle.getString(MergeMain.MSG_PATTERN_KEY_MERGING_SRC_MODULE_VERSION_INTO_DEST), moduleVersionSrc, moduleVersionDest.getVersion(), pathModuleWorkspace, scmPlugin.getScmUrl(pathModuleWorkspace), mergeMainMode));
 
       if (!Util.handleDoYouWantToContinue(Util.DO_YOU_WANT_TO_CONTINUE_CONTEXT_MERGE)) {
         if (indWorkspaceDirUserModuleVersionCreated) {

@@ -239,6 +239,8 @@ public abstract class DefaultNode implements Node, MutableNode {
       this.state = State.CONFIG;
     }
 
+    this.validateNodeName(nodeConfig.getName());
+
     this.name = nodeConfig.getName();
     this.defaultModel = defaultModel;
   }
@@ -280,6 +282,9 @@ public abstract class DefaultNode implements Node, MutableNode {
     }
 
     this.defaultClassificationNodeParent = defaultClassificationNodeParent;
+
+    this.validateNodeName(nodeConfig.getName());
+
     this.name = nodeConfig.getName();
     this.defaultModel = (DefaultModel)defaultClassificationNodeParent.getModel(); // This ensures that all DefaultNode's in a DefaultModel are actually part of that DefaultModel.
   }
@@ -318,6 +323,8 @@ public abstract class DefaultNode implements Node, MutableNode {
     if (this.state != State.DYNAMICALLY_BEING_COMPLETED) {
       throw new IllegalStateException("State must be DYNAMICALLY_BEING_COMPLETED. State: " + this.state);
     }
+
+    this.validateNodeName(name);
 
     this.name = name;
   }
@@ -1013,6 +1020,8 @@ public abstract class DefaultNode implements Node, MutableNode {
         throw new RuntimeException(dne);
       }
 
+      this.validateNodeName(newName);
+
       this.name = newName;
     } else { // if (this.state == State.CONFIG_NEW) {
       if (this.defaultClassificationNodeParent != null) {
@@ -1147,6 +1156,20 @@ public abstract class DefaultNode implements Node, MutableNode {
       return "[root]";
     } else {
       return this.getNodePath().toString();
+    }
+  }
+
+  /**
+   * Validates a {@link Node} name.
+   *
+   * <p>Throws an exception if invalid.
+   *
+   * @param name Node name.
+   */
+  //TODO: Should eventually implement some kind of validator plugin.
+  private void validateNodeName(String name) {
+    if (!NodePath.validateNodeName(name)) {
+      throw new RuntimeException("Node name " + name + " within parent " + this.getClassificationNodeParent() + " is invalid.");
     }
   }
 }

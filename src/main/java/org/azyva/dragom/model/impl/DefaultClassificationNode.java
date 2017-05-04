@@ -397,8 +397,10 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
    * @param name Name of the child ClassificationNode.
    * @return Child ClassificationNode. null if no child of the specified name is
    *   currently defined and none can be dynamically created.
+   * @throws IllegalArgumentException If the {@link Node} identified by name is not
+   *   a ClassificationNode.
    */
-  DefaultClassificationNode getDefaultClassificationNodeChildDynamic(String name) {
+  DefaultClassificationNode getDefaultClassificationNodeChildDynamic(String name) throws IllegalArgumentException {
     DefaultNode defaultNode;
 
     if ((this.state != DefaultNode.State.CONFIG) && (this.state != DefaultNode.State.DYNAMICALLY_CREATED)) {
@@ -430,7 +432,7 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
     if (defaultNode.getNodeType() == NodeType.CLASSIFICATION){
       return (DefaultClassificationNode)defaultNode;
     } else {
-      throw new RuntimeException("The child node " + name + " is not a classification node.");
+      throw new IllegalArgumentException("The child node " + name + " is not a classification node.");
     }
   }
 
@@ -444,8 +446,10 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
    * @param name Name of the child Module.
    * @return Child Module. null if no child of the specified name is currently
    *   defined and none can be dynamically created.
+   * @throws IllegalArgumentException If the {@link Node} identified by name is not
+   *   a Module.
    */
-  DefaultModule getDefaultModuleChildDynamic(String name) {
+  DefaultModule getDefaultModuleChildDynamic(String name) throws IllegalArgumentException {
     DefaultNode defaultNode;
 
     if ((this.state != DefaultNode.State.CONFIG) && (this.state != DefaultNode.State.DYNAMICALLY_CREATED)) {
@@ -477,7 +481,7 @@ public class DefaultClassificationNode extends DefaultNode implements Classifica
     if (defaultNode.getNodeType() == NodeType.MODULE) {
       return (DefaultModule)defaultNode;
     } else {
-      throw new RuntimeException("The child node " + name + " is not a module.");
+      throw new IllegalArgumentException("The child node " + name + " is not a module.");
     }
   }
 
