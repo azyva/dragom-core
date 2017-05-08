@@ -62,7 +62,8 @@ public class BuildReferenceGraph extends RootModuleVersionJobAbstractImpl implem
   public BuildReferenceGraph(ReferenceGraph referenceGraph, List<ModuleVersion> listModuleVersionRoot) {
     super(listModuleVersionRoot);
 
-    // By default this is true and must be false for this class.
+    // By default this is true and must be false for this class since we want to
+    // include in the ReferenceGraph all matched ReferencePath's.
     this.setIndAvoidReentry(false);
 
     if (referenceGraph == null) {

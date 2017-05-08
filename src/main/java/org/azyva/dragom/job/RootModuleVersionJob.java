@@ -95,5 +95,4 @@ public interface RootModuleVersionJob {
    * Main method for performing the job.
    */
   void performJob();
-
 }

@@ -418,7 +418,7 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
     referencePath.add(new Reference(rootModuleVersion));
 
     if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(rootModuleVersion)) {
-      RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + referencePath + '.');
+      RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + rootModuleVersion + " has already been matched and processed. Reentry avoided for ReferencePath\n" + referencePath + '.');
       return false;
     }
 
@@ -509,16 +509,16 @@ public abstract class RootModuleVersionJobAbstractImpl extends RootModuleVersion
 
     indentHandle = null;
 
+    moduleVersion = reference.getModuleVersion();
+
     // We use a try-finally construct to ensure that the current ModuleVersion always
     // gets removed for the current ReferencePath, and that the
     // UserInteractionCallback IndentHandle gets closed.
     try {
-      moduleVersion = reference.getModuleVersion();
-
       // Reentry avoidance is handled as soon as possible. This is important mostly
       // for depth-first traversal.
       if (this.indAvoidReentry && this.moduleReentryAvoider.isModuleProcessed(moduleVersion)) {
-        RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been processed. Reentry avoided for ReferencePath\n" + referencePath + '.');
+        RootModuleVersionJobAbstractImpl.logger.info("ModuleVersion " + moduleVersion + " has already been matched and processed. Reentry avoided for ReferencePath\n" + this.referencePath + '.');
         return false;
       }
 

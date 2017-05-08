@@ -221,8 +221,7 @@ public class SimpleReferenceGraph implements ReferenceGraph {
    * @param referencePath Current {@link ReferencePath}, not including visited
    *   {@link Reference}.
    * @param reference Visited Reference.
-   * @param indDepthFirst Indicates that the traversal is depth-first, as opposed to
-   *   parent-first.
+   * @param traversalOrder TraversalOrder.
    * @param moduleReentryAvoider ModuleReentryAvoider to be used to avoid reentry or
    *   to simply know if a {@link ModuleVersion} is being reentered. Used for all
    *   {@link org.azyva.dragom.reference.ReferenceGraph.ReentryMode}.

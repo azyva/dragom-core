@@ -103,6 +103,10 @@ import org.xml.sax.SAXException;
  * class we considered to use the class ArtifactVersion. But we figured this was
  * at a higher level than this class.
  *
+ * Some fields within the Pom are cached and lazily read from the POM file, but not
+ * all (only those which are most often accessed and are likely to be accessed
+ * multiple times).
+ *
  * This class also allows listing submodules.
  *
  * @author David Raymond
@@ -453,6 +457,71 @@ public class Pom {
   private Path pathPomLoaded;
 
   /**
+   * Cache for the groupId.
+   *
+   * <p>It is lazily read and it avoids using costly XPath evaluation when accessed
+   * more than once.
+   */
+  private String groupId;
+
+  /**
+   * Indicates the groupId has been read.
+   *
+   * <p>We cannot use {@link #groupId} being null since the groupId could be not
+   * specified.
+   */
+  private boolean indGroupIdRead;
+
+  /**
+   * Cache for the artifactId.
+   *
+   * <p>It is lazily read and it avoids using costly XPath evaluation when accessed
+   * more than once.
+   */
+  private String artifactId;
+
+  /**
+   * Indicates the artifactId has been read.
+   *
+   * <p>We cannot use {@link #artifactId} being null since the artifactId could be
+   * not specified.
+   */
+  private boolean indArtifactIdRead;
+
+  /**
+   * Cache for the version.
+   *
+   * <p>It is lazily read and it avoids using costly XPath evaluation when accessed
+   * more than once.
+   */
+  private String version;
+
+  /**
+   * Indicates the version Id has been read.
+   *
+   * <p>We cannot use {@link #version} being null since the version could be not
+   * specified.
+   */
+  private boolean indVersionRead;
+
+  /**
+   * Cache for parent {@link org.azyva.dragom.maven.Pom.ReferencedArtifact}.
+   *
+   * <p>It is lazily read and it avoids using costly XPath evaluation when accessed
+   * more than once.
+   */
+  private ReferencedArtifact referencedArtifactParent;
+
+  /**
+   * Indicates the parent {@link org.azyva.dragom.maven.Pom.ReferencedArtifact} has
+   * been read.
+   *
+   * <p>We cannot use {@link #referencedArtifactParent} being null since the version
+   * could be not specified.
+   */
+  private boolean indReferencedArtifactParentRead;
+
+  /**
    * Constructor.
    */
   public Pom() {
@@ -486,6 +555,18 @@ public class Pom {
     if (this.pathPom == null) {
       throw new RuntimeException("pathPom is null.");
     }
+
+    // Setting to null the cache variables is not really required because of the
+    // indicator variables, but it is cleaner.
+
+    this.groupId = null;
+    this.indGroupIdRead = false;
+    this.artifactId = null;
+    this.indArtifactIdRead = false;
+    this.version = null;
+    this.indVersionRead = false;
+    this.referencedArtifactParent = null;
+    this.indReferencedArtifactParentRead = false;
 
     documentBuilderFactory = DocumentBuilderFactory.newInstance();
 
@@ -630,7 +711,12 @@ public class Pom {
    *   groupId (if it inherits it from its parent).
    */
   public String getGroupId() {
-    return this.getSimpleElement("project/groupId");
+    if (!this.indGroupIdRead) {
+      this.groupId = this.getSimpleElement("/project/groupId");
+      this.indGroupIdRead = true;
+    }
+
+    return this.groupId;
   }
 
   /**
@@ -655,7 +741,12 @@ public class Pom {
    *   artifactId (which is an error).
    */
   public String getArtifactId() {
-    return this.getSimpleElement("project/artifactId");
+    if (!this.indArtifactIdRead) {
+      this.artifactId = this.getSimpleElement("/project/artifactId");
+      this.indArtifactIdRead = true;
+    }
+
+    return this.artifactId;
   }
 
   /**
@@ -663,26 +754,12 @@ public class Pom {
    *   artifact version (if it inherits it from its parent).
    */
   public String getVersion() {
-    XPathFactory xPathFactory;
-    XPath xPath;
-    String version;
-
-    xPathFactory = XPathFactory.newInstance();
-    xPath = xPathFactory.newXPath();
-
-    try {
-      version = xPath.evaluate("/project/version", this.documentPom);
-    } catch (XPathExpressionException xpee) {
-      throw new RuntimeException(xpee);
+    if (!this.indVersionRead) {
+      this.version = this.getSimpleElement("/project/version");
+      this.indVersionRead = true;
     }
 
-    /* It looks like XPath.evaluate returns absent elements as empty strings.
-     */
-    if (version.isEmpty()) {
-      return null;
-    } else {
-      return version;
-    }
+    return this.version;
   }
 
   /**
@@ -712,6 +789,9 @@ public class Pom {
     }
 
     nodeVersion.setTextContent(version);
+
+    this.version = version;
+    this.indVersionRead = true;
   }
 
   /**
@@ -801,24 +881,30 @@ public class Pom {
     xPath = xPathFactory.newXPath();
 
     if (enumSetReferencedArtifactType.contains(ReferencedArtifactType.PARENT)) {
-      try {
-        nodeParent = (Node)xPath.evaluate("/project/parent", this.documentPom, XPathConstants.NODE);
-      } catch (XPathExpressionException xpee) {
-        throw new RuntimeException(xpee);
-      }
-
-      if (nodeParent != null) {
+      if (!this.indReferencedArtifactParentRead) {
         try {
-          referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PARENT, null, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
+          nodeParent = (Node)xPath.evaluate("/project/parent", this.documentPom, XPathConstants.NODE);
         } catch (XPathExpressionException xpee) {
           throw new RuntimeException(xpee);
         }
 
-        if (!this.isExcluded(nodeParent, referencedArtifact)) {
-          if (Pom.referencedArtifactFiltered(referencedArtifact, filterGroupId, filterArtifactId, filterVersion)) {
-            listReferencedArtifact.add(referencedArtifact);
+        if (nodeParent != null) {
+          try {
+            referencedArtifact = new ReferencedArtifact(ReferencedArtifactType.PARENT, null, xPath.evaluate("groupId", nodeParent), xPath.evaluate("artifactId", nodeParent), xPath.evaluate("version", nodeParent));
+          } catch (XPathExpressionException xpee) {
+            throw new RuntimeException(xpee);
+          }
+
+          if (!this.isExcluded(nodeParent, referencedArtifact)) {
+            this.referencedArtifactParent = referencedArtifact;
           }
         }
+
+        this.indReferencedArtifactParentRead = true;
+      }
+
+      if ((this.referencedArtifactParent != null) && Pom.referencedArtifactFiltered(this.referencedArtifactParent, filterGroupId, filterArtifactId, filterVersion)) {
+        listReferencedArtifact.add(this.referencedArtifactParent);
       }
     }
 
@@ -1091,8 +1177,15 @@ public class Pom {
    * @return Parent ReferencedArtifact.
    */
   public ReferencedArtifact getParentReferencedArtifact() {
+    List<ReferencedArtifact> listReferencedArtifact;
 
-    List<ReferencedArtifact> listReferencedArtifact = this.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.PARENT), null,  null,  null);
+    if (this.indReferencedArtifactParentRead) {
+      return this.referencedArtifactParent;
+    }
+
+    // getListReferencedArtifact caches the parent. We test for it being cached above
+    // for top performance.
+    listReferencedArtifact = this.getListReferencedArtifact(EnumSet.of(Pom.ReferencedArtifactType.PARENT), null,  null,  null);
 
     if (listReferencedArtifact.isEmpty()) {
       return null;
@@ -1143,6 +1236,13 @@ public class Pom {
       }
 
       nodeVersion.setTextContent(version);
+
+      if (!this.indReferencedArtifactParentRead) {
+        this.referencedArtifactParent = new ReferencedArtifact(ReferencedArtifactType.PARENT, null, referencedArtifact.groupId,  referencedArtifact.artifactId, referencedArtifact.version);
+        this.indReferencedArtifactParentRead = true;
+      } else {
+        this.referencedArtifactParent.version = version;
+      }
 
       break;
 

@@ -119,10 +119,20 @@ public abstract class RootModuleVersionJobSimpleAbstractImpl implements RootModu
   protected boolean indHandleStaticVersion = true;
 
   /**
-   * Indicates to avoid reentry by using {@link ModuleReentryAvoider}. The default
-   * value is true.
+   * Indicates to avoid reentry by using {@link ModuleReentryAvoider}.
+   *
+   * <p>The default value is true.
    */
   protected boolean indAvoidReentry = true;
+
+  /**
+   * {@link ModuleReentryAvoider}.
+   * <p>
+   * Used by this class when matching {@link ReferencePath} if
+   * {@link #indAvoidReentry}. Available to subclasses as well, independently
+   * of indAvoidReentry.
+   */
+  protected ModuleReentryAvoider moduleReentryAvoider;
 
   /**
    * Indicates that traversal must be depth first, as opposed to parent first.
@@ -138,15 +148,6 @@ public abstract class RootModuleVersionJobSimpleAbstractImpl implements RootModu
    * Specifies the behavior related to unsynchronized remote changes.
    */
   protected UnsyncChangesBehavior unsyncChangesBehaviorRemote;
-
-  /**
-   * {@link ModuleReentryAvoider}.
-   * <p>
-   * Used by this class when matching {@link ReferencePath} if
-   * indAvoidReentry. Available to subclasses as well independently of
-   * indAvoidReentry.
-   */
-  protected ModuleReentryAvoider moduleReentryAvoider;
 
   /**
    * Subclasses can use this variable during the traversal of a reference graph to
