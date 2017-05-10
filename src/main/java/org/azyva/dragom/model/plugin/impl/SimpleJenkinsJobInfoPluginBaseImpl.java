@@ -283,7 +283,8 @@ public abstract class SimpleJenkinsJobInfoPluginBaseImpl extends ModulePluginAbs
     }
 
     if (indIncludeVersion) {
-      stringBuilder.append(versionDynamic.getVersion());
+      // Versions can contain "/" which would not be valid in a Jenkins job name.
+      stringBuilder.append(versionDynamic.getVersion().replace('/', '_'));
       stringBuilder.append('_');
     }
 
