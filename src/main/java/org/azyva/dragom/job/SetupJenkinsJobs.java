@@ -72,13 +72,13 @@ import org.azyva.dragom.util.Util;
  * use of {@link JenkinsJobInfoPlugin} to abstract the actual job creation
  * details, namely the config.xml file or the template parameters.
  * <p>
- * Jobs and folders created by this class are recorded in an items created file,
+ * Jobs and folders created by this class are recorded in an items-created file,
  * whose content is also used as input if it already exists, in conjunction with a
- * {@link ExistingItemsCreatedFileMode}. The default items created file, if
+ * {@link ItemsCreatedFileMode}. The default items-created file, if
  * {@link #setPathItemsCreatedFile} is not called, is jenkins-items-created.txt in
- * the metadata directory of the workspace. The default
- * ExistingItemsCreatedFileMode, if {@link #setExistingItemsCreatedFileMode} is not
- * called, is {@link ExistingItemsCreatedFileMode#MERGE}.
+ * the metadata directory of the workspace. The default ItemsCreatedFileMode, if
+ * {@link #setItemsCreatedFileMode} is not called, is
+ * {@link ItemsCreatedFileMode#MERGE}.
  *
  * @author David Raymond
  */
@@ -170,22 +170,22 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   private static final ResourceBundle resourceBundle = ResourceBundle.getBundle(SetupJenkinsJobs.class.getName() + "ResourceBundle");
 
   /**
-   * Default file in the workspace metadata directory containing the items created.
+   * Default file in the workspace metadata directory containing the items-created.
    */
   private static final String DEFAULT_ITEMS_CREATED_FILE = "jenkins-items-created.txt";
 
   /**
-   * Modes for handling the items created file if it already exists.
+   * Modes for handling the items-created file if it already exists.
    */
-  public enum ExistingItemsCreatedFileMode {
+  public enum ItemsCreatedFileMode {
     /**
-     * Replace items created file, ignoring its current contents.
+     * Replace items-created file, ignoring its current contents.
      */
     IGNORE,
 
     /**
-     * Add new items, replace existing jobs. Existing folders are not touched, other
-     * than manipulating the jobs within them.
+     * Add new items, replace existing jobs. Existing jobs and folders are not
+     * touched, other than manipulating the jobs within existing folders.
      */
     MERGE,
 
@@ -212,59 +212,59 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   }
 
   /**
-   * Existing items created file mode.
+   * Items-created file mode.
    */
-  private ExistingItemsCreatedFileMode existingItemsCreatedFileMode;
+  private ItemsCreatedFileMode itemsCreatedFileMode;
 
   /**
-   * Manages the items created file.
+   * Manages the items-created file.
    */
   private static class ItemsCreatedFileManager {
     /**
-     * Set of folders present in the existing items created file when it was loaded
-     * and which were not referenced during the execution of the job.
+     * Set of folders present in the items-created file when it was loaded and which
+     * were not referenced during the execution of the job.
      * <p>
      * These folders become candidates for deletion for some
-     * {@link ExistingItemsCreatedFileMode}.
+     * {@link ItemsCreatedFileMode}.
      */
     Set<String> setFolderNotReferencedSinceLoaded;
 
     /**
-     * Set of jobs present in the existing items created file when it was loaded
-     * and which were not referenced during the execution of the job.
+     * Set of jobs present in the items-created file when it was loaded and which
+     * were not referenced during the execution of the job.
      * <p>
      * These jobs become candidates for deletion for some
-     * {@link ExistingItemsCreatedFileMode}.
+     * {@link ItemsCreatedFileMode}.
      */
     Set<String> setJobNotReferencedSinceLoaded;
 
     /**
-     * Set of folders created during the execution of the job or from the existing
-     * items created file.
+     * Set of folders created during the execution of the job or from the
+     * items-created file.
      */
     Set<String> setFolderCreated;
 
     /**
-     * Set of jobs created during the execution of the job or from the existing items
-     * created file.
+     * Set of jobs created during the execution of the job or from the items-created
+     * file.
      */
     Set<String> setJobCreated;
 
 
     /**
-     * Path to the file containing the items created.
+     * Path to the file containing the items-created.
      */
     Path pathItemsCreatedFile;
 
     /**
-     * Indicates the items created information was modified and must be saved.
+     * Indicates the items-created information was modified and must be saved.
      */
     boolean indModified;
 
     /**
      * Constructor.
      *
-     * @param pathItemsCreatedFile Path to the items created file.
+     * @param pathItemsCreatedFile Path to the items-created file.
      */
     public ItemsCreatedFileManager(Path pathItemsCreatedFile) {
       this.pathItemsCreatedFile = pathItemsCreatedFile;
@@ -275,16 +275,16 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     }
 
     /**
-     * @return Indicates if the items created file exists.
+     * @return Indicates if the items-created file exists.
      */
     public boolean isFileSpecified() {
       return this.pathItemsCreatedFile != null;
     }
 
     /**
-     * Loads the items created file if it exists.
+     * Loads the items-created file if it exists.
      *
-     * @return Indicates if the items created file exists.
+     * @return Indicates if the items-created file exists.
      */
     public boolean loadIfExists() {
       BufferedReader bufferedReader;
@@ -302,7 +302,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
         bufferedReader = new BufferedReader(new FileReader(this.pathItemsCreatedFile.toFile()));
 
         while ((line = bufferedReader.readLine()) != null) {
-          // Within the items created file, folders and jobs are distinguished by the fact
+          // Within the items-created file, folders and jobs are distinguished by the fact
           // that folders have a "/" at the end. But this is not exposed through the API and
           // folders names (paths) do not end with "/".
           if (line.charAt(line.length() - 1) == '/') {
@@ -324,11 +324,11 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     }
 
     /**
-     * Saves the items created file with the currently known jobs and folders created.
+     * Saves the items-created file with the currently known jobs and folders created.
      * <p>
-     * This includes those from the existing items created file and those added.
+     * This includes those from the items-created file and those added.
      * <p>
-     * To {@link ExistingItemsCreatedFileMode#IGNORE} the items created file, this
+     * To {@link ItemsCreatedFileMode#IGNORE} the items-created file, this
      * method can be called without having called {@link #loadIfExists}.
      */
     public void save() {
@@ -409,7 +409,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
     /**
      * Returns the Set of jobs which were not referenced during this job execution
-     * since the existing items created file was loaded.
+     * since the items-created file was loaded.
      *
      * @return See description.
      */
@@ -421,7 +421,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
 
     /**
      * Returns the Set of folders which were not referenced during this job execution
-     * since the existing items created file was loaded.
+     * since the items-created file was loaded.
      *
      * @return See description. Caller must not modify the Set.
      */
@@ -484,11 +484,11 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   /**
    * ItemsCreatedFileManager.
    * <p>
-   * The Path to the items created file is not kept by the class. An
-   * ItemsCreatedFileManager is rather created with the Path to the items created
+   * The Path to the items-created file is not kept by the class. An
+   * ItemsCreatedFileManager is rather created with the Path to the items-created
    * file so that it can manage it on behalf of this class.
    * <p>
-   * If null, no items created file is managed.
+   * If null, no items-created file is managed.
    */
   private ItemsCreatedFileManager itemsCreatedFileManager;
 
@@ -519,7 +519,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     String password;
 
     this.itemsCreatedFileManager = new ItemsCreatedFileManager(((WorkspaceExecContext)ExecContextHolder.get()).getPathMetadataDir().resolve(SetupJenkinsJobs.DEFAULT_ITEMS_CREATED_FILE));
-    this.existingItemsCreatedFileMode = ExistingItemsCreatedFileMode.MERGE;
+    this.itemsCreatedFileMode = ItemsCreatedFileMode.MERGE;
 
     execContext = ExecContextHolder.get();
     runtimePropertiesPlugin = execContext.getExecContextPlugin(RuntimePropertiesPlugin.class);
@@ -564,8 +564,8 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   }
 
   /**
-   * @param pathItemsCreatedFile Path to the items created file. Can be null to
-   *   disable items created file handling. If not called, the default items created
+   * @param pathItemsCreatedFile Path to the items-created file. Can be null to
+   *   disable items-created file handling. If not called, the default items-created
    *   file is jenkins-items-created.txt in the metadata directory of the workspace.
    */
   public void setPathItemsCreatedFile(Path pathItemsCreatedFile) {
@@ -573,12 +573,11 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
   }
 
   /**
-   * @param existingItemsCreatedFileMode ExistingItemsCreatedFileMode. If not
-   *   called, the default ExistingItemsCreatedFileMode is
-   *   {@link ExistingItemsCreatedFileMode#MERGE}.
+   * @param itemsCreatedFileMode ItemsCreatedFileMode. If not called, the
+   *   default ItemsCreatedFileMode is {@link ItemsCreatedFileMode#MERGE}.
    */
-  public void setExistingItemsCreatedFileMode(ExistingItemsCreatedFileMode existingItemsCreatedFileMode) {
-    this.existingItemsCreatedFileMode = existingItemsCreatedFileMode;
+  public void setItemsCreatedFileMode(ItemsCreatedFileMode itemsCreatedFileMode) {
+    this.itemsCreatedFileMode = itemsCreatedFileMode;
   }
 
   /**
@@ -712,13 +711,13 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
     userInteractionCallbackPlugin = ExecContextHolder.get().getExecContextPlugin(UserInteractionCallbackPlugin.class);
 
     if (this.itemsCreatedFileManager.isFileSpecified()) {
-      if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.IGNORE) {
+      if (this.itemsCreatedFileMode == ItemsCreatedFileMode.IGNORE) {
         this.itemsCreatedFileManager.save();
       } else {
         this.itemsCreatedFileManager.loadIfExists();
       }
-    } else if (this.existingItemsCreatedFileMode != ExistingItemsCreatedFileMode.IGNORE) {
-      throw new RuntimeException("ExistingItemsCreatedFileMode must be IGNORE when items created file not specified.");
+    } else if (this.itemsCreatedFileMode != ItemsCreatedFileMode.IGNORE) {
+      throw new RuntimeException("ItemsCreatedFileMode must be IGNORE when items-created file not specified.");
     }
 
     referenceGraphVisitorSetupJob = new SetupJenkinsJobs.ReferenceGraphVisitorSetupJob();
@@ -729,7 +728,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
       // ReferenceGraph.
       referenceGraph.traverseReferenceGraph(null, ReferenceGraph.TraversalOrder.ALL_PARENTS_FIRST, ReferenceGraph.ReentryMode.NO_REENTRY, referenceGraphVisitorSetupJob);
 
-      if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE) {
+      if (this.itemsCreatedFileMode == ItemsCreatedFileMode.REPLACE) {
         // We start by deleting the folders since this will delete all jobs within them at
         // once, which will be more efficient than deleting the jobs individually.
         for (String folder: this.itemsCreatedFileManager.getSetFolderNotReferencedSinceLoaded()) {
@@ -765,7 +764,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
           this.jenkinsClient.deleteItem(job);
           this.itemsCreatedFileManager.jobDeleted(job);
         }
-      } else if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE_DELETE_FOLDER_ONLY_IF_EMPTY) {
+      } else if (this.itemsCreatedFileMode == ItemsCreatedFileMode.REPLACE_DELETE_FOLDER_ONLY_IF_EMPTY) {
         // Here, we must delete the jobs first since the folders need to be deleted only
         // if empty, and they can become empty following the deletion of jobs within them.
         for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {
@@ -800,7 +799,7 @@ public class SetupJenkinsJobs extends RootModuleVersionJobSimpleAbstractImpl {
           }
 
         }
-      } else if (this.existingItemsCreatedFileMode == ExistingItemsCreatedFileMode.REPLACE_NO_DELETE_FOLDER) {
+      } else if (this.itemsCreatedFileMode == ItemsCreatedFileMode.REPLACE_NO_DELETE_FOLDER) {
         for (String job: this.itemsCreatedFileManager.getSetJobNotReferencedSinceLoaded()) {
           userInteractionCallbackPlugin.provideInfo(MessageFormat.format(SetupJenkinsJobs.resourceBundle.getString(SetupJenkinsJobs.MSG_PATTERN_KEY_DELETING_UNREFERENCED_JOB), job));
 

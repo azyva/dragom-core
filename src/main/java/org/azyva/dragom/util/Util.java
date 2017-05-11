@@ -129,6 +129,20 @@ public final class Util {
   private static final String DRAGOM_PROPERTIES_RESOURCE = "/META-INF/dragom.properties";
 
   /**
+   * Path to a static Dragom properties resource within the classpath meant to be
+   * optionally provided by the installation to override properties defined by the
+   * META-INF/dragom.properties resource.
+   */
+  private static final String DRAGOM_PROPERTIES_OVERRIDE_RESOURCE = "/META-INF/dragom-override.properties";
+
+  /**
+   * Path to the static default initialization properties resource within the
+   * classpath meant to be optionally provided by the installation to override
+   * properties defined by the META-INF/dragom-init.properties resource.
+   */
+  private static final String DRAGOM_DEFAULT_INIT_PROPERTIES_OVERRIDE_RESOURCE = "/META-INF/dragom-init-override.properties";
+
+  /**
    * Path to the static default initialization properties resource within the
    * classpath.
    */
@@ -519,8 +533,9 @@ public final class Util {
   }
 
   /**
-   * Applies system properties from the META-INF/dragom.properties classpath
-   * resource.
+   * Applies system properties from the META-INF/dragom.properties and
+   * META-INF/dragom-override.properties classpath resources, the properties defined
+   * in the latter having precedence.
    * <p>
    * This method can be called from many places where it is expected that Dragom
    * properties be available as system properties. This class ensures that loading
@@ -531,6 +546,8 @@ public final class Util {
   public static void applyDragomSystemProperties() {
     Properties propertiesDragom;
 
+    propertiesDragom = new Properties();
+
     // Ideally this should be synchronized. But since it is expected that this method
     // be called once during initialization in a single-threaded context, it is not
     // worth bothering.
@@ -539,39 +556,62 @@ public final class Util {
         if (inputStream != null) {
           Util.logger.debug("Loading properties from classpath resource " + Util.DRAGOM_PROPERTIES_RESOURCE + " into system properties.");
 
-          propertiesDragom = new Properties();
-
           propertiesDragom.load(inputStream);
-
-          for (Map.Entry<Object, Object> mapEntry: propertiesDragom.entrySet()) {
-            String key;
-
-            key = (String)mapEntry.getKey();
-
-            if (System.getProperty(key) == null) {
-              System.setProperty(key, (String)mapEntry.getValue());
-            }
-          }
         }
       } catch (IOException ioe) {
         throw new RuntimeException(ioe);
+      }
+
+      try (InputStream inputStream = Util.class.getResourceAsStream(Util.DRAGOM_PROPERTIES_OVERRIDE_RESOURCE)) {
+        if (inputStream != null) {
+          Util.logger.debug("Loading properties from classpath resource " + Util.DRAGOM_PROPERTIES_OVERRIDE_RESOURCE + " into system properties.");
+
+          propertiesDragom.load(inputStream);
+
+        }
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+
+      for (Map.Entry<Object, Object> mapEntry: propertiesDragom.entrySet()) {
+        String key;
+
+        key = (String)mapEntry.getKey();
+
+        if (System.getProperty(key) == null) {
+          System.setProperty(key, (String)mapEntry.getValue());
+        }
       }
     }
   }
 
   /**
-   * @return Default initialization properties loaded from dragom-init.properties.
+   * Loads properties from the META-INF/dragom-init.properties and
+   * META-INF/dragom-init-override.properties classpath resources, the properties
+   * defined in the latter having precedence.
+   *
+   * @return See description.
    */
   public static Properties getPropertiesDefaultInit() {
     // Ideally this should be synchronized. But since it is expected that this method
     // be called once during initialization in a single-threaded context, it is not
     // worth bothering.
     if (Util.propertiesDefaultInit == null) {
+      Util.propertiesDefaultInit = new Properties();
+
       try (InputStream inputStream = Util.class.getResourceAsStream(Util.DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE)) {
         if (inputStream != null) {
           Util.logger.debug("Loading initialization properties from classpath resource " + Util.DRAGOM_DEFAULT_INIT_PROPERTIES_RESOURCE + '.');
 
-          Util.propertiesDefaultInit = new Properties();
+          Util.propertiesDefaultInit.load(inputStream);
+        }
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+
+      try (InputStream inputStream = Util.class.getResourceAsStream(Util.DRAGOM_DEFAULT_INIT_PROPERTIES_OVERRIDE_RESOURCE)) {
+        if (inputStream != null) {
+          Util.logger.debug("Loading initialization properties from classpath resource " + Util.DRAGOM_DEFAULT_INIT_PROPERTIES_OVERRIDE_RESOURCE + '.');
 
           Util.propertiesDefaultInit.load(inputStream);
         }
