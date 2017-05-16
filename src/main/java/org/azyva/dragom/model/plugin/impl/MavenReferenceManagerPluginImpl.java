@@ -72,17 +72,23 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   private static final Logger logger = LoggerFactory.getLogger(MavenArtifactVersionManagerPluginImpl.class);
 
   /**
+   * Exceptional condition representing the fact that a submodule has a version
+   * which is different from that of its container.
+   */
+  private static final String EXCEPTIONAL_COND_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER = "MAVEN_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER";
+
+  /**
    * Exceptional condition representing the fact that a referenced artifact within a
    * POM could not be resolved (properties).
    */
-  private static final String EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
+  private static final String EXCEPTIONAL_COND_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "MAVEN_CANNOT_RESOLVE_REFERENCED_ARTIFACT";
 
   /**
    * Exceptional condition representing an artifact that was found to be produced by
    * a Module, but the POM(s) of the ModuleVersion Module that could not be found
    * corresponding to an artifact specified by the user.
    */
-  private static final String EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM = "ARTIFACT_IN_MODULE_BUT_NOT_IN_POM";
+  private static final String EXECEPTIONAL_COND_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM = "MAVEN_ARTIFACT_IN_MODULE_BUT_NOT_IN_POM";
 
   /**
    * See description in ResourceBundle.
@@ -92,12 +98,17 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
   /**
    * See description in ResourceBundle.
    */
+  private static final String MSG_PATTERN_KEY_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER = "SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER";
+
+  /**
+   * See description in ResourceBundle.
+   */
   private static final String MSG_PATTERN_KEY_CANNOT_RESOLVE_REFERENCED_ARTIFACT = "CANNOT_RESOLVE_REFERENCED_ARTIFACT";
 
   /**
    * See description in ResourceBundle.
    */
-  private static final String MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT = "ERROR_INVALID_REFERENCED_ARTIFACT";
+  private static final String MSG_PATTERN_KEY_INVALID_REFERENCED_ARTIFACT = "INVALID_REFERENCED_ARTIFACT";
 
   /**
    * ResourceBundle specific to this class.
@@ -269,7 +280,18 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
       }
 
       if (!version.equals(aggregationVersion)) {
-        throw new RuntimeException("The submodule POM " + pom.getPathPom() + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + aggregationVersion + '.');
+        Util.ToolExitStatusAndContinue toolExitStatusAndContinue;
+
+        MavenReferenceManagerPluginImpl.logger.error("The submodule POM " + pom.getPathPom() + " of module " + this.getModule() + " has version " + version + " which is not the same as that of its container " + aggregationVersion + '.');
+
+        toolExitStatusAndContinue = Util.handleToolExitStatusAndContinueForExceptionalCond(null, MavenReferenceManagerPluginImpl.EXCEPTIONAL_COND_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER);
+
+        if (toolExitStatusAndContinue.indContinue) {
+          userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER), toolExitStatusAndContinue.toolExitStatus, pom.getPathPom(), this.getModule(), version, aggregationVersion));
+          continue;
+        } else {
+          throw new RuntimeExceptionAbort(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_SUBMODULE_VERSION_NOT_SAME_AS_CONTAINER), toolExitStatusAndContinue.toolExitStatus, pom.getPathPom(), this.getModule(), version, aggregationVersion));
+        }
       }
 
       listReferencedArtifact = pom.getListReferencedArtifact(EnumSet.allOf(Pom.ReferencedArtifactType.class), null ,null, null);
@@ -281,7 +303,6 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
         ModuleVersion moduleVersion;
         Reference reference;
         ArtifactVersionMapperPlugin artifactVersionMapperPlugin;
-
 
         try {
           artifactGroupId = new ArtifactGroupId(pom.resolveProperties(referencedArtifact.getGroupId(), pomResolver), pom.resolveProperties(referencedArtifact.getArtifactId(), pomResolver));
@@ -366,10 +387,10 @@ public class MavenReferenceManagerPluginImpl extends ModulePluginAbstractImpl im
           }
 
           if (toolExitStatusAndContinue.indContinue) {
-            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
+            userInteractionCallbackPlugin.provideInfo(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
             continue;
           } else {
-            throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_ERROR_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
+            throw new RuntimeExceptionUserError(MessageFormat.format(MavenReferenceManagerPluginImpl.resourceBundle.getString(MavenReferenceManagerPluginImpl.MSG_PATTERN_KEY_INVALID_REFERENCED_ARTIFACT), toolExitStatusAndContinue.toolExitStatus, pathModuleWorkspace, stringReferencedArtifact, module));
           }
         }
 
