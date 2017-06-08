@@ -30,8 +30,8 @@ import org.azyva.dragom.jenkins.JenkinsClient;
  * Implements a simple and generic service locator.
  * <p>
  * This class allows a separation of concern between Dragom and clients regarding
- * the use of some service-like interfaces whose implementation should be selectable
- * at runtime.
+ * the use of some service-like interfaces whose implementation should be
+ * selectable at runtime.
  * <p>
  * An example of such a service-like interface is {@link JenkinsClient}.
  * <p>
