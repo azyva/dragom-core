@@ -254,7 +254,7 @@ public class CredentialStore {
   /**
    * Constructor.
    * <p>
-   * If pathMasterPassworedFile is null, the master key file is
+   * If pathMasterKeyFile is null, the master key file is
    * "dragom-credentials-master-key" in the user home directory.
    * <p>
    * If pathCredentialFile is null, the credential file is

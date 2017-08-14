@@ -85,7 +85,7 @@ import org.azyva.dragom.util.Util;
  *
  * @author David Raymond
  */
-public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceExecContextFactory {
+public class DefaultExecContextFactory extends SimpleExecContextFactory implements ExecContextFactory, WorkspaceExecContextFactory {
   /**
    * Initialization property specifying the workspace directory.
    */
@@ -148,7 +148,7 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
    * ExecContextPlugin instances so that plugin instances are unique (whithin an
    * ExecContext).
    */
-  private class DefaultExecContextImpl implements ExecContext, WorkspaceExecContext, ToolLifeCycleExecContext {
+  private class DefaultExecContextImpl extends SimpleExecContextFactory.SimpleExecContextImpl implements ExecContext, WorkspaceExecContext, ToolLifeCycleExecContext {
     /**
      * Indicates if the workspace directory has been initialized.
      */
@@ -170,35 +170,10 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
     private Path pathPropertiesFile;
 
     /**
-     * Model to be returned by this {@link ExecContext}.
-     */
-    private Model model;
-
-    /**
-     * Map of {@link ExecContextPlugin} that are already instantiated.
-     */
-    private Map<Class<? extends ExecContextPlugin>, ExecContextPlugin> mapExecContextPluginInstantiated;
-
-    /**
-     * Map of transient {@link ExecContextPlugin} that are already instantiated.
-     */
-    private Map<Class<? extends ExecContextPlugin>, ExecContextPlugin> mapExecContextPluginTransientInstantiated;
-
-    /**
-     * Initialization Properties. Passed when instantiating the {@link ExecContext}.
-     */
-    private Properties propertiesInit;
-
-    /**
      * Properties. Loaded from the properties file within the metadata workspace
      * directory.
      */
     private Properties properties;
-
-    /**
-     * Transient data.
-     */
-    private Map<String, Object> mapTransientData;
 
     /**
      * Initialization Properties passed by a tool.
@@ -219,12 +194,11 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
      * @param propertiesInit Initialization properties.
      */
     private DefaultExecContextImpl(Path pathWorkspaceDir, Properties propertiesInit) {
-      this.propertiesInit = propertiesInit;
+      super(propertiesInit);
+
       this.pathWorkspaceDir = pathWorkspaceDir;
       this.pathMetadataDir = this.pathWorkspaceDir.resolve(DefaultExecContextFactory.DRAGOM_METADATA_DIR);
       this.pathPropertiesFile = this.pathMetadataDir.resolve(DefaultExecContextFactory.PROPERTIES_FILE);
-
-      this.model = ModelFactoryHolder.getModelFactory().getModel(propertiesInit);
 
       this.properties = new SortedProperties();
 
@@ -241,11 +215,6 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
 
         this.indWorkspaceDirInit = true;
       }
-
-      this.mapTransientData = new HashMap<String, Object>();
-
-      this.mapExecContextPluginInstantiated = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPlugin>();
-      this.mapExecContextPluginTransientInstantiated = new HashMap<Class<? extends ExecContextPlugin>, ExecContextPlugin>();
     }
 
     /**
@@ -275,81 +244,6 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
           }
         }
       }
-    }
-
-    /**
-     * Returns the Model.
-     *
-     * See the description of this class for the strategy for obtaining the Model.
-     *
-     *  @return Model.
-     */
-    @Override
-    public Model getModel() {
-      return this.model;
-    }
-
-    /**
-     * Gets a ExecContextPlugin.
-     *
-     * See the description of this class for the strategy for obtaining
-     * ExecContextPlugin.
-     *
-     * @param classExecContextPluginInterface Plugin ID.
-     * @return ExecContextPlugin. null if not found.
-     */
-    @Override
-    public <ExecContextPluginInterface extends ExecContextPlugin> ExecContextPluginInterface getExecContextPlugin(Class<ExecContextPluginInterface> classExecContextPluginInterface) {
-      ExecContextPlugin execContextPlugin;
-
-      if (this.mapExecContextPluginInstantiated.containsKey(classExecContextPluginInterface)) {
-        execContextPlugin = this.mapExecContextPluginInstantiated.get(classExecContextPluginInterface);
-      }
-      else if (this.mapExecContextPluginTransientInstantiated.containsKey(classExecContextPluginInterface)) {
-        execContextPlugin = this.mapExecContextPluginTransientInstantiated.get(classExecContextPluginInterface);
-      } else {
-        ExecContextPluginFactory<ExecContextPluginInterface> execContextPluginFactory;
-
-        execContextPluginFactory = ExecContextPluginFactoryHolder.getExecContextPluginFactory(classExecContextPluginInterface);
-
-        execContextPlugin = execContextPluginFactory.getExecContextPlugin(this);
-
-        if (execContextPlugin instanceof ToolLifeCycleExecContextPlugin) {
-          ToolLifeCycleExecContextPlugin toolLifeCycleExecContextPlugin;
-
-          toolLifeCycleExecContextPlugin = (ToolLifeCycleExecContextPlugin)execContextPlugin;
-
-          if (toolLifeCycleExecContextPlugin.isTransient()) {
-            this.mapExecContextPluginTransientInstantiated.put(classExecContextPluginInterface, execContextPlugin);
-          } else {
-            this.mapExecContextPluginInstantiated.put(classExecContextPluginInterface, execContextPlugin);
-          }
-        } else {
-          this.mapExecContextPluginInstantiated.put(classExecContextPluginInterface, execContextPlugin);
-        }
-      }
-
-      // Seems to be the only way to avoid warnings without a SuppressWarnings
-      // annotation.
-      return execContextPlugin.getClass().asSubclass(classExecContextPluginInterface).cast(execContextPlugin);
-    }
-
-    @Override
-    public Set<String> getSetInitProperty() {
-      Set<String> setInitProperty;
-
-      setInitProperty = new HashSet<String>();
-
-      for (Object key: this.propertiesInit.keySet()) {
-        setInitProperty.add((String)key);
-      }
-
-      return setInitProperty;
-    }
-
-    @Override
-    public String getInitProperty(String name) {
-      return this.propertiesInit.getProperty(name);
     }
 
     @Override
@@ -427,16 +321,6 @@ public class DefaultExecContextFactory implements ExecContextFactory, WorkspaceE
       } catch (IOException ioe) {
         throw new RuntimeException(ioe);
       }
-    }
-
-    @Override
-    public Object getTransientData(String name) {
-      return this.mapTransientData.get(name);
-    }
-
-    @Override
-    public void setTransientData(String name, Object value) {
-      this.mapTransientData.put(name, value);
     }
 
     /**
