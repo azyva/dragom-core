@@ -326,7 +326,7 @@ public class WormFile {
   }
 
   /**
-   * Gets an OutputStream allowing to read the file.
+   * Gets an OutputStream allowing to write the file.
    *
    * <p>When a file is managed by this class, write access to it must be performed
    * only though this OutputStream. The reason is because of the way FileChannel's
@@ -349,7 +349,15 @@ public class WormFile {
 
     try {
       fileChannel = this.fileLock.channel();
+
+      // An OutputStream obtained for a FileChannel does not behave the same as an
+      // OutputStream obtained directly from a file. In particular, when an
+      // OutputStream if obtained for a FileChannel, the underlying file is not
+      // overwritten. In order to simulate the semantics of a regular file
+      // OutputStream, we must therefore set the writing position to 0 and truncate
+      // the FileChannel.
       fileChannel.position(0);
+      fileChannel.truncate(0);
 
       return Channels.newOutputStream(fileChannel);
     } catch (IOException ioe) {
