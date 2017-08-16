@@ -7,6 +7,7 @@ import org.azyva.dragom.model.ClassificationNode;
 import org.azyva.dragom.model.Model;
 import org.azyva.dragom.model.Node;
 import org.azyva.dragom.model.NodePath;
+import org.azyva.dragom.modelcommand.CommandResult;
 import org.azyva.dragom.modelcommand.ListChildrenCommand;
 import org.azyva.dragom.modelcommand.ListChildrenCommandResult;
 import org.azyva.dragom.modelcommand.ModelCommand;
@@ -36,7 +37,7 @@ public class ListChildrenCommandExecutor extends SpecificModelCommandExecutor {
     nodePath = listChildrenCommand.getNodePath();
 
     if (!nodePath.isPartial()) {
-      listChildrenCommandResult.setErrorId("NODE_PATH_MUST_BE_PARTIAL");
+      listChildrenCommandResult.setErrorId(CommandResult.ErrorId.NODE_PATH_MUST_BE_PARTIAL.toString());
       listChildrenCommandResult.setErrorMsg("NodePath " + nodePath + " is partial and must reference a ClassificationNode, but the node referenced is not. Remove the trailing '/' to make the NodePath complete.");
 
       return listChildrenCommandResult;
@@ -45,7 +46,7 @@ public class ListChildrenCommandExecutor extends SpecificModelCommandExecutor {
     classificationNode = this.model.getClassificationNode(nodePath);
 
     if (classificationNode == null) {
-      listChildrenCommandResult.setErrorId("NODE_NODE_FOUND");
+      listChildrenCommandResult.setErrorId(CommandResult.ErrorId.NODE_NOT_FOUND.toString());
       listChildrenCommandResult.setErrorMsg("No ClassificationNode corresponds to NodePath " + nodePath);
 
       return listChildrenCommandResult;
