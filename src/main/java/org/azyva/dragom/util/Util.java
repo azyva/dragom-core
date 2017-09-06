@@ -1949,7 +1949,7 @@ public final class Util {
     stringBuilder = new StringBuilder();
     throwable = e;
 
-    while (throwable != null) {
+    while ((throwable != null) && (throwable.getMessage() != null)) {
       stringBuilder.append(throwable.getMessage().replace('\n', ' '));
       throwable = throwable.getCause();
 
