@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
@@ -98,7 +99,7 @@ public class DefaultGitImpl implements Git {
     /**
      * Modification timestamp.
      */
-    public long modTimestamp;
+    public FileTime fileTimeModTimestamp;
 
     /**
      * Version.
@@ -526,6 +527,9 @@ public class DefaultGitImpl implements Git {
       DefaultGitImpl.setPathToDeleteOnShutdown.remove(pathWorkspace);
     }
 
+    // TODO: This works, but seems unclean. We setPathWorkspaceVersion above which
+    // causes getBranch below to reuse this information. So the code below seems
+    // useless.
     if (version != null) {
       // We need to verify the type of version checked out by checking whether we are in
       // a detached head state (tag) or not (branch).
@@ -670,8 +674,20 @@ public class DefaultGitImpl implements Git {
 
     versionCurrent = this.getPathWorkspaceVersion(pathWorkspace);
 
-    if ((versionCurrent != null)  && versionCurrent.equals(version)) {
-      return;
+    if (versionCurrent != null) {
+      if (versionCurrent.equals(version)) {
+        return;
+      }
+
+      // If a checkout operation really needs to be performed, we clear the Version
+      // cache based on the last modified timestamp in order to force Version type
+      // validation.
+      // In theory we should not have to do this since the last modification timestamp
+      // logic (in getPathWorkspaceVersion called by getBranch) should conclude the
+      // cached Version is stale. But it seems like on many Linux systems the last
+      // modification timestamp of a file is returned with second precision, which is
+      // not sufficient.
+      this.setPathWorkspaceVersion(pathWorkspace, null);
     }
 
     // The checkout command takes a branch or tag name, but without the complete
@@ -962,6 +978,7 @@ public class DefaultGitImpl implements Git {
     ExecContext execContext;
     Map<Path, ModTimestampVersion> mapPathModTimestampVersion;
     ModTimestampVersion modTimestampVersion;
+    FileTime fileTime;
 
     execContext = ExecContextHolder.get();
 
@@ -978,7 +995,13 @@ public class DefaultGitImpl implements Git {
       return null;
     }
 
-    if (pathWorkspace.resolve(".git/HEAD").toFile().lastModified() != modTimestampVersion.modTimestamp) {
+    try {
+      fileTime = Files.getLastModifiedTime(pathWorkspace.resolve(".git/HEAD"));
+    } catch (IOException ioe) {
+      throw new RuntimeException(ioe);
+    }
+
+    if (!fileTime.equals(modTimestampVersion.fileTimeModTimestamp)) {
       mapPathModTimestampVersion.remove(pathWorkspace);
       return null;
     }
@@ -1006,7 +1029,12 @@ public class DefaultGitImpl implements Git {
     } else {
       modTimestampVersion = new ModTimestampVersion();
 
-      modTimestampVersion.modTimestamp = pathWorkspace.resolve(".git/HEAD").toFile().lastModified();
+      try {
+        modTimestampVersion.fileTimeModTimestamp = Files.getLastModifiedTime(pathWorkspace.resolve(".git/HEAD"));
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+
       modTimestampVersion.version = version;
 
       mapPathModTimestampVersion.put(pathWorkspace, modTimestampVersion);
