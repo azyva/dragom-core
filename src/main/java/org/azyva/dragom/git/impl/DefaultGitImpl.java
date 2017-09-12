@@ -978,7 +978,7 @@ public class DefaultGitImpl implements Git {
       return null;
     }
 
-    if (pathWorkspace.toFile().lastModified() != modTimestampVersion.modTimestamp) {
+    if (pathWorkspace.resolve(".git/HEAD").toFile().lastModified() != modTimestampVersion.modTimestamp) {
       mapPathModTimestampVersion.remove(pathWorkspace);
       return null;
     }
@@ -1006,7 +1006,7 @@ public class DefaultGitImpl implements Git {
     } else {
       modTimestampVersion = new ModTimestampVersion();
 
-      modTimestampVersion.modTimestamp = pathWorkspace.toFile().lastModified();
+      modTimestampVersion.modTimestamp = pathWorkspace.resolve(".git/HEAD").toFile().lastModified();
       modTimestampVersion.version = version;
 
       mapPathModTimestampVersion.put(pathWorkspace, modTimestampVersion);
