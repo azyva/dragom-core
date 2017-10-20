@@ -203,11 +203,13 @@ public class DefaultGitImpl implements Git {
   @Override
   public void setUser(String user) {
     this.user = user;
+    this.httpCredentials = null;
   }
 
   @Override
   public void setPassword(String password) {
     this.password = password;
+    this.httpCredentials = null;
   }
 
   @Override
