@@ -269,12 +269,15 @@ public interface Git {
    * immediately after creating the branch.
    * <p>
    * In the case gitRef is a tag, --set-upstream has no effect.
+   * <p>
+   * There are many opportunities for a push to fail, including rejection because of
+   * non-fast-forward et lack of permissions. But it is hard to distinguish the
+   * various cases. So this method considers any failure as unexpected.
    *
    * @param pathWorkspace Path to the workspace.
    * @param gitRef Git reference to push. If null, the current branch is pushed.
-   * @return Indicates if push failed because remote contains new changes.
    */
-  boolean push(Path pathWorkspace, String gitRef);
+  void push(Path pathWorkspace, String gitRef);
 
   /**
    * Git checkout.
@@ -313,11 +316,14 @@ public interface Git {
 
   /**
    * Pushes all refs, branches and tags.
+   * <p>
+   * There are many opportunities for a push to fail, including rejection because of
+   * non-fast-forward et lack of permissions. But it is hard to distinguish the
+   * various cases. So this method considers any failure as unexpected.
    *
    * @param pathWorkspace Path to the workspace.
-   * @return Indicates if push failed because remote contains new changes.
    */
-  boolean push(Path pathWorkspace);
+  void push(Path pathWorkspace);
 
   /**
    * Returns the current version.

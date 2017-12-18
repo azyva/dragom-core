@@ -657,16 +657,12 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public boolean push(Path pathWorkspace, String gitRef) {
-    int exitCode;
-
+  public void push(Path pathWorkspace, String gitRef) {
     if (gitRef != null) {
-      exitCode = this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.ONE, pathWorkspace, null, false);
+      this.executeGitCommand(new String[] {"push", "--set-upstream", "origin", gitRef + ':' + gitRef}, true, AllowExitCode.NONE, pathWorkspace, null, false);
     } else {
-      exitCode = this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
+      this.executeGitCommand(new String[] {"push"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
     }
-
-    return exitCode == 1;
   }
 
   @Override
@@ -808,25 +804,17 @@ public class DefaultGitImpl implements Git {
   }
 
   @Override
-  public boolean push(Path pathWorkspace) {
-    int exitCode;
-
+  public void push(Path pathWorkspace) {
     // We always set the upstream tracking information because because pushes can be
     // delayed and new branches can be pushed on the call to this method other than
     // the one immediately after creating the branch.
-    exitCode = this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
-
-    if (exitCode == 1) {
-      return true;
-    }
+    this.executeGitCommand(new String[] {"push", "--all", "--set-upstream", "origin"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
 
     // Unfortunately we cannot specify --all and --tags in the same command.
     // Maybe it is possible to specify --follow-tags with --all, but even if so,
     // this is not what we need since there may be exceptional cases where tags
     // are not reachable from a branch.
-    exitCode = this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.ONE, pathWorkspace, null, false);
-
-    return exitCode == 1;
+    this.executeGitCommand(new String[] {"push", "--tags"}, true, AllowExitCode.NONE, pathWorkspace, null, false);
   }
 
   @Override
